@@ -1,13 +1,1438 @@
 <!DOCTYPE html>
 <html lang="fr">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-    <title>EDGE — Intelligence Sportive</title>
-    <meta name="theme-color" content="#070709" />
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0"/>
+<title>EDGE · Betting Intelligence</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#07070f;--bg2:#0c0c18;--c1:#101020;--c2:#161626;--c3:#1c1c30;
+  --v:#6d28d9;--v2:#7c3aed;--v3:#8b5cf6;--v4:rgba(109,40,217,.18);--v5:rgba(109,40,217,.08);
+  --gold:#f59e0b;--gold2:rgba(245,158,11,.12);
+  --green:#10b981;--green2:rgba(16,185,129,.12);
+  --red:#ef4444;--red2:rgba(239,68,68,.12);
+  --pink:#ec4899;--pink2:rgba(236,72,153,.12);
+  --cyan:#06b6d4;
+  --w:#fff;--w2:rgba(255,255,255,.8);--w3:rgba(255,255,255,.5);--w4:rgba(255,255,255,.15);
+  --g2:#8888a8;--g3:#55556a;--g4:#252538;--g5:#18182a;
+  --ln:rgba(255,255,255,.07);--ln2:rgba(255,255,255,.03);
+  --r:9px;--r2:13px;--r3:17px;--r4:21px;
+  --shv:0 8px 32px rgba(109,40,217,.2);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{background:var(--bg);color:var(--w);font-family:'Syne',sans-serif;font-size:14px;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+button{font-family:'Syne',sans-serif;font-size:14px;cursor:pointer}
+input,select{font-family:'Syne',sans-serif;font-size:13px;background:var(--c2);border:1px solid var(--ln);border-radius:9px;color:var(--w);padding:10px 12px;width:100%;outline:none;transition:border-color .13s;display:block}
+input:focus,select:focus{border-color:rgba(109,40,217,.5);box-shadow:0 0 0 2px rgba(109,40,217,.1)}
+select{appearance:none;-webkit-appearance:none}
+::-webkit-scrollbar{width:3px;height:3px}
+::-webkit-scrollbar-thumb{background:var(--v2);border-radius:3px}
+
+/* ── LAYOUT ── */
+#app{display:flex;min-height:100vh}
+#sidebar{width:224px;background:var(--bg2);border-right:1px solid var(--ln);position:fixed;top:0;left:0;height:100vh;display:flex;flex-direction:column;z-index:100;transition:transform .26s cubic-bezier(.16,1,.3,1)}
+#main{margin-left:224px;flex:1;display:flex;flex-direction:column;min-height:100vh}
+@media(max-width:768px){#sidebar{transform:translateX(-224px)}#sidebar.open{transform:none}#main{margin-left:0}}
+
+/* ── SIDEBAR ── */
+.sb-head{padding:20px 16px 14px;border-bottom:1px solid var(--ln)}
+.sb-logo{font-size:24px;font-weight:800;letter-spacing:-2px}
+.sb-logo span{color:var(--v3)}
+.sb-sub{font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--g3);letter-spacing:.12em;text-transform:uppercase;margin-top:3px}
+.sb-nav{flex:1;padding:8px;overflow-y:auto}
+.nav-sec{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--g3);padding:0 8px;margin:12px 0 3px;letter-spacing:.1em;text-transform:uppercase;font-weight:700}
+.nb{display:flex;align-items:center;gap:8px;width:100%;padding:9px 10px;border:none;background:transparent;color:var(--g2);border-radius:8px;font-size:12.5px;font-weight:500;text-align:left;position:relative;transition:all .11s}
+.nb:hover{background:var(--c2);color:var(--w2)}
+.nb.on{background:var(--v4);color:var(--v3);font-weight:700}
+.nb.on::after{content:'';position:absolute;right:0;top:50%;transform:translateY(-50%);width:3px;height:52%;background:var(--v3);border-radius:2px 0 0 2px}
+.ni{font-size:14px;width:20px;text-align:center;flex-shrink:0}
+.nbadge{margin-left:auto;font-size:9px;padding:1px 6px;border-radius:100px;background:var(--v5);color:var(--v3);font-weight:700}
+.nbadge.live{background:var(--pink2);color:var(--pink);animation:pulse 2s infinite}
+.nbadge.ok{background:var(--green2);color:var(--green)}
+.sb-foot{padding:10px;border-top:1px solid var(--ln)}
+.bkcard{background:var(--c2);border:1px solid var(--ln);border-radius:var(--r2);padding:12px 14px;cursor:pointer;transition:border-color .14s}
+.bkcard:hover{border-color:var(--v2)}
+.bklbl{font-size:10px;color:var(--g3);font-weight:600;margin-bottom:2px}
+.bkval{font-size:21px;font-weight:800;letter-spacing:-1px;color:var(--gold)}
+.bksub{font-size:10px;color:var(--g3);margin-top:2px}
+
+/* ── TOPBAR ── */
+#topbar{background:rgba(7,7,15,.93);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-bottom:1px solid var(--ln);padding:0 20px;height:54px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:90}
+.ham{display:none;flex-direction:column;gap:4px;padding:7px;border-radius:7px;border:1px solid var(--ln);background:var(--c2)}
+.ham span{width:16px;height:2px;background:var(--g3);border-radius:1px;display:block}
+@media(max-width:768px){.ham{display:flex}}
+#page-title{font-size:14px;font-weight:700;letter-spacing:-.3px}
+.tb-r{margin-left:auto;display:flex;align-items:center;gap:7px}
+.tbtn{padding:5px 11px;background:transparent;border:1px solid var(--ln);border-radius:7px;color:var(--g2);font-size:11px;font-weight:600;white-space:nowrap;transition:all .12s}
+.tbtn:hover{border-color:var(--v3);color:var(--v3)}
+.tbtn.ok{border-color:rgba(16,185,129,.35);color:var(--green);background:var(--green2)}
+.livepill{display:flex;align-items:center;gap:4px;padding:3px 9px;background:var(--pink2);border:1px solid rgba(236,72,153,.22);border-radius:100px;font-size:10px;color:var(--pink);font-family:'JetBrains Mono',monospace;font-weight:700}
+.livedot{width:5px;height:5px;border-radius:50%;background:var(--pink);animation:pulse 1.5s infinite;flex-shrink:0}
+
+/* ── PAGE ── */
+#page{padding:20px;max-width:880px;animation:fu .18s ease}
+
+/* ── CARDS ── */
+.card{background:var(--c1);border:1px solid var(--ln);border-radius:var(--r2);padding:18px;margin-bottom:10px}
+.cardv{background:var(--c1);border:1px solid rgba(109,40,217,.22);border-radius:var(--r2);padding:18px;margin-bottom:10px;box-shadow:var(--shv)}
+.carde{background:var(--green2);border:1px solid rgba(16,185,129,.18);border-radius:var(--r2);padding:18px;margin-bottom:10px}
+.cardr{background:var(--red2);border:1px solid rgba(239,68,68,.16);border-radius:var(--r2);padding:18px;margin-bottom:10px}
+.clbl{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--g3);font-weight:700;text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px}
+
+/* ── TAGS ── */
+.tag{display:inline-flex;align-items:center;padding:2px 8px;border-radius:100px;font-size:10px;font-weight:700}
+.tg{background:var(--gold2);color:var(--gold)}
+.te{background:var(--green2);color:var(--green)}
+.tv{background:var(--v5);color:var(--v3)}
+.tr{background:var(--red2);color:var(--red)}
+
+/* ── FORMS ── */
+.fw{display:flex;flex-direction:column;gap:4px;margin-bottom:8px}
+.fl{font-size:10px;color:var(--g3);font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.g4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:7px}
+@media(max-width:768px){.g4{grid-template-columns:1fr 1fr}}
+.rg{display:flex;gap:3px}
+.rb{flex:1;padding:8px 4px;font-size:11px;font-weight:700;border-radius:7px;border:1px solid var(--ln);background:var(--c2);color:var(--g3);text-align:center;transition:all .11s}
+.rb:hover{border-color:var(--v3);color:var(--v3)}
+.rb.on{background:var(--v4);border-color:rgba(109,40,217,.4);color:var(--v3)}
+.fsec{background:var(--c1);border:1px solid var(--ln);border-radius:var(--r2);padding:15px;margin-bottom:8px}
+.fsh{display:flex;align-items:center;gap:8px;margin-bottom:12px;padding-bottom:9px;border-bottom:1px solid var(--ln2)}
+.fsn{font-size:9px;font-weight:700;color:var(--v3);background:var(--v5);border-radius:4px;padding:2px 7px;text-transform:uppercase;letter-spacing:.06em}
+.fst{font-size:13px;font-weight:700;color:var(--w)}
+
+/* ── BUTTONS ── */
+.cbtn{width:100%;height:44px;background:var(--v2);border:none;border-radius:9px;font-size:13px;font-weight:700;color:#fff;letter-spacing:-.2px;margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .14s}
+.cbtn:hover:not(:disabled){background:var(--v3);transform:translateY(-1px);box-shadow:0 5px 18px rgba(109,40,217,.35)}
+.cbtn:disabled{background:var(--g4);color:var(--g3);transform:none;opacity:.6}
+.cbtn.gold{background:linear-gradient(135deg,#d97706,var(--gold))}
+.cbtn.gold:hover:not(:disabled){background:linear-gradient(135deg,var(--gold),#fbbf24)}
+.abtn{padding:4px 9px;border-radius:6px;font-size:10px;font-weight:700;border:1px solid var(--ln);color:var(--g3);background:transparent;white-space:nowrap;transition:all .11s}
+.abtn:hover{border-color:var(--v3);color:var(--v3);background:var(--v5)}
+
+/* ── MATCH ROWS ── */
+.mwrap{background:var(--c1);border:1px solid var(--ln);border-radius:var(--r2);overflow:hidden;margin-bottom:5px}
+.mrow{display:grid;grid-template-columns:46px 1fr 152px 1fr 50px;align-items:center;padding:10px 12px;cursor:pointer;transition:background .09s;border-bottom:1px solid var(--ln2);gap:5px}
+.mrow:hover{background:var(--c2)}
+.mrow:last-child{border-bottom:none}
+@media(max-width:600px){.mrow{grid-template-columns:40px 1fr 134px 1fr 42px;padding:9px 10px}}
+.mteam{font-size:12px;font-weight:700;letter-spacing:-.2px}
+.mxg{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--g3);margin-top:1px}
+.mtime{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--g3);text-align:center;display:block}
+.odds{display:flex;gap:3px;justify-content:center}
+.odd{display:flex;flex-direction:column;align-items:center;min-width:43px;padding:5px 2px;border-radius:6px;background:var(--c2);border:1px solid var(--ln);transition:all .11s}
+.odd:hover,.odd.val{background:var(--v5);border-color:rgba(109,40,217,.32)}
+.odd-l{font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--g3)}
+.odd-v{font-size:12px;font-weight:700;margin-top:1px}
+
+/* ── SCANNER SIGNALS ── */
+.sig{background:var(--c1);border:1px solid var(--ln);border-radius:var(--r2);overflow:hidden;margin-bottom:7px;cursor:pointer;transition:all .14s}
+.sig:hover{border-color:rgba(109,40,217,.3);transform:translateY(-1px)}
+.sig.top{border-color:rgba(109,40,217,.2)}
+.sig-bar{height:2px}
+.sig-body{padding:13px}
+.sig-meta{font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--g3);margin-bottom:6px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;text-transform:uppercase;letter-spacing:.07em}
+.sig-teams{font-size:11px;color:var(--g2);margin-bottom:3px}
+.sig-bet{font-size:16px;font-weight:800;letter-spacing:-.4px;margin-bottom:10px;line-height:1.2}
+.sig-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:7px}
+@media(max-width:600px){.sig-grid{grid-template-columns:repeat(2,1fr)}}
+.sig-box{background:var(--bg2);border-radius:6px;padding:7px 4px;text-align:center;border:1px solid var(--ln2)}
+.sig-lbl{font-family:'JetBrains Mono',monospace;font-size:7px;color:var(--g3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:2px}
+.sig-val{font-size:14px;font-weight:800;letter-spacing:-.3px}
+.progbar{height:2px;background:var(--g4);border-radius:2px;overflow:hidden}
+.progfill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--v2),var(--v3))}
+
+/* ── RESULT / VERDICT ── */
+.vrd{background:var(--c1);border:1px solid rgba(109,40,217,.22);border-radius:var(--r3);padding:18px;margin-bottom:10px;box-shadow:var(--shv);position:relative;overflow:hidden}
+.vrd::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--v2),var(--pink),transparent)}
+.vbet{font-size:clamp(16px,3.5vw,22px);font-weight:800;letter-spacing:-1px;line-height:1.15;margin-bottom:4px}
+.vmeta{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--g3);margin-bottom:12px}
+.prow{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-bottom:9px}
+.pb{background:var(--c2);border:1px solid var(--ln);border-radius:var(--r);padding:11px 5px;text-align:center}
+.pb.win{background:var(--v5);border-color:rgba(109,40,217,.28)}
+.pp{font-size:21px;font-weight:800;letter-spacing:-.5px}
+.pb.win .pp{color:var(--v3)}
+.pn{font-size:10px;color:var(--g3);font-weight:600;margin-top:2px}
+.b3{height:3px;background:var(--g4);border-radius:2px;display:flex;overflow:hidden;margin-top:7px}
+.b3h{background:var(--v2)}.b3n{background:var(--g4)}.b3a{background:var(--pink)}
+.crow{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
+.cl{font-size:9px;color:var(--g3);font-weight:700;text-transform:uppercase;letter-spacing:.08em}
+.cv{font-size:13px;font-weight:700}
+.ctr{height:3px;background:var(--g4);border-radius:2px;overflow:hidden;margin-bottom:13px}
+.ctrfill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--v2),var(--v3))}
+
+/* ── EDGE BLOCK ── */
+.edgb{display:flex;justify-content:space-between;align-items:center;padding:13px;border-radius:var(--r);margin-bottom:10px}
+.edgb.pos{background:var(--green2);border:1px solid rgba(16,185,129,.2)}
+.edgb.neg{background:var(--red2);border:1px solid rgba(239,68,68,.16)}
+.edgv{font-size:24px;font-weight:800;letter-spacing:-1px}
+.edgb.pos .edgv{color:var(--green)}.edgb.neg .edgv{color:var(--red)}
+
+/* ── MARKET ROWS ── */
+.mkrow{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-radius:7px;margin-bottom:4px}
+.mkrow.pos{background:var(--v5);border:1px solid rgba(109,40,217,.2)}
+.mkrow.safe{background:var(--green2);border:1px solid rgba(16,185,129,.16)}
+.mkrow.neu{background:var(--c2);border:1px solid var(--ln2)}
+
+/* ── SCORE BOXES ── */
+.sgr{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px}
+.scbox{background:var(--c2);border:1px solid var(--ln);border-radius:9px;padding:9px 5px;text-align:center}
+.scbox.top{background:var(--v5);border-color:rgba(109,40,217,.28)}
+.scv{font-size:16px;font-weight:800;letter-spacing:-.3px}
+.scp{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--g3);margin-top:2px}
+
+/* ── KELLY ── */
+.kg{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:9px}
+.kb{background:var(--c2);border:1px solid var(--ln);border-radius:9px;padding:11px;text-align:center}
+.kbv{font-size:17px;font-weight:800;color:var(--v3);letter-spacing:-.3px}
+.kbl{font-size:9px;color:var(--g3);font-weight:700;margin-top:3px;text-transform:uppercase;letter-spacing:.06em}
+.vp{padding:9px 12px;border-radius:7px;font-size:12px;font-weight:700}
+.vp.y{background:var(--green2);border:1px solid rgba(16,185,129,.2);color:var(--green)}
+.vp.n{background:var(--red2);border:1px solid rgba(239,68,68,.16);color:var(--red)}
+
+/* ── BARS ── */
+.barrow{margin-bottom:8px}
+.bartop{display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px;font-weight:500}
+.bartrack{height:3px;background:var(--g4);border-radius:2px;overflow:hidden}
+.barfill{height:100%;border-radius:2px}
+
+/* ── STAT BOXES ── */
+.sg4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
+@media(max-width:600px){.sg4{grid-template-columns:repeat(2,1fr)}}
+.sbox{background:var(--c1);border:1px solid var(--ln);border-radius:var(--r2);padding:13px;text-align:center;transition:border-color .12s}
+.sbox:hover{border-color:rgba(255,255,255,.1)}
+.sv{font-size:21px;font-weight:800;letter-spacing:-1px;line-height:1;margin-bottom:3px}
+.sl{font-size:10px;color:var(--g3);font-weight:500}
+
+/* ── TABLE ── */
+.ctbl{width:100%;border-collapse:collapse;font-size:12px}
+.ctbl th{padding:8px 10px;text-align:left;font-size:9px;color:var(--g3);font-weight:700;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--ln);background:var(--bg2)}
+.ctbl td{padding:9px 10px;border-bottom:1px solid var(--ln2)}
+.ctbl tr:last-child td{border-bottom:none}
+.ctbl tr:hover td{background:var(--c2)}
+.bkn{font-size:12px;font-weight:700}
+.oc{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--g2)}
+.oc.best{color:var(--green);font-weight:700}
+.pinb{font-size:9px;color:var(--cyan);background:rgba(6,182,212,.1);border-radius:4px;padding:1px 5px;margin-left:4px;font-weight:700}
+
+/* ── TIPS ── */
+.tipcard{background:var(--c1);border:1px solid var(--ln);border-radius:var(--r2);overflow:hidden;margin-bottom:7px;cursor:pointer;transition:all .14s}
+.tipcard:hover{border-color:rgba(109,40,217,.28);transform:translateY(-1px)}
+.tipcard.top{border-color:rgba(109,40,217,.18)}
+.tiph{padding:8px 13px;background:var(--bg2);display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--ln2)}
+.tipb{padding:12px 13px}
+.tipbet{font-size:15px;font-weight:800;margin-bottom:7px;letter-spacing:-.3px}
+.tipmg{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:7px}
+@media(max-width:600px){.tipmg{grid-template-columns:repeat(2,1fr)}}
+.tipm{background:var(--bg2);border-radius:7px;padding:7px 4px;text-align:center;border:1px solid var(--ln2)}
+.tipml{font-family:'JetBrains Mono',monospace;font-size:7px;color:var(--g3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px}
+.tipmv{font-size:14px;font-weight:800;letter-spacing:-.3px}
+
+/* ── FILTERS ── */
+.fils{display:flex;gap:5px;overflow-x:auto;padding-bottom:3px;margin-bottom:12px;-webkit-overflow-scrolling:touch}
+.fib{padding:5px 12px;border-radius:100px;font-size:11px;font-weight:700;border:1px solid var(--ln);background:transparent;color:var(--g3);white-space:nowrap;flex-shrink:0;transition:all .11s}
+.fib:hover{border-color:var(--v3);color:var(--v3)}
+.fib.on{background:var(--v2);border-color:var(--v2);color:#fff}
+
+/* ── MODAL ── */
+.modal{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.82);display:flex;align-items:center;justify-content:center;padding:14px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.mbox{background:var(--c1);border:1px solid rgba(109,40,217,.22);border-radius:var(--r4);padding:22px;width:100%;max-width:370px;box-shadow:0 20px 60px rgba(0,0,0,.7)}
+.mtit{font-size:16px;font-weight:800;margin-bottom:14px;letter-spacing:-.4px}
+.mbtns{display:flex;gap:8px;margin-top:13px}
+.mbtn{flex:1;padding:10px;border-radius:8px;font-size:13px;font-weight:700;border:1px solid}
+.mbtn.gold{background:var(--gold2);border-color:rgba(245,158,11,.28);color:var(--gold)}
+.mbtn.grey{background:var(--c2);border-color:var(--ln);color:var(--g2)}
+.mbtn.v{background:var(--v4);border-color:rgba(109,40,217,.28);color:var(--v3)}
+
+/* ── MISC ── */
+.empty{text-align:center;padding:46px 20px}
+.ei{font-size:38px;opacity:.1;margin-bottom:12px}
+.et{font-size:15px;font-weight:700;color:var(--g2);margin-bottom:5px;letter-spacing:-.3px}
+.es{font-size:12px;color:var(--g3);line-height:1.75}
+.stb{padding:8px 12px;background:var(--v5);border:1px solid rgba(109,40,217,.14);border-radius:7px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--v3);margin-bottom:8px;display:flex;align-items:center;gap:7px}
+.aimsg{padding:8px 11px;border-radius:7px;font-size:11px;margin-top:6px;line-height:1.6}
+.aiok{background:var(--green2);border:1px solid rgba(16,185,129,.2);color:var(--green)}
+.aier{background:var(--red2);border:1px solid rgba(239,68,68,.2);color:var(--red)}
+.selm{background:var(--v5);border:1px solid rgba(109,40,217,.14);border-radius:9px;padding:9px 12px;margin-bottom:9px;display:flex;align-items:center;gap:9px}
+.disc{padding:10px 12px;background:var(--red2);border:1px solid rgba(239,68,68,.14);border-radius:8px;font-size:10px;color:var(--g2);line-height:1.7}
+.ovl{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:99;backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);display:none}
+.ovl.show{display:block}
+
+/* spinners */
+.spin{width:13px;height:13px;border:2px solid rgba(109,40,217,.15);border-top-color:var(--v2);border-radius:50%;animation:spin .6s linear infinite;display:inline-block;vertical-align:middle;flex-shrink:0}
+.ldr{display:inline-flex;gap:3px;align-items:center;vertical-align:middle}
+.ldr i{width:4px;height:4px;border-radius:50%;background:var(--v2);animation:ldot 1.3s ease-in-out infinite;display:inline-block;font-style:normal}
+.ldr i:nth-child(2){animation-delay:.15s}
+.ldr i:nth-child(3){animation-delay:.3s}
+
+/* ── ANIMATIONS ── */
+@keyframes fu{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+@keyframes ldot{0%,80%,100%{transform:scale(0);opacity:.4}40%{transform:scale(1);opacity:1}}
+@keyframes cffall{0%{transform:translateY(-10px) rotate(0deg);opacity:1}100%{transform:translateY(110vh) rotate(720deg);opacity:0}}
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- SIDEBAR -->
+  <nav id="sidebar">
+    <div class="sb-head">
+      <div class="sb-logo">EDGE<span>.</span></div>
+      <div class="sb-sub">Betting Intelligence</div>
+    </div>
+    <div class="sb-nav" id="sb-nav"></div>
+    <div class="sb-foot">
+      <div class="bkcard" onclick="showModal('bk')">
+        <div class="bklbl">Bankroll</div>
+        <div class="bkval" id="sb-bk">1 000 €</div>
+        <div class="bksub" id="sb-roi">0 victoires · ROI —</div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- MAIN -->
+  <div id="main">
+    <div id="topbar">
+      <div class="ham" onclick="toggleSide()"><span></span><span></span><span></span></div>
+      <div id="page-title">Accueil</div>
+      <div class="tb-r">
+        <div class="livepill" id="livepill" style="display:none">
+          <div class="livedot"></div><span id="livecount">0</span>&nbsp;Live
+        </div>
+        <button class="tbtn" id="cfgbtn" onclick="showModal('cfg')">⚙ Config</button>
+      </div>
+    </div>
+    <div id="page"></div>
+  </div>
+
+  <div class="ovl" id="ovl" onclick="closeSide()"></div>
+</div>
+
+<!-- MODAL BANKROLL -->
+<div class="modal" id="modal-bk" style="display:none" onclick="if(event.target===this)hideModal('bk')">
+  <div class="mbox">
+    <div class="mtit">💰 Bankroll</div>
+    <div class="fw"><div class="fl">Nouvelle valeur (€)</div>
+      <input type="number" id="bk-inp" placeholder="1000" style="font-size:16px;padding:12px"/>
+    </div>
+    <div class="mbtns">
+      <button class="mbtn gold" onclick="saveBkModal()">Valider</button>
+      <button class="mbtn grey" onclick="hideModal('bk')">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CONFIG -->
+<div class="modal" id="modal-cfg" style="display:none" onclick="if(event.target===this)hideModal('cfg')">
+  <div class="mbox" style="max-width:400px">
+    <div class="mtit">⚙ Configuration IA</div>
+    <div style="margin-bottom:12px;padding:12px;background:var(--c2);border:1px solid var(--ln);border-radius:9px">
+      <div style="font-size:12px;font-weight:700;margin-bottom:3px">Clé Anthropic Claude</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--g3);margin-bottom:8px;line-height:1.6">
+        Commence par <span style="color:var(--v3)">sk-ant-…</span> ·
+        <a href="https://console.anthropic.com" target="_blank" rel="noopener" style="color:var(--gold)">console.anthropic.com</a>
+      </div>
+      <input id="cfg-key" type="text" placeholder="sk-ant-api03-..." style="font-family:'JetBrains Mono',monospace;font-size:11px"/>
+    </div>
+    <div style="padding:10px 12px;background:var(--green2);border:1px solid rgba(16,185,129,.2);border-radius:8px;margin-bottom:12px;font-size:11px;color:var(--green);line-height:1.7">
+      ✓ Auto-fill stats · Tips IA · Analyse contextuelle
+    </div>
+    <div class="mbtns">
+      <button class="mbtn v" onclick="saveCfg()">Enregistrer</button>
+      <button class="mbtn grey" onclick="hideModal('cfg')">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/* ════════════════════════════════════════════
+   MOTEUR DIXON-COLES
+════════════════════════════════════════════ */
+function pmf(l, k) {
+  if (l <= 0) return k === 0 ? 1 : 0;
+  if (k < 0) return 0;
+  if (k > 20) {
+    var lp = -l + k * Math.log(l);
+    for (var i = 1; i <= k; i++) lp -= Math.log(i);
+    return Math.max(0, Math.exp(lp));
+  }
+  var v = Math.exp(-l);
+  for (var j = 1; j <= k; j++) v *= l / j;
+  return Math.max(0, v);
+}
+function cdf(l, m) {
+  if (m < 0) return 0;
+  var s = 0, t = Math.exp(-l);
+  for (var k = 0; k <= m; k++) { s += t; if (t < 1e-10) break; t *= l / (k + 1); }
+  return Math.min(1, s);
+}
+function tau(h, a, lH, lA, rho) {
+  var r = Math.max(-0.25, Math.min(-0.05, rho || -0.135));
+  if (h === 0 && a === 0) return Math.max(0.001, 1 - lH * lA * r);
+  if (h === 1 && a === 0) return Math.max(0.001, 1 + lA * r);
+  if (h === 0 && a === 1) return Math.max(0.001, 1 + lH * r);
+  if (h === 1 && a === 1) return Math.max(0.01, 1 - r);
+  return 1;
+}
+var RHO = { "Ligue 1": -0.142, "Premier League": -0.118, "La Liga": -0.135, "Bundesliga": -0.128, "Serie A": -0.151, "Champions League": -0.132 };
+function kellyF(p, o) {
+  if (!o || o <= 1 || !p || p <= 0 || p >= 1) return 0;
+  var b = o - 1, k = (b * p - (1 - p)) / b;
+  if (k <= 0) return 0;
+  var e = p * o - 1, fr = e > 0.10 ? 0.25 : e > 0.05 ? 0.20 : 0.125;
+  return Math.min(k * fr, 0.05);
+}
+function edgeF(p, o) { return (!o || !p || o <= 1 || p <= 0 || p >= 1) ? null : p * o - 1; }
+function arbF(o1, oN, o2) {
+  if (!o1 || !oN || !o2 || o1 <= 1 || oN <= 1 || o2 <= 1) return null;
+  var imp = 1/o1 + 1/oN + 1/o2;
+  return imp >= 1 ? null : +((1/imp - 1) * 100).toFixed(2);
+}
+function fmW(p5, p10) {
+  var r5 = Math.min(15, p5 || 7) / 15, r10 = Math.min(30, p10 || 14) / 30;
+  return Math.max(0.72, Math.min(1.28, 0.72 + 0.56 * (r5 * 0.6 + r10 * 0.4)));
+}
+function calc(m) {
+  try {
+    var lH = (m.hxg || 1.35) * 0.58 + (m.hg || 1.25) * 0.28 + ((m.hsh || 12) / 24) * 0.14;
+    var lA = (m.axg || 1.10) * 0.58 + (m.ag || 1.00) * 0.28 + ((m.ash || 10) / 24) * 0.14;
+    var hD = (m.hxga || 1.1) * 0.6 + (1 - (m.hcs || 30) / 100) * 0.25 + (m.hc || 1.2) * 0.15;
+    var aD = (m.axga || 1.3) * 0.6 + (1 - (m.acs || 22) / 100) * 0.25 + (m.ac || 1.4) * 0.15;
+    lH *= Math.pow(Math.max(0.4, aD) / 1.2, 0.38);
+    lA *= Math.pow(Math.max(0.4, hD) / 1.2, 0.38);
+    lH *= 1.082;
+    lH *= fmW(m.hf, m.hf10); lA *= fmW(m.af, m.af10);
+    if (m.derby) { lH *= 0.91; lA *= 0.91; }
+    if (m.hfat) lH *= 0.935; if (m.afat) lA *= 0.935;
+    lH = Math.max(0.22, Math.min(4.5, lH));
+    lA = Math.max(0.15, Math.min(4.0, lA));
+    var rho = RHO[m.league || m.c] || -0.135;
+    var pH = 0, pN = 0, pA = 0, sc = [], tot = 0;
+    for (var h = 0; h <= 9; h++) {
+      for (var a = 0; a <= 9; a++) {
+        var p = pmf(lH, h) * pmf(lA, a) * tau(h, a, lH, lA, rho);
+        if (p < 0) continue;
+        tot += p; sc.push({ s: h + "-" + a, p: p });
+        if (h > a) pH += p; else if (h === a) pN += p; else pA += p;
+      }
+    }
+    if (tot > 0) { pH /= tot; pN /= tot; pA /= tot; }
+    sc.sort(function(x, y) { return y.p - x.p; });
+    var bP = pH, bR = "1";
+    if (pN > bP) { bP = pN; bR = "N"; }
+    if (pA > bP) { bP = pA; bR = "2"; }
+    var bO = +(bR === "1" ? m.o1 : bR === "N" ? m.on : m.o2) || 0;
+    var edg = edgeF(bP, bO), kel = kellyF(bP, bO);
+    var mg = (m.o1 && m.on && m.o2) ? 1/m.o1 + 1/m.on + 1/m.o2 : null;
+    var safe = mg ? (mg > 1.3 ? "SUSPENDED" : mg > 1.15 ? "WARNING" : "SAFE") : "OK";
+    var conf = Math.min(97, Math.max(8, Math.round(
+      bP * 35 + (edg > 0 ? Math.min(edg * 65, 22) : (edg ? edg * 15 : 0)) +
+      (safe === "SAFE" ? 4 : safe === "WARNING" ? -3 : -8) + (m.derby ? -12 : 0)
+    )));
+    var label = bR === "1" ? (m.h || "Dom") + " favori (" + (pH * 100).toFixed(1) + "%)" :
+                bR === "2" ? (m.a || "Ext") + " favori (" + (pA * 100).toFixed(1) + "%)" :
+                "Equilibre — Nul probable (" + (pN * 100).toFixed(1) + "%)";
+    var btts = (1 - pmf(lH, 0)) * (1 - pmf(lA, 0));
+    var o25 = 1 - cdf(lH + lA, 2), o35 = 1 - cdf(lH + lA, 3), p15 = 1 - cdf(lH + lA, 1);
+    return { lH: lH, lA: lA, pH: pH, pN: pN, pA: pA, sc: sc, bR: bR, bP: bP, bO: bO,
+             edg: edg, kel: kel, conf: conf, label: label, safe: safe,
+             btts: btts, o25: o25, o35: o35, p15: p15, avgGoals: lH + lA };
+  } catch(err) { console.error(err); return null; }
+}
+function buildBets(r, d) {
+  var o1 = +d.o1 || 0, oN = +d.oN || 0, o2 = +d.o2 || 0;
+  var oO25 = +d.oO25 || 0, oO35 = +d.oO35 || 0, oBtts = +d.oBtts || 0;
+  var bets = [
+    { id:"1",  cat:"1X2",  name:"Victoire " + (d.home || "Dom"), p: r.pH, o: o1 },
+    { id:"N",  cat:"1X2",  name:"Match nul",                    p: r.pN, o: oN },
+    { id:"2",  cat:"1X2",  name:"Victoire " + (d.away || "Ext"),p: r.pA, o: o2 },
+    { id:"1X", cat:"DC",   name:"Double Chance 1X",  p: r.pH + r.pN, o: 0 },
+    { id:"X2", cat:"DC",   name:"Double Chance X2",  p: r.pN + r.pA, o: 0 },
+    { id:"O15",cat:"BUTS", name:"Over 1.5",  p: r.p15, o: 0 },
+    { id:"O25",cat:"BUTS", name:"Over 2.5",  p: r.o25, o: oO25 },
+    { id:"O35",cat:"BUTS", name:"Over 3.5",  p: r.o35, o: oO35 },
+    { id:"U25",cat:"BUTS", name:"Under 2.5", p: 1 - r.o25, o: 0 },
+    { id:"BTTS",  cat:"BTTS", name:"BTTS — Les deux marquent", p: r.btts, o: oBtts },
+    { id:"NBTTS", cat:"BTTS", name:"BTTS Non",                 p: 1 - r.btts, o: 0 },
+    { id:"CSH",cat:"CS", name:"Clean Sheet " + (d.home || "Dom"), p: pmf(r.lA, 0), o: 0 },
+    { id:"CSA",cat:"CS", name:"Clean Sheet " + (d.away || "Ext"), p: pmf(r.lH, 0), o: 0 },
+  ];
+  bets.forEach(function(b) {
+    b.edg = b.o > 1.01 ? edgeF(b.p, b.o) : null;
+    b.kel = b.o > 1.01 ? kellyF(b.p, b.o) : 0;
+  });
+  var best = bets.filter(function(b) { return b.o > 1.01 && (b.edg || 0) > 0; })
+                 .sort(function(a, b) { return (b.edg || 0) - (a.edg || 0); })[0]
+           || bets.slice().sort(function(a, b) { return b.p - a.p; })[0];
+  var safe = bets.filter(function(b) { return b.p > 0.65; })
+                 .sort(function(a, b) { return b.p - a.p; })[0];
+  var value = bets.filter(function(b) { return (b.edg || 0) > 0.04; })
+                  .sort(function(a, b) { return (b.edg || 0) - (a.edg || 0); })[0];
+  return { allBets: bets, bestBet: best, safeBet: safe, valueBet: value };
+}
+
+/* ════════════════════════════════════════════
+   MATCH DATA
+════════════════════════════════════════════ */
+var MS_RAW = [
+  {id:1,c:"Ligue 1",f:"🇫🇷",h:"Lyon",a:"Monaco",t:"15:00",o1:2.88,on:3.50,o2:2.32,hot:1,
+   bk:[{n:"Betclic",o1:2.85,on:3.53,o2:2.35},{n:"Pinnacle",o1:2.92,on:3.48,o2:2.28},{n:"Unibet",o1:2.82,on:3.55,o2:2.38},{n:"1xBet",o1:2.95,on:3.45,o2:2.30}],
+   hxg:1.65,hg:1.61,hxga:1.05,axg:1.72,ag:1.97,axga:1.32,hf:9,af:10},
+  {id:2,c:"Ligue 1",f:"🇫🇷",h:"Marseille",a:"Lille",t:"17:15",o1:1.92,on:3.68,o2:3.82,hot:1,
+   bk:[{n:"Betclic",o1:1.86,on:3.73,o2:3.93},{n:"Pinnacle",o1:1.92,on:3.68,o2:3.82},{n:"Unibet",o1:1.88,on:3.70,o2:3.88}],
+   hxg:1.78,hg:1.85,hxga:1.02,axg:1.68,ag:1.68,axga:1.08,hf:11,af:10},
+  {id:3,c:"Ligue 1",f:"🇫🇷",h:"PSG",a:"Nice",t:"20:45",o1:1.45,on:4.70,o2:7.20,hot:1,
+   bk:[{n:"Betclic",o1:1.42,on:4.80,o2:7.50},{n:"Pinnacle",o1:1.45,on:4.70,o2:7.20},{n:"Winamax",o1:1.44,on:4.72,o2:7.40}],
+   hxg:2.21,hg:2.21,hxga:0.72,axg:1.32,ag:1.32,axga:1.42,hf:14,af:8},
+  {id:4,c:"La Liga",f:"🇪🇸",h:"Barcelone",a:"Rayo Vallecano",t:"14:00",o1:1.41,on:4.60,o2:8.00,hot:1,
+   bk:[{n:"Betclic",o1:1.38,on:4.70,o2:8.20},{n:"Pinnacle",o1:1.41,on:4.60,o2:8.00},{n:"1xBet",o1:1.43,on:4.55,o2:7.80}],
+   hxg:2.52,hg:2.72,hxga:0.72,axg:1.05,ag:1.12,axga:1.48,hf:13,af:5},
+  {id:5,c:"La Liga",f:"🇪🇸",h:"Real Madrid",a:"Atletico",t:"21:00",o1:2.02,on:3.48,o2:3.72,hot:1,derby:true,
+   bk:[{n:"Betclic",o1:1.95,on:3.55,o2:3.85},{n:"Pinnacle",o1:2.02,on:3.48,o2:3.72},{n:"Unibet",o1:1.98,on:3.52,o2:3.80},{n:"William Hill",o1:1.96,on:3.50,o2:3.75}],
+   hxg:2.38,hg:2.42,hxga:0.82,axg:1.62,ag:1.62,axga:0.85,hf:12,af:11},
+  {id:6,c:"Premier League",f:"🏴󠁧󠁢󠁥󠁮󠁧󠁿",h:"Newcastle",a:"Sunderland",t:"13:00",o1:1.76,on:3.78,o2:4.42,hot:1,derby:true,
+   bk:[{n:"Betclic",o1:1.72,on:3.85,o2:4.55},{n:"Pinnacle",o1:1.76,on:3.78,o2:4.42},{n:"William Hill",o1:1.73,on:3.80,o2:4.50}],
+   hxg:1.82,hg:1.88,hxga:0.88,axg:1.28,ag:1.28,axga:1.45,hf:11,af:6},
+  {id:7,c:"Premier League",f:"🏴󠁧󠁢󠁥󠁮󠁧󠁿",h:"Man City",a:"Crystal Palace",t:"15:00",o1:1.58,on:4.12,o2:5.80,hot:1,
+   bk:[{n:"Betclic",o1:1.55,on:4.20,o2:6.00},{n:"Pinnacle",o1:1.58,on:4.12,o2:5.80},{n:"William Hill",o1:1.57,on:4.14,o2:5.85}],
+   hxg:2.18,hg:2.35,hxga:0.85,axg:1.12,ag:1.05,axga:1.42,hf:13,af:5},
+  {id:8,c:"Serie A",f:"🇮🇹",h:"Napoli",a:"Lecce",t:"15:00",o1:1.51,on:4.20,o2:7.00,
+   bk:[{n:"Betclic",o1:1.48,on:4.30,o2:7.20},{n:"Pinnacle",o1:1.51,on:4.20,o2:7.00}],
+   hxg:2.02,hg:2.15,hxga:0.82,axg:0.88,ag:0.95,axga:1.78,hf:12,af:4},
+  {id:9,c:"Serie A",f:"🇮🇹",h:"Inter Milan",a:"Udinese",t:"20:45",o1:1.45,on:4.50,o2:7.60,hot:1,
+   bk:[{n:"Betclic",o1:1.42,on:4.60,o2:7.80},{n:"Pinnacle",o1:1.45,on:4.50,o2:7.60},{n:"1xBet",o1:1.47,on:4.45,o2:7.40}],
+   hxg:2.15,hg:2.42,hxga:0.72,axg:0.95,ag:0.98,axga:1.68,hf:13,af:4},
+  {id:10,c:"Bundesliga",f:"🇩🇪",h:"Dortmund",a:"Mainz",t:"17:30",o1:1.68,on:3.82,o2:5.05,
+   bk:[{n:"Betclic",o1:1.65,on:3.90,o2:5.20},{n:"Pinnacle",o1:1.68,on:3.82,o2:5.05}],
+   hxg:2.12,hg:2.18,hxga:1.05,axg:1.32,ag:1.32,axga:1.42,hf:11,af:7},
+  {id:11,c:"Bundesliga",f:"🇩🇪",h:"Leverkusen",a:"Stuttgart",t:"19:30",o1:1.76,on:3.72,o2:4.65,hot:1,
+   bk:[{n:"Betclic",o1:1.72,on:3.80,o2:4.80},{n:"Pinnacle",o1:1.76,on:3.72,o2:4.65}],
+   hxg:2.22,hg:2.28,hxga:0.88,axg:1.58,ag:1.62,axga:1.12,hf:12,af:10},
+  {id:12,c:"Champions League",f:"🏆",h:"Real Madrid",a:"Arsenal",t:"21:00",hot:1,o1:2.15,on:3.38,o2:3.48,
+   bk:[{n:"Betclic",o1:2.10,on:3.45,o2:3.60},{n:"Pinnacle",o1:2.15,on:3.38,o2:3.48},{n:"William Hill",o1:2.11,on:3.40,o2:3.52},{n:"1xBet",o1:2.18,on:3.35,o2:3.45}],
+   hxg:2.38,hg:2.42,hxga:0.82,axg:2.12,ag:2.05,axga:0.78,hf:12,af:12},
+  {id:13,c:"Liga Portugal",f:"🇵🇹",h:"Benfica",a:"Sporting CP",t:"18:00",hot:1,derby:true,o1:2.30,on:3.22,o2:3.05,
+   bk:[{n:"Betclic",o1:2.25,on:3.28,o2:3.15},{n:"Pinnacle",o1:2.30,on:3.22,o2:3.05}],
+   hxg:2.08,hg:2.12,hxga:0.85,axg:2.12,ag:2.05,axga:0.78,hf:12,af:13},
+];
+function getMin() { var n = new Date(); return n.getHours() * 60 + n.getMinutes(); }
+function matchMin(t) { var p = t.split(":"); return +p[0] * 60 + +p[1]; }
+function isFinished(t) { return getMin() > matchMin(t) + 105; }
+function isLive(t) { var m = matchMin(t), n = getMin(); return n >= m && n <= m + 105; }
+function isUpcoming(t) { return getMin() < matchMin(t); }
+var MS = MS_RAW.map(function(m) { return Object.assign({}, m, { e: calc(m), arb: arbF(m.o1, m.on, m.o2) }); });
+
+/* ════════════════════════════════════════════
+   STATE
+════════════════════════════════════════════ */
+var S = {
+  tab: "home",
+  bk: +(localStorage.getItem("edge_bk") || 1000),
+  hist: JSON.parse(localStorage.getItem("edge_hist") || "[]"),
+  aiKey: localStorage.getItem("edge_ai") || "",
+  res: null, tips: [], tLoad: false, tFil: "all",
+  selM: null, compM: null, fil: "all", openL: {},
+  aiLoad: false, aiStep: "", aiMsg: { t: "", m: "" }, nar: "",
+  bkC: { tot: "", prob: "", odd: "", frac: "0.25" }, bkR: null,
+  closingOdd: "", mTab: "upcoming",
+  d: {
+    home: "", away: "", hXG: 1.5, hXGA: 1.1, hG: 1.4, hF: 7, hF10: 14,
+    aXG: 1.2, aXGA: 1.3, aG: 1.1, aF: 7, aF10: 14,
+    derby: false, hFat: false, aFat: false,
+    o1: "", oN: "", o2: "", oO25: "", oO35: "", oBtts: "",
+    bk: "", aiH: "", aiA: "", aiC: "Ligue 1", league: "Ligue 1"
+  }
+};
+function saveBk(v) { S.bk = v; localStorage.setItem("edge_bk", JSON.stringify(v)); updSide(); }
+function saveHist(h) { S.hist = h; localStorage.setItem("edge_hist", JSON.stringify(h)); updSide(); }
+function saveKey(k) { S.aiKey = k; localStorage.setItem("edge_ai", k); updTop(); }
+function sv(k, v) { S.d[k] = v; }
+function goTab(t) { S.tab = t; closeSide(); render(); }
+
+/* helpers */
+function gWins() { return S.hist.filter(function(h) { return h.result === "WIN"; }).length; }
+function gRoi() {
+  if (!S.hist.length) return null;
+  var p = S.hist.reduce(function(a, h) { return a + (h.profit || 0); }, 0);
+  var s = Math.max(1, S.hist.reduce(function(a, h) { return a + (h.stake || 20); }, 0));
+  return +(p / s * 100).toFixed(1);
+}
+function gArb() { return MS.filter(function(m) { return m.arb !== null; }).length; }
+function gVal() { return MS.filter(function(m) { return (m.e && m.e.edg || 0) > 0.06; }).length; }
+function gLive() { return MS.filter(function(m) { return isLive(m.t); }).length; }
+function toM(v) { return isNaN(v) ? 0 : Math.round(v * 100) / 100; }
+function pct(v, d) { return (v * 100).toFixed(d !== undefined ? d : 1) + "%"; }
+function f2(v) { return (v !== null && v !== undefined && !isNaN(v)) ? v.toFixed(2) : "—"; }
+function esc(s) {
+  return String(s || "")
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+function tag(cls, txt) { return '<span class="tag ' + cls + '">' + txt + '</span>'; }
+function ldrHtml() { return '<span class="ldr"><i></i><i></i><i></i></span>'; }
+function spinHtml() { return '<span class="spin"></span>'; }
+function barHtml(p, c) {
+  return '<div class="bartrack"><div class="barfill" style="width:' +
+    Math.max(0, Math.min(100, p)) + '%;background:' + c + '"></div></div>';
+}
+function fsecHtml(n, t, ch) {
+  return '<div class="fsec"><div class="fsh"><span class="fsn">' + n +
+    '</span><span class="fst">' + t + '</span></div>' + ch + '</div>';
+}
+
+/* ════════════════════════════════════════════
+   NAVIGATION
+════════════════════════════════════════════ */
+var NAV = [
+  { id: "home",     l: "Accueil",     icon: "🏠", sec: "MENU"    },
+  { id: "scanner",  l: "Scanner",     icon: "⚡", sec: "ANALYSE" },
+  { id: "matchs",   l: "Matchs",      icon: "⚽", sec: "ANALYSE" },
+  { id: "tips",     l: "Tips IA",     icon: "🎯", sec: "ANALYSE" },
+  { id: "comp",     l: "Comparateur", icon: "📊", sec: "OUTILS"  },
+  { id: "analyse",  l: "Analyser",    icon: "🔬", sec: "OUTILS"  },
+  { id: "result",   l: "Resultat",    icon: "📈", sec: "OUTILS"  },
+  { id: "bankroll", l: "Bankroll",    icon: "💰", sec: "GESTION" },
+  { id: "stats",    l: "Mes Stats",   icon: "📊", sec: "GESTION" },
+];
+var SECS = ["MENU", "ANALYSE", "OUTILS", "GESTION"];
+
+function buildSide() {
+  var h = "";
+  SECS.forEach(function(sec) {
+    h += '<div class="nav-sec">' + sec + '</div>';
+    NAV.filter(function(n) { return n.sec === sec; }).forEach(function(n) {
+      var badges = "";
+      if (n.id === "matchs") badges += '<span class="nbadge">' + MS.length + '</span>';
+      if (n.id === "tips" && gLive() > 0) badges += '<span class="nbadge live">Live</span>';
+      if (n.id === "result" && S.res) badges += '<span class="nbadge ok">✓</span>';
+      h += '<button class="nb' + (S.tab === n.id ? " on" : "") + '" onclick="goTab(\'' + n.id + '\')">' +
+           '<span class="ni">' + n.icon + '</span><span>' + n.l + '</span>' + badges + '</button>';
+    });
+  });
+  document.getElementById("sb-nav").innerHTML = h;
+}
+function updSide() {
+  var roi = gRoi();
+  document.getElementById("sb-bk").textContent = S.bk.toLocaleString("fr-FR") + " €";
+  document.getElementById("sb-roi").textContent = gWins() + " victoires · ROI " +
+    (roi !== null ? (roi > 0 ? "+" : "") + roi + "%" : "—");
+}
+function updTop() {
+  var btn = document.getElementById("cfgbtn");
+  if (S.aiKey) { btn.textContent = "⚙ IA OK"; btn.classList.add("ok"); }
+  else { btn.textContent = "⚙ Config"; btn.classList.remove("ok"); }
+  var lp = document.getElementById("livepill"), lN = gLive();
+  lp.style.display = lN > 0 ? "flex" : "none";
+  document.getElementById("livecount").textContent = lN;
+  document.getElementById("page-title").textContent = (NAV.find(function(n) { return n.id === S.tab; }) || { l: "EDGE" }).l;
+}
+function toggleSide() {
+  document.getElementById("sidebar").classList.toggle("open");
+  document.getElementById("ovl").classList.toggle("show");
+}
+function closeSide() {
+  document.getElementById("sidebar").classList.remove("open");
+  document.getElementById("ovl").classList.remove("show");
+}
+
+/* ════════════════════════════════════════════
+   MODALS
+════════════════════════════════════════════ */
+function showModal(id) {
+  if (id === "bk") { document.getElementById("bk-inp").value = S.bk; }
+  if (id === "cfg") { document.getElementById("cfg-key").value = S.aiKey; }
+  document.getElementById("modal-" + id).style.display = "flex";
+}
+function hideModal(id) { document.getElementById("modal-" + id).style.display = "none"; }
+function saveBkModal() {
+  var v = +document.getElementById("bk-inp").value;
+  if (v > 0) { saveBk(v); hideModal("bk"); }
+}
+function saveCfg() {
+  saveKey((document.getElementById("cfg-key").value || "").trim());
+  hideModal("cfg");
+}
+
+/* ════════════════════════════════════════════
+   PICK MATCH
+════════════════════════════════════════════ */
+function pickMatch(id) {
+  var m = MS.find(function(x) { return x.id === id; });
+  if (!m) return;
+  S.selM = m; S.compM = m;
+  S.d = Object.assign({}, S.d, {
+    home: m.h, away: m.a, league: m.c, aiH: m.h, aiA: m.a, aiC: m.c,
+    hXG: m.hxg || S.d.hXG, hXGA: m.hxga || S.d.hXGA, hG: m.hg || S.d.hG, hF: m.hf || S.d.hF,
+    aXG: m.axg || S.d.aXG, aXGA: m.axga || S.d.aXGA, aG: m.ag || S.d.aG, aF: m.af || S.d.aF,
+    o1: m.o1 || "", oN: m.on || "", o2: m.o2 || ""
+  });
+  goTab("analyse");
+}
+
+/* ════════════════════════════════════════════
+   AI CALLS
+════════════════════════════════════════════ */
+async function callAI(prompt, max) {
+  max = max || 2000;
+  if (!S.aiKey) throw new Error("Cle manquante");
+  var resp = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": S.aiKey,
+      "anthropic-version": "2023-06-01",
+      "anthropic-dangerous-direct-browser-access": "true"
+    },
+    body: JSON.stringify({ model: "claude-haiku-4-5-20251001", max_tokens: max, messages: [{ role: "user", content: prompt }] })
+  });
+  var data = await resp.json();
+  if (!data.content) throw new Error((data.error && data.error.message) || "Erreur API");
+  return data.content.map(function(b) { return b.type === "text" ? b.text : ""; }).join("");
+}
+function parseJSON(raw, arr) {
+  var c = raw.replace(/```json|```/g, "").trim();
+  var ch = arr ? "[" : "{", ct = arr ? "]" : "}";
+  var si = c.indexOf(ch), ei = c.lastIndexOf(ct);
+  if (si !== -1 && ei !== -1) c = c.substring(si, ei + 1);
+  return JSON.parse(c);
+}
+
+async function autoFill() {
+  var h = (S.d.aiH || "").trim(), a = (S.d.aiA || "").trim();
+  if (!h || !a) { S.aiMsg = { t: "err", m: "Remplis les deux equipes." }; renderPage(); return; }
+  if (!S.aiKey) { S.aiMsg = { t: "err", m: "Configure ta cle Anthropic (Config)" }; renderPage(); return; }
+  S.aiLoad = true; S.aiMsg = { t: "", m: "" }; S.nar = "";
+  S.aiStep = "Chargement stats pour " + h + " vs " + a + "...";
+  renderPage();
+  try {
+    var raw = await callAI(
+      "Match: " + h + " vs " + a + " (" + (S.d.aiC || "football") + ", saison 2025-26).\n" +
+      "Reponds avec uniquement ce JSON (pas de texte avant ou apres):\n" +
+      '{"o1":2.10,"oN":3.40,"o2":3.20,"bk":[{"n":"Betclic","o1":2.10,"oN":3.35,"o2":3.20},' +
+      '{"n":"Pinnacle","o1":2.12,"oN":3.44,"o2":3.18}],' +
+      '"hXG":1.72,"aXG":1.18,"hG":1.65,"aG":1.22,"hXGA":0.98,"aXGA":1.41,"hF":10,"aF":7,' +
+      '"narrative":"Analyse contextuelle en 2 phrases"}', 2000
+    );
+    var p = parseJSON(raw, false);
+    S.d = Object.assign({}, S.d, {
+      home: h, away: a,
+      hXG: p.hXG || S.d.hXG, hXGA: p.hXGA || S.d.hXGA, hG: p.hG || S.d.hG,
+      aXG: p.aXG || S.d.aXG, aXGA: p.aXGA || S.d.aXGA, aG: p.aG || S.d.aG,
+      hF: p.hF || S.d.hF, aF: p.aF || S.d.aF,
+      o1: p.o1 || S.d.o1, oN: p.oN || S.d.oN, o2: p.o2 || S.d.o2
+    });
+    if (p.narrative) S.nar = p.narrative;
+    S.aiMsg = { t: "ok", m: "✓ Stats chargees — Lance l'analyse" };
+  } catch(err) {
+    S.aiMsg = { t: "err", m: "Erreur: " + (err.message || "Verifiez votre cle") };
+  }
+  S.aiLoad = false; S.aiStep = "";
+  renderPage();
+}
+
+async function loadTips() {
+  if (!S.aiKey) { S.aiMsg = { t: "err", m: "Configure ta cle Anthropic" }; return; }
+  S.tLoad = true; renderPage();
+  try {
+    var raw = await callAI(
+      "Genere 8 tips football value bets du 29 mars 2026. Reponds uniquement avec ce JSON array:\n" +
+      '[{"h":"PSG","a":"Monaco","c":"Ligue 1","t":"20:45","bet":"Victoire PSG","odd":1.72,' +
+      '"prob":0.62,"edge":0.065,"kelly":0.018,"conf":"high","type":"1x2","val":true,"top":true,' +
+      '"reason":"PSG domine a domicile, xG 2.1 vs 0.9","risk":null}]\n' +
+      "Genere 8 tips varies (over, btts, 1x2) avec des donnees realistes.", 2500
+    );
+    S.tips = parseJSON(raw, true);
+  } catch(err) {
+    S.tips = [];
+  }
+  S.tLoad = false; renderPage();
+}
+
+/* ════════════════════════════════════════════
+   ANALYSE / LOG
+════════════════════════════════════════════ */
+function doAnalyse() {
+  var d = S.d;
+  var m = {
+    hxg: +d.hXG, axg: +d.aXG, hg: +d.hG, ag: +d.aG,
+    hxga: +d.hXGA, axga: +d.aXGA, hf: +d.hF, af: +d.aF,
+    hf10: +d.hF10, af10: +d.aF10,
+    o1: +d.o1, on: +d.oN, o2: +d.o2,
+    derby: d.derby, hfat: d.hFat, afat: d.aFat,
+    c: d.league || d.aiC || "Ligue 1", bk: +d.bk || S.bk
+  };
+  var r = calc(m);
+  if (!r) { S.aiMsg = { t: "err", m: "Erreur de calcul — verifiez les donnees." }; renderPage(); return; }
+  var extra = buildBets(r, d);
+  S.res = Object.assign({}, r, extra, { d: d });
+  goTab("result");
+}
+
+function logBet(win) {
+  if (!S.res) return;
+  var stake = toM(Math.max(S.bk * (S.res.kel || 0.02), 1));
+  var profit = win ? toM(stake * ((S.res.bO || 2) - 1)) : toM(-stake);
+  var newBk = toM(S.bk + profit);
+  if (win) launchConfetti();
+  var co = +S.closingOdd || 0;
+  var clv = co > 0 ? toM((S.res.bO || 2) / co - 1) : 0;
+  var entry = {
+    id: Date.now(),
+    date: new Date().toLocaleDateString("fr-FR"),
+    match: (S.res.d.home || "?") + " vs " + (S.res.d.away || "?"),
+    stake: stake, oddsT: S.res.bO || 2, clv: clv,
+    result: win ? "WIN" : "LOSS", profit: profit, bk: newBk
+  };
+  saveHist([entry].concat(S.hist).slice(0, 100));
+  saveBk(newBk);
+  S.closingOdd = "";
+  renderPage();
+}
+
+function launchConfetti() {
+  var colors = ["#7c3aed", "#a78bfa", "#ec4899", "#06d6a0", "#ffd60a"];
+  var el = document.createElement("div");
+  el.style.cssText = "position:fixed;inset:0;pointer-events:none;z-index:9999;overflow:hidden";
+  document.body.appendChild(el);
+  for (var i = 0; i < 55; i++) {
+    var p = document.createElement("div");
+    var sz = Math.random() * 7 + 3;
+    var c = colors[Math.floor(Math.random() * colors.length)];
+    p.style.cssText = "position:absolute;top:-20px;left:" + (Math.random() * 100) + "%;width:" + sz +
+      "px;height:" + sz + "px;background:" + c + ";border-radius:" + (Math.random() > .5 ? "50%" : "2px") +
+      ";animation:cffall " + (Math.random() * 2 + 1.5) + "s " + (Math.random() * 0.8) + "s ease-in forwards";
+    el.appendChild(p);
+  }
+  setTimeout(function() { el.remove(); }, 3500);
+}
+
+function calcBkR() {
+  var b = S.bkC, tot = +b.tot, prob = +b.prob, odd = +b.odd, frac = +b.frac || 0.25;
+  if (!tot || !prob || !odd) { S.bkR = null; return; }
+  var p = prob / 100, bo = odd - 1, q = 1 - p;
+  var kR = Math.max(0, (bo * p - q) / bo), kA = kR * frac;
+  S.bkR = { kR: kR, kA: kA, m: kA * tot, g: odd * kA * tot - kA * tot, ev: p * odd - 1 };
+}
+
+/* ════════════════════════════════════════════
+   PAGE RENDERERS
+════════════════════════════════════════════ */
+function pageHome() {
+  var topSig = MS.filter(function(m) { return (m.e && m.e.edg || 0) > 0.05 && (m.e && m.e.conf || 0) >= 65; })
+               .sort(function(a, b) { return (b.e && b.e.conf || 0) - (a.e && a.e.conf || 0); }).slice(0, 4);
+  var upcoming = MS.filter(function(m) { return isUpcoming(m.t); }).length;
+  var h = '<div style="position:relative;overflow:hidden;border-radius:17px;margin-bottom:12px;' +
+    'background:linear-gradient(155deg,var(--c2) 0%,var(--c1) 60%);border:1px solid rgba(109,40,217,.2);padding:24px 17px 20px">' +
+    '<div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--v2),var(--pink),transparent)"></div>' +
+    '<div style="font-family:\'JetBrains Mono\',monospace;font-size:8px;color:var(--g3);letter-spacing:.15em;text-transform:uppercase;margin-bottom:6px">EDGE · Betting Intelligence V4</div>' +
+    '<div style="font-size:clamp(28px,8vw,38px);font-weight:800;letter-spacing:-2px;color:#fff;line-height:.95;margin-bottom:8px">' +
+    'ANALYSE<br><span style="color:var(--v3)">DIXON-COLES</span></div>' +
+    '<div style="font-size:12px;color:var(--w3);margin-bottom:13px;line-height:1.65;max-width:270px">' +
+    'Moteur Poisson · Kelly 1/4 · Value bets · ' + MS.length + ' matchs · 10 bookmakers</div>' +
+    '<div style="display:flex;gap:7px;margin-bottom:13px">' +
+    '<button onclick="goTab(\'scanner\')" style="flex:1;height:41px;background:var(--v2);border:none;border-radius:8px;font-size:13px;font-weight:700;color:#fff;cursor:pointer">⚡ Scanner</button>' +
+    '<button onclick="goTab(\'matchs\')" style="height:41px;padding:0 13px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);border-radius:8px;font-size:12px;font-weight:600;color:#fff;cursor:pointer">⚽ Matchs</button>' +
+    '</div><div style="display:flex;gap:5px;flex-wrap:wrap">';
+  [{ v: upcoming, l: "A venir", c: "var(--v3)" }, { v: gLive(), l: "Live", c: "var(--pink)" },
+   { v: gVal(), l: "Value", c: "var(--gold)" }, { v: gArb(), l: "Arb", c: "var(--green)" }].forEach(function(s) {
+    h += '<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.05);border-radius:7px;padding:7px 10px;text-align:center;flex:1 1 58px">' +
+      '<div style="font-family:\'JetBrains Mono\',monospace;font-size:17px;font-weight:800;color:' + s.c + ';line-height:1">' + s.v + '</div>' +
+      '<div style="font-family:\'JetBrains Mono\',monospace;font-size:8px;color:var(--w4);text-transform:uppercase;letter-spacing:.1em;margin-top:2px">' + s.l + '</div></div>';
+  });
+  h += '</div></div>';
+  if (topSig.length) {
+    h += '<div style="font-family:\'JetBrains Mono\',monospace;font-size:8px;color:var(--g3);text-transform:uppercase;letter-spacing:.12em;margin-bottom:7px">⚡ Top signaux</div>';
+    topSig.forEach(function(m) {
+      var e = m.e;
+      h += '<div onclick="pickMatch(' + m.id + ')" style="background:var(--c1);border:1px solid rgba(109,40,217,.16);border-radius:10px;padding:10px 12px;margin-bottom:5px;cursor:pointer;display:flex;justify-content:space-between;align-items:center">' +
+        '<div><div style="font-family:\'JetBrains Mono\',monospace;font-size:8px;color:var(--g3);margin-bottom:2px;text-transform:uppercase">' + m.f + ' ' + m.c + ' · ' + m.t + '</div>' +
+        '<div style="font-size:13px;font-weight:700;letter-spacing:-.2px">' + m.h + ' <span style="color:var(--g3);font-weight:300">vs</span> ' + m.a + '</div>' +
+        '<div style="font-family:\'JetBrains Mono\',monospace;font-size:10px;color:var(--v3);margin-top:2px">' + (e ? e.label : "") + '</div></div>' +
+        '<div style="text-align:right;flex-shrink:0">' +
+        '<div style="font-family:\'JetBrains Mono\',monospace;font-size:18px;font-weight:800;color:var(--gold)">' + (e ? e.conf : 0) + '%</div>' +
+        '<div style="font-family:\'JetBrains Mono\',monospace;font-size:8px;color:var(--g3)">confiance</div>' +
+        (e && e.edg > 0 ? '<div style="font-family:\'JetBrains Mono\',monospace;font-size:9px;color:var(--green)">+' + (e.edg * 100).toFixed(1) + '% edge</div>' : '') +
+        '</div></div>';
+    });
+  }
+  h += '<div style="margin-top:8px;padding:10px 12px;background:var(--v5);border:1px solid rgba(109,40,217,.14);border-radius:9px;font-family:\'JetBrains Mono\',monospace;font-size:9px;color:var(--v3);line-height:1.7">' +
+    'Configure ta cle Anthropic (Config) pour activer l\'analyse IA, les tips et le chargement auto des stats.</div>';
+  return h;
+}
+
+function pageScanner() {
+  var h = '<div style="background:linear-gradient(155deg,var(--c2),var(--c1));border:1px solid var(--ln);border-radius:var(--r4);padding:22px 18px;margin-bottom:13px;position:relative;overflow:hidden">' +
+    '<div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--v2),var(--pink),transparent)"></div>' +
+    '<div style="font-family:\'JetBrains Mono\',monospace;font-size:8px;color:var(--g3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px">EDGE SCANNER V4</div>' +
+    '<div style="font-size:26px;font-weight:800;letter-spacing:-1.5px;margin-bottom:4px">Value <span style="color:var(--v3)">Detector</span></div>' +
+    '<div style="font-family:\'JetBrains Mono\',monospace;font-size:10px;color:var(--g3);margin-bottom:13px">Dixon-Coles · Kelly 1/4 · ' + MS.length + ' matchs · 10 bookmakers</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:13px">';
+  [{ v: MS.length, l: "Matchs" }, { v: gVal(), l: "Value", c: "var(--gold)" }, { v: gArb(), l: "Arb", c: "var(--green)" }, { v: "10", l: "Bkmkrs" }].forEach(function(s) {
+    h += '<div style="background:var(--c1);border:1px solid var(--ln);border-radius:8px;padding:10px;text-align:center">' +
+      '<div style="font-size:19px;font-weight:800;color:' + (s.c || "var(--w)") + ';letter-spacing:-1px;margin-bottom:2px">' + s.v + '</div>' +
+      '<div style="font-family:\'JetBrains Mono\',monospace;font-size:8px;color:var(--g3)">' + s.l + '</div></div>';
+  });
+  h += '</div><button class="cbtn" id="scanbtn" onclick="runScan()">⚡ Lancer le Scanner</button></div>';
+  var aN = gArb();
+  if (aN > 0) {
+    h += '<div class="carde" style="margin-bottom:12px"><div class="clbl" style="color:var(--green)">♾ Arbitrages (' + aN + ')</div>';
+    MS.filter(function(m) { return m.arb !== null; }).forEach(function(m, i) {
+      h += '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;' + (i > 0 ? "border-top:1px solid rgba(16,185,129,.1)" : "") + '">' +
+        '<div><div style="font-size:12px;font-weight:700">' + m.h + ' vs ' + m.a + '</div>' +
+        '<div style="font-family:\'JetBrains Mono\',monospace;font-size:9px;color:var(--g3);margin-top:2px">' + m.c + ' · ' + m.t + '</div></div>' +
+        '<div style="display:flex;gap:6px;align-items:center">' + tag("te", "+" + m.arb + "% garanti") +
+        '<button class="abtn" onclick="pickMatch(' + m.id + ')">Analyser</button></div></div>';
+    });
+    h += '</div>';
+  }
+  h += '<div id="scan-res"><div class="empty"><div class="ei">⚡</div><div class="et">Pret a analyser</div>' +
+    '<div class="es">' + MS.length + ' matchs indexes avec cotes reelles</div></div></div>';
+  return h;
+}
+
+function runScan() {
+  var btn = document.getElementById("scanbtn");
+  if (!btn) return;
+  btn.disabled = true;
+  btn.innerHTML = spinHtml() + " Scan en cours...";
+  setTimeout(function() {
+    var top = MS.filter(function(m) { return (m.e && m.e.edg || 0) > 0.025 || m.arb; })
+               .sort(function(a, b) { return (b.e && b.e.edg || 0) - (a.e && a.e.edg || 0); }).slice(0, 12);
+    var h = "";
+    if (!top.length) {
+      h = '<div class="empty"><div class="ei">😶</div><div class="et">Aucun signal</div></div>';
+    } else {
+      top.forEach(function(m, i) {
+        var e = m.e, cc = (e && e.conf >= 75) ? "var(--gold)" : (e && e.conf >= 60) ? "var(--w2)" : "var(--g2)";
+        h += '<div class="sig' + (e && e.conf >= 72 ? " top" : "") + '" style="animation:fu .2s ' + (i * 0.04) + 's ease both" onclick="pickMatch(' + m.id + ')">' +
+          '<div class="sig-bar" style="background:' + (m.arb ? "var(--green)" : (e && e.conf >= 72 ? "var(--v2)" : "transparent")) + '"></div>' +
+          '<div class="sig-body">' +
+          '<div class="sig-meta"><span>' + m.f + '</span><span>' + m.c + '</span><span>·</span><span>' + m.t + '</span>' +
+          (m.arb ? tag("te", "+" + m.arb + "% ARB") : "") +
+          (e && e.conf >= 75 ? tag("tg", "Top Signal") : "") +
+          (e && e.edg > 0.10 ? tag("te", "Strong Value") : "") + '</div>' +
+          '<div class="sig-teams">' + m.h + ' vs ' + m.a + '</div>' +
+          '<div class="sig-bet" style="color:' + cc + '">' + (e ? e.label : "") + '</div>' +
+          '<div class="sig-grid">' +
+          [{ l: "Confiance", v: (e ? e.conf : 0) + "%", c: cc },
+           { l: "Proba",    v: pct(e ? e.bP : 0), c: "var(--green)" },
+           { l: "Edge",     v: "+" + ((e && e.edg ? e.edg * 100 : 0).toFixed(1)) + "%", c: "var(--w)" },
+           { l: "Kelly",    v: ((e && e.kel ? e.kel * 100 : 0).toFixed(1)) + "%", c: "var(--gold)" }
+          ].map(function(x) {
+            return '<div class="sig-box"><div class="sig-lbl">' + x.l + '</div><div class="sig-val" style="color:' + x.c + '">' + x.v + '</div></div>';
+          }).join("") + '</div>' +
+          '<div class="progbar"><div class="progfill" style="width:' + (e ? e.conf : 0) + '%"></div></div>' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">' +
+          (e && e.bO > 0 ? '<span style="font-family:\'JetBrains Mono\',monospace;font-size:12px;font-weight:700;color:var(--gold)">@ ' + e.bO.toFixed(2) + '</span>' : '<span></span>') +
+          '<span style="font-size:10px;color:var(--g3)">Analyser →</span>' +
+          '</div></div></div>';
+      });
+    }
+    var r = document.getElementById("scan-res");
+    if (r) r.innerHTML = h;
+    if (btn) { btn.disabled = false; btn.innerHTML = "↻ Relancer"; }
+  }, 500);
+}
+
+function pageMatchs() {
+  var mTab = S.mTab || "upcoming";
+  var upcoming = MS.filter(function(m) { return isUpcoming(m.t); });
+  var live = MS.filter(function(m) { return isLive(m.t); });
+  var finished = MS.filter(function(m) { return isFinished(m.t); });
+  var displayed = mTab === "upcoming" ? upcoming : mTab === "live" ? live : finished;
+  var fil = S.fil;
+  var leaguesAll = [];
+  MS.forEach(function(m) { if (leaguesAll.indexOf(m.c) < 0) leaguesAll.push(m.c); });
+  var filtL = leaguesAll.filter(function(c) {
+    if (fil === "all") return true;
+    var m = MS.find(function(x) { return x.c === c; }), f = m ? m.f : "";
+    if (fil === "fr") return f === "🇫🇷";
+    if (fil === "eu") return ["🏴󠁧󠁢󠁥󠁮󠁧󠁿","🇪🇸","🇮🇹","🇩🇪","🇵🇹"].indexOf(f) >= 0;
+    if (fil === "cup") return f === "🏆";
+    if (fil === "val") return MS.filter(function(x) { return x.c === c; }).some(function(x) { return (x.e && x.e.edg || 0) > 0.06; });
+    if (fil === "arb") return MS.filter(function(x) { return x.c === c; }).some(function(x) { return x.arb !== null; });
+    return true;
+  });
+  var h = '<div style="margin-bottom:12px">' +
+    '<div style="font-family:\'JetBrains Mono\',monospace;font-size:8px;color:var(--g3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:2px">29 MARS 2026 · ' + MS.length + ' MATCHS · 10 BOOKMAKERS</div>' +
+    '<div style="font-size:21px;font-weight:800;letter-spacing:-1px">Matchs du jour</div></div>' +
+    '<div style="display:flex;gap:5px;margin-bottom:10px;flex-wrap:wrap">';
+  [{ k: "upcoming", l: "⏰ A venir (" + upcoming.length + ")" },
+   { k: "live",     l: "🔴 Live (" + live.length + ")" },
+   { k: "finished", l: "✓ Termines (" + finished.length + ")" }].forEach(function(t) {
+    h += '<button onclick="S.mTab=\'' + t.k + '\';renderPage()" style="padding:5px 9px;border-radius:6px;font-size:10px;font-weight:700;' +
+      'border:1px solid ' + (mTab === t.k ? "var(--v3)" : "var(--ln)") + ';' +
+      'background:' + (mTab === t.k ? "var(--v4)" : "transparent") + ';' +
+      'color:' + (mTab === t.k ? "var(--v3)" : "var(--g3)") + ';cursor:pointer;white-space:nowrap">' + t.l + '</button>';
+  });
+  h += '</div><div class="fils">';
+  [["all","🌍 Tous"],["fr","🇫🇷 France"],["eu","🇪🇺 Europe"],["cup","🏆 Coupes"],["val","⚡ Value"],["arb","♾ Arb"]].forEach(function(f) {
+    h += '<button class="fib' + (fil === f[0] ? " on" : "") + '" onclick="S.fil=\'' + f[0] + '\';renderPage()">' + f[1] + '</button>';
+  });
+  h += '</div>';
+  if (!displayed.length) {
+    h += '<div class="empty"><div class="ei">⏰</div><div class="et">Aucun match</div></div>';
+    return h;
+  }
+  filtL.forEach(function(lg) {
+    var ms = displayed.filter(function(m) { return m.c === lg; });
+    if (!ms.length) return;
+    var isO = !!S.openL[lg];
+    var hasArb = ms.some(function(m) { return m.arb; });
+    var hasVal = ms.some(function(m) { return (m.e && m.e.edg || 0) > 0.07; });
+    h += '<div style="margin-bottom:9px">' +
+      '<div onclick="S.openL[\'' + lg + '\']=!S.openL[\'' + lg + '\'];renderPage()" ' +
+      'style="display:flex;align-items:center;gap:8px;padding:9px 11px;background:var(--c1);border-radius:var(--r);cursor:pointer;border:1px solid var(--ln);margin-bottom:3px;transition:background .1s" ' +
+      'onmouseover="this.style.background=\'var(--c2)\'" onmouseout="this.style.background=\'var(--c1)\'">' +
+      '<span style="font-size:14px">' + (ms[0] ? ms[0].f : "⚽") + '</span>' +
+      '<span style="font-size:12px;font-weight:700;color:var(--w3)">' + lg + '</span>' +
+      '<span style="font-family:\'JetBrains Mono\',monospace;font-size:9px;color:var(--g3);padding:1px 5px;background:var(--c3);border-radius:4px">' + ms.length + '</span>' +
+      (hasArb ? tag("te", "♾") : "") + (hasVal ? tag("tg", "⚡") : "") +
+      '<span style="margin-left:auto;font-size:10px;color:var(--g3);display:inline-block;transition:transform .2s;transform:' + (isO ? "rotate(180deg)" : "none") + '">▾</span>' +
+      '</div>';
+    if (isO) {
+      h += '<div class="mwrap">';
+      ms.forEach(function(m) {
+        var isVal = m.e && (m.e.edg || 0) > 0.04;
+        h += '<div class="mrow" onclick="pickMatch(' + m.id + ')">' +
+          '<div style="text-align:center"><span class="mtime">' + m.t + '</span>' +
+          (m.arb ? '<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;font-weight:700;color:var(--green);text-transform:uppercase;display:block">ARB</span>' : '') + '</div>' +
+          '<div style="text-align:right;padding-right:7px"><div class="mteam">' + m.h + '</div><div class="mxg">' + (m.hxg || "—") + ' xG</div></div>' +
+          '<div class="odds">';
+        [{ v: m.o1, l: "1", k: "1" }, { v: m.on, l: "N", k: "N" }, { v: m.o2, l: "2", k: "2" }].forEach(function(ot) {
+          var isV = m.e && m.e.bR === ot.k && (m.e.edg || 0) > 0.04;
+          h += '<div class="odd' + (isV ? " val" : "") + '" onclick="event.stopPropagation();pickMatch(' + m.id + ')">' +
+            '<span class="odd-l">' + ot.l + '</span>' +
+            '<span class="odd-v">' + (ot.v ? ot.v.toFixed(2) : "—") + '</span></div>';
+        });
+        h += '</div><div><div class="mteam">' + m.a + '</div><div class="mxg">' + (m.axg || "—") + ' xG</div></div>' +
+          '<div style="display:flex;justify-content:flex-end"><button class="abtn" onclick="event.stopPropagation();pickMatch(' + m.id + ')">→</button></div>' +
+          '</div>';
+      });
+      h += '</div>';
+    }
+    h += '</div>';
+  });
+  return h;
+}
+
+function pageTips() {
+  var tFil = S.tFil, tips = S.tips, tLoad = S.tLoad;
+  var filt = tips.filter(function(t) {
+    if (tFil === "all") return true;
+    if (tFil === "h") return t.conf === "high";
+    if (tFil === "v") return t.val;
+    if (tFil === "o") return t.type === "over";
+    if (tFil === "b") return t.type === "btts";
+    return t.type === "1x2";
+  });
+  var h = '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;flex-wrap:wrap;gap:8px">' +
+    '<div><div style="font-size:21px;font-weight:800;letter-spacing:-1px;margin-bottom:2px">Tips IA</div>' +
+    '<div style="font-family:\'JetBrains Mono\',monospace;font-size:9px;color:var(--g3)">EDGE &gt;5% · CLE ANTHROPIC REQUISE</div></div>' +
+    '<button onclick="loadTips()" style="padding:6px 13px;background:var(--c1);border:1px solid var(--ln);border-radius:100px;color:var(--w2);font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">' +
+    (tLoad ? ldrHtml() + " Chargement..." : "↻ Charger") + '</button></div>' +
+    '<div class="fils">';
+  [["all","Tous"],["h","🟢 Conf."],["v","⚡ Value"],["o","⚽ Over"],["b","🔄 BTTS"],["1x2","1X2"]].forEach(function(f) {
+    h += '<button class="fib' + (tFil === f[0] ? " on" : "") + '" onclick="S.tFil=\'' + f[0] + '\';renderPage()">' +
+      (f[0] === "all" && tips.length ? "Tous (" + tips.length + ")" : f[1]) + '</button>';
+  });
+  h += '</div>';
+  if (tLoad) {
+    h += '<div style="text-align:center;padding:46px">' + ldrHtml() + '</div>';
+  } else if (!tips.length) {
+    h += '<div class="empty"><div class="ei">🎯</div><div class="et">Aucun tip</div>' +
+      '<div class="es">Necessite la cle Anthropic<br>Clique Charger pour generer des tips IA</div>' +
+      '<button onclick="loadTips()" style="margin-top:13px;padding:8px 20px;background:var(--gold2);border:1px solid rgba(245,158,11,.28);border-radius:100px;color:var(--gold);font-size:12px;font-weight:700;cursor:pointer">Charger les Tips</button></div>';
+  } else {
+    filt.forEach(function(t, i) {
+      h += '<div class="tipcard' + (t.top ? " top" : "") + '" style="animation:fu .2s ' + (i * 0.04) + 's ease both">' +
+        '<div class="tiph"><div style="display:flex;align-items:center;gap:5px">' +
+        '<span style="font-family:\'JetBrains Mono\',monospace;font-size:9px;color:var(--g3)">' + (t.c || "") + '</span>' +
+        (t.top ? tag("tg", "Top") : "") + (t.val ? tag("te", "Value") : "") +
+        '</div><span style="font-family:\'JetBrains Mono\',monospace;font-size:9px;color:var(--g3)">' + (t.t || "") + '</span></div>' +
+        '<div class="tipb"><div style="font-size:11px;color:var(--g3);margin-bottom:3px">' + (t.h || "") + ' vs ' + (t.a || "") + '</div>' +
+        '<div class="tipbet" style="color:' + (t.top ? "var(--gold)" : "var(--w)") + '">' + (t.bet || "") + '</div>' +
+        '<div class="tipmg">' +
+        [{ l: "Cote", v: (t.odd || "?") + "x", c: "var(--gold)" },
+         { l: "Proba", v: t.prob ? pct(t.prob, 0) : "?", c: "var(--green)" },
+         { l: "Edge", v: "+" + (t.edge ? (t.edge * 100).toFixed(1) : "?") + "%", c: "var(--w)" },
+         { l: "Kelly", v: (t.kelly ? (t.kelly * 100).toFixed(1) : "?") + "%", c: "var(--gold)" }
+        ].map(function(x) {
+          return '<div class="tipm"><div class="tipml">' + x.l + '</div><div class="tipmv" style="color:' + x.c + '">' + x.v + '</div></div>';
+        }).join("") + '</div>' +
+        '<div style="font-size:11px;color:var(--g3);line-height:1.7">' + (t.reason || "") + '</div>' +
+        (t.risk ? '<div style="margin-top:5px;font-size:10px;color:var(--red);padding:4px 9px;background:var(--red2);border:1px solid rgba(239,68,68,.14);border-radius:6px">' + t.risk + '</div>' : "") +
+        '</div></div>';
+    });
+  }
+  return h;
+}
+
+function pageComp() {
+  var m = S.compM;
+  if (!m) return '<div class="empty"><div class="ei">📊</div><div class="et">Aucun match</div><div class="es">Clique Analyser sur un match</div></div>';
+  var bks = m.bk || [];
+  var mO1 = Math.max.apply(null, bks.map(function(b) { return b.o1 || 0; }));
+  var mON = Math.max.apply(null, bks.map(function(b) { return b.on || 0; }));
+  var mO2 = Math.max.apply(null, bks.map(function(b) { return b.o2 || 0; }));
+  function marg(o1, oN, o2) { return o1 && oN && o2 ? +((1/o1 + 1/oN + 1/o2 - 1) * 100).toFixed(1) : null; }
+  var h = '<div style="margin-bottom:12px">' +
+    '<div style="font-family:\'JetBrains Mono\',monospace;font-size:9px;color:var(--g3);margin-bottom:2px">' + m.c + ' · ' + m.t + ' · ' + bks.length + ' BOOKMAKERS</div>' +
+    '<div style="font-size:20px;font-weight:800;letter-spacing:-1px">' + m.h + ' <span style="color:var(--g3);font-weight:300">vs</span> ' + m.a + '</div></div>';
+  if (m.arb) {
+    h += '<div class="carde" style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;align-items:center">' +
+      '<div><div style="font-family:\'JetBrains Mono\',monospace;font-size:9px;color:var(--green);margin-bottom:2px">ARBITRAGE DETECTE</div>' +
+      '<div style="font-size:22px;font-weight:800;color:var(--green)">+' + m.arb + '% garanti</div></div>' +
+      '<div style="text-align:right"><div style="font-size:10px;color:var(--g3)">Mise min.</div><div style="font-size:15px;font-weight:700">300€</div></div></div></div>';
+  }
+  h += '<div class="cardv"><div class="clbl" style="color:var(--gold)">Comparaison — ' + bks.length + ' Bookmakers</div>' +
+    '<div style="overflow-x:auto"><table class="ctbl"><thead><tr><th>Bookmaker</th><th>Cote 1</th><th>Cote N</th><th>Cote 2</th><th>Marge</th></tr></thead><tbody>';
+  bks.forEach(function(b) {
+    var mg = marg(b.o1, b.on, b.o2);
+    h += '<tr><td class="bkn">' + esc(b.n) + (b.n === "Pinnacle" ? '<span class="pinb">Sharp</span>' : "") + '</td>' +
+      '<td class="oc' + (b.o1 === mO1 ? " best" : "") + '">' + f2(b.o1) + '</td>' +
+      '<td class="oc' + (b.on === mON ? " best" : "") + '">' + f2(b.on) + '</td>' +
+      '<td class="oc' + (b.o2 === mO2 ? " best" : "") + '">' + f2(b.o2) + '</td>' +
+      '<td style="font-family:\'JetBrains Mono\',monospace;font-size:10px;color:' + (mg && mg < 4 ? "var(--green)" : mg && mg > 7 ? "var(--red)" : "var(--g3)") + '">' + (mg !== null ? mg + "%" : "—") + '</td></tr>';
+  });
+  var mg2 = marg(mO1, mON, mO2);
+  h += '<tr style="background:var(--v5)"><td class="bkn" style="color:var(--v3)">MEILLEURE</td>' +
+    '<td class="oc best">' + (mO1 > 0 ? mO1.toFixed(2) : "—") + '</td>' +
+    '<td class="oc best">' + (mON > 0 ? mON.toFixed(2) : "—") + '</td>' +
+    '<td class="oc best">' + (mO2 > 0 ? mO2.toFixed(2) : "—") + '</td>' +
+    '<td style="font-family:\'JetBrains Mono\',monospace;font-size:10px;color:var(--gold)">' + (mg2 !== null ? mg2 + "%" : "—") + '</td></tr>' +
+    '</tbody></table></div></div>';
+  if (m.e) {
+    h += '<div class="card" style="border-left:3px solid var(--gold)"><div class="clbl">Analyse Dixon-Coles</div>' +
+      '<div style="font-family:\'JetBrains Mono\',monospace;font-size:13px;font-weight:800;color:var(--gold);margin-bottom:6px">' + m.e.label + '</div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">';
+    [{ l: m.h, p: m.e.pH, k: "1" }, { l: "Nul", p: m.e.pN, k: "N" }, { l: m.a, p: m.e.pA, k: "2" }].forEach(function(it) {
+      var win = it.k === m.e.bR;
+      h += '<div style="background:' + (win ? "var(--gold2)" : "var(--c2)") + ';border:1px solid ' + (win ? "rgba(245,158,11,.28)" : "var(--ln)") + ';border-radius:9px;padding:10px 5px;text-align:center">' +
+        '<div style="font-size:19px;font-weight:800;color:' + (win ? "var(--gold)" : "var(--w)") + '">' + pct(it.p) + '</div>' +
+        '<div style="font-size:10px;color:' + (win ? "var(--gold)" : "var(--g3)") + ';margin-top:2px">' + it.l + '</div></div>';
+    });
+    h += '</div></div><button class="cbtn" onclick="goTab(\'analyse\')" style="margin-top:4px">Analyse Complete →</button>';
+  }
+  return h;
+}
+
+function pageAnalyse() {
+  var d = S.d, selM = S.selM, aiLoad = S.aiLoad, aiMsg = S.aiMsg, nar = S.nar;
+  var h = "";
+  if (selM) {
+    h += '<div class="selm"><div style="flex:1"><div style="font-weight:700;font-size:13px">' + esc(selM.h) + ' <span style="color:var(--g3);font-weight:300">vs</span> ' + esc(selM.a) + '</div>' +
+      '<div style="font-family:\'JetBrains Mono\',monospace;font-size:9px;color:var(--g3);margin-top:2px">' + selM.c + ' · ' + selM.t + '</div></div>' +
+      '<button onclick="S.selM=null;renderPage()" style="background:none;border:none;color:var(--g3);font-size:18px;cursor:pointer;padding:0 4px">×</button></div>';
+  }
+  h += '<div class="cardv" style="margin-bottom:10px">' +
+    '<div style="display:flex;gap:5px;align-items:center;margin-bottom:7px">' +
+    '<div style="width:7px;height:7px;border-radius:50%;background:var(--v3);animation:pulse 2.5s infinite"></div>' +
+    '<span style="font-size:13px;font-weight:700">Analyse IA — Stats + Bookmakers</span></div>' +
+    '<div style="font-size:11px;color:var(--g3);margin-bottom:9px">Stats 2025-26 · Betclic, Pinnacle, Unibet... · Cle Anthropic pour auto-fill</div>' +
+    '<div style="display:grid;grid-template-columns:1fr 22px 1fr;gap:7px;margin-bottom:7px">' +
+    '<input type="text" value="' + esc(d.aiH) + '" placeholder="Equipe domicile" oninput="S.d.aiH=this.value" style="padding:11px 12px;font-size:14px"/>' +
+    '<div style="display:flex;align-items:center;justify-content:center;background:var(--c3);border:1px solid var(--ln);border-radius:7px;font-size:8px;font-weight:700;color:var(--g3)">VS</div>' +
+    '<input type="text" value="' + esc(d.aiA) + '" placeholder="Equipe exterieur" oninput="S.d.aiA=this.value" style="padding:11px 12px;font-size:14px"/>' +
+    '</div><div class="g2" style="margin-bottom:8px">' +
+    '<div class="fw"><div class="fl">Competition</div>' +
+    '<select onchange="S.d.aiC=this.value;S.d.league=this.value">' +
+    ["Ligue 1","La Liga","Premier League","Serie A","Bundesliga","Liga Portugal","Champions League","Europa League"].map(function(o) {
+      return '<option value="' + o + '"' + (d.aiC === o ? " selected" : "") + '>' + o + '</option>';
+    }).join("") + '</select></div>' +
+    '<div class="fw"><div class="fl">Bankroll (€)</div><input type="number" value="' + (d.bk || "") + '" placeholder="1000" oninput="S.d.bk=this.value"/></div>' +
+    '</div>' +
+    (aiLoad ? '<div class="stb">' + spinHtml() + ' ' + esc(S.aiStep || "Chargement...") + '</div>' : "") +
+    '<button class="cbtn" onclick="autoFill()"' + (aiLoad ? " disabled" : "") + '>' +
+    (aiLoad ? ldrHtml() + " Chargement..." : "🤖 Auto-fill IA — Stats + Cotes") + '</button>' +
+    (aiMsg.m ? '<div class="aimsg ' + (aiMsg.t === "ok" ? "aiok" : "aier") + '">' + esc(aiMsg.m) + '</div>' : "") +
+    (nar ? '<div style="margin-top:8px;padding:10px 12px;background:var(--v5);border:1px solid rgba(109,40,217,.14);border-radius:8px;font-size:12px;color:var(--w2);line-height:1.7;font-style:italic">💡 ' + esc(nar) + '</div>' : "") +
+    '</div>';
+
+  h += fsecHtml("01", "Equipes & Contexte",
+    '<div style="display:grid;grid-template-columns:1fr 22px 1fr;gap:7px;margin-bottom:8px">' +
+    '<div class="fw"><div class="fl">Domicile</div><input type="text" value="' + esc(d.home) + '" placeholder="Ex: PSG" oninput="S.d.home=this.value" style="padding:11px 12px"/></div>' +
+    '<div style="display:flex;align-items:center;justify-content:center;background:var(--c3);border:1px solid var(--ln);border-radius:7px;font-size:8px;font-weight:700;color:var(--g3);margin-top:14px">VS</div>' +
+    '<div class="fw"><div class="fl">Exterieur</div><input type="text" value="' + esc(d.away) + '" placeholder="Ex: Monaco" oninput="S.d.away=this.value" style="padding:11px 12px"/></div>' +
+    '</div><div class="g3">' +
+    ['<div class="fw"><div class="fl">Derby</div><div class="rg">' +
+     ['false','true'].map(function(k) { return '<button class="rb' + (String(d.derby) === k ? " on" : "") + '" onclick="S.d.derby=' + k + ';renderPage()">' + (k === 'false' ? 'Non' : 'Oui') + '</button>'; }).join("") + '</div></div>',
+     '<div class="fw"><div class="fl">Fatigue Dom.</div><div class="rg">' +
+     ['false','true'].map(function(k) { return '<button class="rb' + (String(d.hFat) === k ? " on" : "") + '" onclick="S.d.hFat=' + k + ';renderPage()">' + (k === 'false' ? 'Non' : 'Oui') + '</button>'; }).join("") + '</div></div>',
+     '<div class="fw"><div class="fl">Fatigue Ext.</div><div class="rg">' +
+     ['false','true'].map(function(k) { return '<button class="rb' + (String(d.aFat) === k ? " on" : "") + '" onclick="S.d.aFat=' + k + ';renderPage()">' + (k === 'false' ? 'Non' : 'Oui') + '</button>'; }).join("") + '</div></div>'
+    ].join("") + '</div>');
+
+  h += fsecHtml("02", "Stats xG & Buts",
+    '<div class="g4" style="margin-bottom:7px">' +
+    ['hXG:xG Dom:1.8','hXGA:xGA Dom:1.0','aXG:xG Ext:1.3','aXGA:xGA Ext:1.3'].map(function(s) {
+      var p = s.split(":"); return '<div class="fw"><div class="fl">' + p[1] + '</div><input type="number" value="' + (d[p[0]] || "") + '" placeholder="' + p[2] + '" oninput="S.d.' + p[0] + '=+this.value||this.value"/></div>';
+    }).join("") + '</div><div class="g4">' +
+    ['hG:Buts/M Dom:1.8','hF:Pts/5 Dom:10','aG:Buts/M Ext:1.3','aF:Pts/5 Ext:7'].map(function(s) {
+      var p = s.split(":"); return '<div class="fw"><div class="fl">' + p[1] + '</div><input type="number" value="' + (d[p[0]] || "") + '" placeholder="' + p[2] + '" oninput="S.d.' + p[0] + '=+this.value||this.value"/></div>';
+    }).join("") + '</div>');
+
+  h += fsecHtml("03", "Cotes",
+    '<div class="g3" style="margin-bottom:7px">' +
+    ['o1:Cote 1:1.95','oN:Cote N:3.50','o2:Cote 2:3.80'].map(function(s) {
+      var p = s.split(":"); return '<div class="fw"><div class="fl">' + p[1] + '</div><input type="number" value="' + (d[p[0]] || "") + '" placeholder="' + p[2] + '" oninput="S.d.' + p[0] + '=this.value"/></div>';
+    }).join("") + '</div><div class="g3">' +
+    ['oO25:Over 2.5:1.82','oO35:Over 3.5:2.48','oBtts:BTTS:1.74'].map(function(s) {
+      var p = s.split(":"); return '<div class="fw"><div class="fl">' + p[1] + '</div><input type="number" value="' + (d[p[0]] || "") + '" placeholder="' + p[2] + '" oninput="S.d.' + p[0] + '=this.value"/></div>';
+    }).join("") + '</div>');
+
+  h += '<button class="cbtn gold" onclick="doAnalyse()">⚡ Generer l\'Analyse Dixon-Coles</button>' +
+    '<div class="disc">Pariez responsablement. <strong style="color:var(--gold)">Joueurs Info Service : 09 74 75 13 13</strong></div>';
+  return h;
+}
+
+function pageResult() {
+  var r = S.res;
+  if (!r) return '<div class="empty"><div class="ei">📈</div><div class="et">Aucune analyse</div><div class="es">Lance une analyse depuis ⚡ Analyser</div></div>';
+  var d = r.d, allBets = r.allBets || [], bestBet = r.bestBet, safeBet = r.safeBet, valueBet = r.valueBet;
+  var pH = r.pH, pN = r.pN, pA = r.pA, sc = r.sc || [];
+  var lH = r.lH, lA = r.lA, bR = r.bR, bP = r.bP, bO = r.bO, edg = r.edg, kel = r.kel, conf = r.conf, label = r.label;
+  var hasV = (edg || 0) > 0.03;
+  var bkV = +(d.bk || S.bk) || 0;
+  var mise = kel && bkV ? (kel * bkV).toFixed(2) : null;
+  var hN = (d.home || "Dom").split(" ").slice(0, 2).join(" ");
+  var aN = (d.away || "Ext").split(" ").slice(0, 2).join(" ");
+  var cc = conf >= 75 ? "var(--v3)" : conf >= 60 ? "var(--w2)" : "var(--g2)";
+  var cats = ["1X2","DC","BUTS","BTTS","CS"];
+  var catLbl = { "1X2":"⚽ Resultat 1X2","DC":"🔄 Double Chance","BUTS":"🥅 Total Buts","BTTS":"🎯 BTTS","CS":"🧤 Clean Sheet" };
+  var h = "";
+
+  /* TOP REC */
+  if (bestBet) {
+    h += '<div class="cardv" style="position:relative;overflow:hidden">' +
+      '<div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--v2),var(--pink),transparent)"></div>' +
+      '<div style="font-family:\'JetBrains Mono\',monospace;font-size:8px;color:var(--g3);text-transform:uppercase;letter-spacing:.12em;margin-bottom:5px">🎯 Meilleur pari EDGE</div>' +
+      '<div style="font-size:19px;font-weight:800;color:var(--v3);letter-spacing:-.5px;margin-bottom:6px">' + esc(bestBet.name) + '</div>' +
+      '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px">' +
+      '<span style="font-family:\'JetBrains Mono\',monospace;font-size:11px;color:var(--w2)">Proba: <strong style="color:var(--v3)">' + pct(bestBet.p) + '</strong></span>' +
+      (bestBet.o > 1.01 ? '<span style="font-family:\'JetBrains Mono\',monospace;font-size:11px;color:var(--w2)">Cote: <strong style="color:var(--gold)">' + bestBet.o.toFixed(2) + 'x</strong></span>' : "") +
+      ((bestBet.edg || 0) > 0 ? '<span style="font-family:\'JetBrains Mono\',monospace;font-size:11px;color:var(--green)">Edge: <strong>+' + ((bestBet.edg || 0) * 100).toFixed(1) + '%</strong></span>' : "") +
+      ((bestBet.kel || 0) > 0 && bkV > 0 ? '<span style="font-family:\'JetBrains Mono\',monospace;font-size:11px;color:var(--gold)">Mise: <strong>' + ((bestBet.kel || 0) * bkV).toFixed(2) + '€</strong></span>' : "") +
+      '</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
+      (safeBet ? '<div style="background:var(--green2);border:1px solid rgba(16,185,129,.18);border-radius:8px;padding:10px 11px"><div style="font-family:\'JetBrains Mono\',monospace;font-size:8px;color:var(--green);margin-bottom:3px;text-transform:uppercase">🛡 Pari Safe</div><div style="font-size:12px;font-weight:700">' + esc(safeBet.name) + '</div><div style="font-family:\'JetBrains Mono\',monospace;font-size:10px;color:var(--green);margin-top:2px">' + pct(safeBet.p, 0) + ' de proba</div></div>' : "<div></div>") +
+      (valueBet ? '<div style="background:var(--v5);border:1px solid rgba(109,40,217,.22);border-radius:8px;padding:10px 11px"><div style="font-family:\'JetBrains Mono\',monospace;font-size:8px;color:var(--v3);margin-bottom:3px;text-transform:uppercase">⚡ Value Bet</div><div style="font-size:12px;font-weight:700">' + esc(valueBet.name) + '</div><div style="font-family:\'JetBrains Mono\',monospace;font-size:10px;color:var(--v3);margin-top:2px">Edge +' + ((valueBet.edg || 0) * 100).toFixed(1) + '%</div></div>' : "<div></div>") +
+      '</div></div>';
+  }
+
+  /* PROBAS 1X2 */
+  h += '<div class="vrd">' +
+    '<div style="font-family:\'JetBrains Mono\',monospace;font-size:8px;color:var(--g3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">Moteur EDGE — Dixon-Coles 10x10</div>' +
+    '<div class="vbet" style="color:' + cc + '">' + esc(label) + '</div>' +
+    '<div class="vmeta">' + esc(hN) + ' vs ' + esc(aN) + ' · λH ' + lH.toFixed(2) + ' — λA ' + lA.toFixed(2) + (d.derby ? " · 🔥 Derby" : "") + '</div>' +
+    '<div class="crow"><span class="cl">Confiance</span><span class="cv" style="color:' + cc + '">' +
+    (conf >= 80 ? "🔥 Tres elevee" : conf >= 70 ? "✓ Elevee" : conf >= 55 ? "📊 Moderee" : "⚠ Faible") + ' · ' + conf + '/100</span></div>' +
+    '<div class="ctr"><div class="ctrfill" style="width:' + conf + '%"></div></div>' +
+    '<div class="prow">' +
+    [{ l: hN, p: pH, k: "1" }, { l: "Nul", p: pN, k: "N" }, { l: aN, p: pA, k: "2" }].map(function(it) {
+      return '<div class="pb' + (it.k === bR ? " win" : "") + '"><div class="pp">' + pct(it.p) + '</div><div class="pn">' + esc(it.l) + '</div></div>';
+    }).join("") + '</div>' +
+    '<div class="b3"><div class="b3h" style="width:' + pct(pH) + '"></div><div class="b3n" style="width:' + pct(pN) + '"></div><div class="b3a" style="width:' + pct(pA) + '"></div></div>' +
+    '</div>';
+
+  /* EDGE */
+  h += '<div class="edgb ' + (hasV ? "pos" : "neg") + '">' +
+    '<div><div style="font-family:\'JetBrains Mono\',monospace;font-size:8px;color:' + (hasV ? "var(--green)" : "var(--red)") + ';letter-spacing:.1em;margin-bottom:2px">' + (hasV ? "EDGE POSITIF" : "PAS DE VALUE") + '</div>' +
+    '<div class="edgv">' + (hasV ? "+" : "") + ((edg || 0) * 100).toFixed(1) + '%</div>' +
+    '<div style="font-family:\'JetBrains Mono\',monospace;font-size:9px;color:var(--g3);margin-top:3px">Modele: ' + pct(bP) + ' · Implicite: ' + (bO ? (1/bO*100).toFixed(1) : "-") + '%</div></div>' +
+    (bO > 0 ? '<div style="text-align:right"><div style="font-family:\'JetBrains Mono\',monospace;font-size:8px;color:var(--g3);margin-bottom:2px">Meilleure cote</div><div style="font-size:21px;font-weight:800;color:var(--v3);letter-spacing:-1px">@ ' + bO.toFixed(2) + '</div></div>' : "") +
+    '</div>';
+
+  /* SCORES */
+  h += '<div class="card"><div class="clbl">Scores les plus probables</div><div class="sgr">' +
+    sc.slice(0, 6).map(function(s, i) {
+      return '<div class="scbox' + (i === 0 ? " top" : "") + '"><div class="scv">' + s.s + '</div><div class="scp">' + pct(s.p) + '</div></div>';
+    }).join("") + '</div>' +
+    '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:3px">' +
+    ["λH " + lH.toFixed(2), "λA " + lA.toFixed(2), "Moy " + (lH + lA).toFixed(2), "BTTS " + (r.btts * 100).toFixed(0) + "%", "O2.5 " + (r.o25 * 100).toFixed(0) + "%"].map(function(t) {
+      return '<span style="font-family:\'JetBrains Mono\',monospace;font-size:9px;color:var(--g3);padding:2px 7px;background:var(--c2);border:1px solid var(--ln);border-radius:4px">' + t + '</span>';
+    }).join("") + '</div></div>';
+
+  /* MARKETS */
+  h += '<div class="card"><div class="clbl">Tous les marches (' + allBets.length + ')</div>';
+  cats.forEach(function(cat) {
+    var bets = allBets.filter(function(b) { return b.cat === cat; });
+    if (!bets.length) return;
+    h += '<div style="margin-bottom:11px"><div style="font-family:\'JetBrains Mono\',monospace;font-size:8px;color:var(--g3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:5px;font-weight:700">' + (catLbl[cat] || cat) + '</div>';
+    bets.forEach(function(b) {
+      var isPos = (b.edg || 0) > 0, isSafe = b.p > 0.65;
+      h += '<div class="mkrow ' + (isPos ? "pos" : isSafe ? "safe" : "neu") + '">' +
+        '<div style="flex:1"><div style="font-size:12px;font-weight:600">' + esc(b.name) + '</div></div>' +
+        '<div style="display:flex;gap:9px;align-items:center;flex-shrink:0">' +
+        '<div style="text-align:center"><div style="font-family:\'JetBrains Mono\',monospace;font-size:11px;font-weight:700">' + pct(b.p, 0) + '</div><div style="font-family:\'JetBrains Mono\',monospace;font-size:7px;color:var(--g3)">Proba</div></div>' +
+        (b.o > 1.01 ? '<div style="text-align:center"><div style="font-family:\'JetBrains Mono\',monospace;font-size:11px;font-weight:700;color:' + (isPos ? "var(--v3)" : "var(--g2)") + '">' + b.o.toFixed(2) + 'x</div><div style="font-family:\'JetBrains Mono\',monospace;font-size:7px;color:var(--g3)">Cote</div></div>' : "") +
+        '<div style="text-align:center;min-width:36px"><div style="font-family:\'JetBrains Mono\',monospace;font-size:10px;font-weight:700;color:' + (isPos ? "var(--green)" : isSafe ? "var(--v3)" : "var(--g3)") + '">' + (isPos ? "+" + (b.edg * 100).toFixed(1) + "%" : isSafe ? "Safe" : "—") + '</div><div style="font-family:\'JetBrains Mono\',monospace;font-size:7px;color:var(--g3)">Edge</div></div>' +
+        '</div></div>';
+    });
+    h += '</div>';
+  });
+  h += '</div>';
+
+  /* FORCES */
+  h += '<div class="card"><div class="clbl">Forces comparees</div>';
+  [{ l: "Attaque " + hN, v: "xG " + (d.hXG || "?"), p: Math.min(100, (+d.hXG || 1.5) / 3.5 * 100), c: "var(--v2)" },
+   { l: "Defense " + hN, v: "xGA " + (d.hXGA || "?"), p: Math.max(5, (1 - (+d.hXGA || 1.1) / 3) * 100), c: "var(--green)" },
+   { l: "Attaque " + aN, v: "xG " + (d.aXG || "?"), p: Math.min(100, (+d.aXG || 1.2) / 3.5 * 100), c: "var(--pink)" },
+   { l: "Defense " + aN, v: "xGA " + (d.aXGA || "?"), p: Math.max(5, (1 - (+d.aXGA || 1.3) / 3) * 100), c: "var(--red)" }
+  ].forEach(function(b) {
+    h += '<div class="barrow"><div class="bartop"><span style="color:var(--w2);font-weight:500">' + b.l + '</span>' +
+      '<span style="font-family:\'JetBrains Mono\',monospace;font-size:9px;color:var(--g3)">' + b.v + '</span></div>' + barHtml(b.p, b.c) + '</div>';
+  });
+  h += '</div>';
+
+  /* KELLY */
+  if (kel > 0 && bkV > 0) {
+    h += '<div class="cardv"><div class="clbl" style="color:var(--v3)">Kelly 1/4 — Gestion bankroll</div>' +
+      '<div class="kg">' +
+      [{ v: (kel * 100).toFixed(2) + "%", l: "Kelly 1/4" }, { v: mise + "€", l: "Mise conseillee" },
+       { v: (bO || "—") + "x", l: "Cote" },
+       { v: bO && mise ? "+" + (bO * +mise - +mise).toFixed(2) + "€" : "—", l: "Gain potentiel" }
+      ].map(function(it) {
+        return '<div class="kb"><div class="kbv">' + it.v + '</div><div class="kbl">' + it.l + '</div></div>';
+      }).join("") + '</div>' +
+      '<div class="vp ' + (hasV ? "y" : "n") + '">' + (hasV ? "✓ Value +" + ((edg || 0) * 100).toFixed(1) + "%" : "✗ Pas de value") + '</div></div>';
+  }
+
+  /* SAVE */
+  h += '<div class="card"><div class="clbl">Enregistrer — CLV Tracker</div>' +
+    '<div class="fw"><div class="fl">Cote de fermeture (optionnel)</div>' +
+    '<input type="number" id="closing-inp" value="' + esc(S.closingOdd || "") + '" placeholder="' + (bO ? bO.toFixed(2) : "2.00") + '" oninput="S.closingOdd=this.value"/></div>' +
+    '<div style="display:flex;gap:7px;margin-top:8px">' +
+    '<button onclick="logBet(true)" style="flex:1;padding:11px;background:var(--green2);border:1px solid rgba(16,185,129,.28);border-radius:8px;color:var(--green);font-size:13px;font-weight:700;cursor:pointer">🏆 Gagne !</button>' +
+    '<button onclick="logBet(false)" style="flex:1;padding:11px;background:var(--red2);border:1px solid rgba(239,68,68,.18);border-radius:8px;color:var(--red);font-size:13px;font-weight:700;cursor:pointer">✗ Perdu</button>' +
+    '</div></div>' +
+    '<div class="disc">⚠️ Pariez responsablement. <strong style="color:var(--gold)">Joueurs Info Service : 09 74 75 13 13</strong></div>';
+  return h;
+}
+
+function pageBankroll() {
+  var hist = S.hist, bk = S.bk, bkC = S.bkC, bkR = S.bkR;
+  var wins = gWins(), roi = gRoi();
+  var wr = hist.length ? Math.round(wins / hist.length * 100) : null;
+  var h = '<div style="font-size:21px;font-weight:800;letter-spacing:-1px;margin-bottom:2px">Bankroll</div>' +
+    '<div style="font-family:\'JetBrains Mono\',monospace;font-size:9px;color:var(--g3);margin-bottom:12px">KELLY · HISTORIQUE · ROI</div>' +
+    '<div class="sg4">' +
+    [{ l: "Capital", v: bk.toLocaleString("fr-FR") + "€", c: "var(--gold)", fn: "showModal('bk')" },
+     { l: "Paris", v: hist.length || "—", c: "var(--w)" },
+     { l: "Win Rate", v: wr !== null ? wr + "%" : "—", c: "var(--green)" },
+     { l: "ROI", v: roi !== null ? (roi > 0 ? "+" : "") + roi + "%" : "—", c: roi && roi > 0 ? "var(--green)" : "var(--red)" }
+    ].map(function(s) {
+      return '<div class="sbox"' + (s.fn ? ' onclick="' + s.fn + '" style="cursor:pointer"' : '') + '>' +
+        '<div class="sv" style="color:' + s.c + '">' + s.v + '</div><div class="sl">' + s.l + '</div></div>';
+    }).join("") + '</div>' +
+    '<div class="cardv"><div class="clbl" style="color:var(--gold)">Calculateur Kelly 1/4</div>' +
+    '<div class="g4" style="margin-bottom:8px">' +
+    [{ k: "tot", l: "Bankroll €", ph: "1000" }, { k: "prob", l: "Prob. %", ph: "55" },
+     { k: "odd", l: "Cote", ph: "2.00" }, { k: "frac", l: "Fraction", ph: "0.25" }
+    ].map(function(f) {
+      return '<div class="fw"><div class="fl">' + f.l + '</div>' +
+        '<input type="number" value="' + (bkC[f.k] || "") + '" placeholder="' + f.ph + '" oninput="S.bkC.' + f.k + '=this.value;calcBkR();renderPage()"/></div>';
+    }).join("") + '</div>' +
+    (bkR ? '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:7px">' +
+      [{ v: ((bkR.kA || 0) * 100).toFixed(2) + "%", l: "Kelly" },
+       { v: (bkR.m || 0).toFixed(2) + "€", l: "Mise" },
+       { v: (bkR.g || 0).toFixed(2) + "€", l: "Gain pot." },
+       { v: ((bkR.ev || 0) * 100).toFixed(1) + "%", l: "EV", c: (bkR.ev || 0) > 0 ? "var(--green)" : "var(--red)" }
+      ].map(function(s) {
+        return '<div class="kb"><div class="kbv" style="color:' + (s.c || "var(--v3)") + '">' + s.v + '</div><div class="kbl">' + s.l + '</div></div>';
+      }).join("") + '</div>'
+    : '<div style="font-family:\'JetBrains Mono\',monospace;font-size:11px;color:var(--g3);text-align:center;padding:8px">Remplis les champs pour calculer</div>') +
+    '</div>';
+  if (hist.length) {
+    h += '<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:11px">' +
+      '<div class="clbl" style="margin-bottom:0">Historique (' + hist.length + ')</div>' +
+      '<button onclick="if(confirm(\'Effacer tout ?\')){saveHist([]);renderPage();}" style="font-size:10px;color:var(--red);background:none;border:none;cursor:pointer;font-weight:700">Effacer</button></div>';
+    hist.slice(0, 15).forEach(function(entry) {
+      h += '<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--ln2)">' +
+        '<div><div style="font-size:12px;font-weight:700">' + esc(entry.match || "?") + '</div>' +
+        '<div style="display:flex;gap:7px;margin-top:2px">' +
+        '<span style="font-family:\'JetBrains Mono\',monospace;font-size:9px;color:var(--g3)">' + (entry.date || "") + '</span>' +
+        (entry.oddsT ? '<span style="font-family:\'JetBrains Mono\',monospace;font-size:9px;color:var(--g3)">@ ' + entry.oddsT + '</span>' : "") +
+        (entry.clv ? '<span style="font-family:\'JetBrains Mono\',monospace;font-size:9px;font-weight:700;color:' + (entry.clv > 0 ? "var(--green)" : "var(--red)") + '">CLV ' + (entry.clv > 0 ? "+" : "") + (entry.clv * 100).toFixed(1) + '%</span>' : "") +
+        '</div></div>' +
+        '<div style="text-align:right;flex-shrink:0;margin-left:10px">' +
+        '<div style="font-size:14px;font-weight:800;color:' + (entry.result === "WIN" ? "var(--green)" : "var(--red)") + '">' + (entry.profit > 0 ? "+" : "") + entry.profit + '€</div>' +
+        '<div style="font-family:\'JetBrains Mono\',monospace;font-size:9px;color:var(--g3);margin-top:1px">' + entry.stake + '€</div></div></div>';
+    });
+    h += '</div>';
+  }
+  return h;
+}
+
+function pageStats() {
+  var hist = S.hist;
+  var wons = hist.filter(function(h) { return h.result === "WIN"; });
+  var losses = hist.filter(function(h) { return h.result === "LOSS"; });
+  var tot = hist.length, wr = tot ? Math.round(wons.length / tot * 100) : 0;
+  var totalMise = hist.reduce(function(a, h) { return a + (h.stake || 0); }, 0);
+  var totalProfit = hist.reduce(function(a, h) { return a + (h.profit || 0); }, 0);
+  var roi2 = totalMise > 0 ? +((totalProfit / totalMise) * 100).toFixed(1) : 0;
+  var avgClv = tot ? +(hist.reduce(function(a, h) { return a + (h.clv || 0); }, 0) / tot * 100).toFixed(1) : 0;
+  var avgOdds = tot ? +(hist.reduce(function(a, h) { return a + (h.oddsT || 2); }, 0) / tot).toFixed(2) : 0;
+  if (!tot) return '<div class="empty"><div class="ei">📊</div><div class="et">Aucun pari enregistre</div><div class="es">Analysez un match et enregistrez vos paris</div></div>';
+  var score = Math.min(100, Math.max(0, wr * 0.4 + (roi2 > 0 ? Math.min(roi2 * 2, 30) : 0) + (avgClv > 0 ? Math.min(avgClv * 5, 20) : 0)));
+  var scoreLabel = score >= 80 ? "Elite 🏆" : score >= 60 ? "Sharp 🎯" : score >= 40 ? "Confirme ✓" : "Debutant 📚";
+  var scoreColor = score >= 80 ? "var(--green)" : score >= 60 ? "var(--v3)" : score >= 40 ? "var(--gold)" : "var(--red)";
+  var h = '<div style="font-size:21px;font-weight:800;letter-spacing:-1px;margin-bottom:3px">Mes Statistiques</div>' +
+    '<div style="font-size:12px;color:var(--g3);margin-bottom:13px">' + tot + ' paris enregistres</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:9px;margin-bottom:10px">';
+  [{ i: "🎯", l: "Win Rate", v: wr + "%", sub: wons.length + "V / " + losses.length + "D", c: wr >= 55 ? "var(--green)" : wr >= 45 ? "var(--v3)" : "var(--red)" },
+   { i: "💰", l: "ROI Total", v: (roi2 > 0 ? "+" : "") + roi2 + "%", sub: (totalProfit > 0 ? "+" : "") + totalProfit.toFixed(2) + "€", c: roi2 > 0 ? "var(--green)" : "var(--red)" },
+   { i: "📈", l: "CLV Moyen", v: (avgClv > 0 ? "+" : "") + avgClv + "%", c: avgClv > 2 ? "var(--green)" : avgClv > 0 ? "var(--v3)" : "var(--red)" },
+   { i: "🎰", l: "Cote Moy.", v: avgOdds + "x", c: "var(--v3)" }
+  ].forEach(function(s) {
+    h += '<div style="background:var(--c1);border:1px solid var(--ln);border-radius:var(--r2);padding:14px 12px;transition:border-color .12s" ' +
+      'onmouseover="this.style.borderColor=\'rgba(109,40,217,.3)\'" onmouseout="this.style.borderColor=\'var(--ln)\'">' +
+      '<div style="font-size:18px;margin-bottom:6px">' + s.i + '</div>' +
+      '<div style="font-size:20px;font-weight:800;color:' + s.c + ';letter-spacing:-1px;line-height:1;margin-bottom:3px">' + s.v + '</div>' +
+      '<div style="font-size:11px;font-weight:600;color:var(--w2);' + (s.sub ? "margin-bottom:2px" : "") + '">' + s.l + '</div>' +
+      (s.sub ? '<div style="font-size:10px;color:var(--g3)">' + s.sub + '</div>' : "") + '</div>';
+  });
+  h += '</div><div class="cardv"><div class="clbl">Score de performance</div>' +
+    '<div style="height:6px;background:var(--g4);border-radius:3px;overflow:hidden;margin-bottom:10px">' +
+    '<div style="height:100%;width:' + score + '%;background:linear-gradient(90deg,var(--v2),var(--v3));border-radius:3px"></div></div>' +
+    '<div style="font-size:26px;font-weight:800;letter-spacing:-1px;color:' + scoreColor + ';margin-bottom:3px">' + score.toFixed(0) + '/100</div>' +
+    '<div style="font-size:13px;font-weight:700;color:' + scoreColor + '">' + scoreLabel + '</div>' +
+    '<div style="font-size:10px;color:var(--g3);margin-top:4px">Base sur win rate, ROI et CLV</div></div>';
+  return h;
+}
+
+/* ════════════════════════════════════════════
+   MAIN RENDER
+════════════════════════════════════════════ */
+function renderPage() {
+  var pg = document.getElementById("page");
+  var t = S.tab, h = "";
+  if (t === "home")     h = pageHome();
+  else if (t === "scanner")  h = pageScanner();
+  else if (t === "matchs")   h = pageMatchs();
+  else if (t === "tips")     h = pageTips();
+  else if (t === "comp")     h = pageComp();
+  else if (t === "analyse")  h = pageAnalyse();
+  else if (t === "result")   h = pageResult();
+  else if (t === "bankroll") h = pageBankroll();
+  else if (t === "stats")    h = pageStats();
+  pg.innerHTML = h;
+  buildSide();
+  updTop();
+  updSide();
+}
+
+function render() { renderPage(); }
+
+/* ════════════════════════════════════════════
+   INIT
+════════════════════════════════════════════ */
+render();
+</script>
+</body>
 </html>
