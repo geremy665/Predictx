@@ -539,11 +539,6 @@ function clearHist(){if(window.confirm("Effacer tout ?")){saveHist([]);renderPag
 function pickM(idx){
   var m=S.matches[idx];
   if(!m)return;
-  // Support both string ID and numeric index
-  var m=S.matches.find(function(x){return x.id===id;});
-  if(!m&&typeof id==="number")m=S.matches[id];
-  if(!m){var idx=parseInt(id);if(!isNaN(idx))m=S.matches[idx];}
-  if(!m)return;
   S.selM=m;S.compM=m;
   S.d=Object.assign({},S.d,{home:m.h,away:m.a,league:m.c,aiH:m.h,aiA:m.a,aiC:m.c,hXG:m.hxg||S.d.hXG,hXGA:m.hxga||S.d.hXGA,hG:m.hg||S.d.hG,hF:m.hf||S.d.hF,aXG:m.axg||S.d.aXG,aXGA:m.axga||S.d.aXGA,aG:m.ag||S.d.aG,aF:m.af||S.d.aF,o1:m.o1||"",oN:m.on||"",o2:m.o2||""});
   GT(5);
@@ -567,8 +562,37 @@ function fetchMatches(){
   S.mLoad=true;S.mErr="";renderPage();
   fetch("/api/odds").then(function(r){return r.json();}).then(function(data){
     if(data.error)throw new Error(data.error);
-    var LMAP={"soccer_france_ligue_one":{n:"Ligue 1",f:"FR"},"soccer_spain_la_liga":{n:"La Liga",f:"ES"},"soccer_epl":{n:"Premier League",f:"ENG"},"soccer_italy_serie_a":{n:"Serie A",f:"IT"},"soccer_germany_bundesliga":{n:"Bundesliga",f:"DE"},"soccer_portugal_primeira_liga":{n:"Liga Portugal",f:"PT"},"soccer_uefa_champs_league":{n:"Champions League",f:"UCL"},"soccer_uefa_europa_league":{n:"Europa League",f:"UEL"}};
-    S.matches=(data.matches||[]).map(function(m){var lg=LMAP[m.league]||{n:m.league,f:"INT"};var enriched=Object.assign({},m,{c:lg.n,f:lg.f,h:m.home,a:m.away});enriched.e=calc(enriched);enriched.arb=arbF(m.o1,m.on,m.o2);return enriched;});
+    var LMAP={
+      "soccer_france_ligue_one":{n:"Ligue 1",f:"FR"},
+      "soccer_france_ligue_two":{n:"Ligue 2",f:"FR"},
+      "soccer_spain_la_liga":{n:"La Liga",f:"ES"},
+      "soccer_spain_segunda_division":{n:"Segunda Division",f:"ES"},
+      "soccer_epl":{n:"Premier League",f:"ENG"},
+      "soccer_england_championship":{n:"Championship",f:"ENG"},
+      "soccer_england_league1":{n:"League One",f:"ENG"},
+      "soccer_england_league2":{n:"League Two",f:"ENG"},
+      "soccer_italy_serie_a":{n:"Serie A",f:"IT"},
+      "soccer_italy_serie_b":{n:"Serie B",f:"IT"},
+      "soccer_germany_bundesliga":{n:"Bundesliga",f:"DE"},
+      "soccer_germany_bundesliga2":{n:"Bundesliga 2",f:"DE"},
+      "soccer_portugal_primeira_liga":{n:"Liga Portugal",f:"PT"},
+      "soccer_netherlands_eredivisie":{n:"Eredivisie",f:"NL"},
+      "soccer_belgium_first_div":{n:"Pro League",f:"BE"},
+      "soccer_turkey_super_league":{n:"Super Lig",f:"TR"},
+      "soccer_russia_premier_league":{n:"RPL",f:"RU"},
+      "soccer_scotland_premiership":{n:"Premiership",f:"SCO"},
+      "soccer_greece_super_league":{n:"Super League",f:"GR"},
+      "soccer_uefa_champs_league":{n:"Champions League",f:"UCL"},
+      "soccer_uefa_europa_league":{n:"Europa League",f:"UEL"},
+      "soccer_uefa_europa_conference_league":{n:"Conference League",f:"UEL"},
+      "soccer_usa_mls":{n:"MLS",f:"USA"},
+      "soccer_brazil_campeonato":{n:"Brasileirao",f:"BRA"},
+      "soccer_argentina_primera_division":{n:"Primera Division",f:"ARG"},
+      "soccer_mexico_ligamx":{n:"Liga MX",f:"MEX"},
+      "soccer_australia_aleague":{n:"A-League",f:"AUS"},
+      "soccer_japan_j_league":{n:"J-League",f:"JPN"}
+    };
+    S.matches=(data.matches||[]).map(function(m,idx){var lg=LMAP[m.league]||{n:m.league,f:"INT"};var enriched=Object.assign({},m,{c:lg.n,f:lg.f,h:m.home||m.h,a:m.away||m.a,idx:idx});enriched.e=calc(enriched);enriched.arb=arbF(m.o1,m.on,m.o2);return enriched;});
     S.mUpd=data.updated;S.mLoad=false;renderPage();
   }).catch(function(){S.matches=getFallback();S.mErr="demo";S.mLoad=false;renderPage();});
 }
