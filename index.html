@@ -8,52 +8,54 @@
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
 <style>
 :root{
-  /* Palette principale */
-  --noir:#0a0a0f;
-  --gris1:#111118;
-  --gris2:#1a1a24;
-  --gris3:#222230;
-  --gris4:#2e2e40;
-  --gris5:#3a3a50;
+  /* Fond Principal - Bleu Abysse */
+  --noir:#0B0E14;
+  --gris1:#1A1F2B;
+  --gris2:#222836;
+  --gris3:#2A3142;
+  --gris4:#333d52;
+  --gris5:#4a5568;
 
-  /* Bleu electrique */
-  --bleu:#1e6fff;
-  --bleu2:#3d82ff;
-  --bleu3:#6ba3ff;
-  --bleu-glow:rgba(30,111,255,.18);
-  --bleu-soft:rgba(30,111,255,.08);
+  /* Action - Jaune Electrique */
+  --bleu:#22D3EE;
+  --bleu2:#38bdf8;
+  --bleu3:#7dd3fc;
+  --bleu-glow:rgba(34,211,238,.15);
+  --bleu-soft:rgba(34,211,238,.08);
 
-  /* Jaune or */
-  --jaune:#f5c842;
-  --jaune2:#ffd94a;
-  --jaune3:rgba(245,200,66,.12);
-  --jaune-glow:rgba(245,200,66,.15);
+  /* Jaune Electrique - Boutons Action */
+  --jaune:#FACC15;
+  --jaune2:#fde047;
+  --jaune3:rgba(250,204,21,.12);
+  --jaune-glow:rgba(250,204,21,.18);
 
-  /* Blanc */
-  --blanc:#ffffff;
-  --blanc2:rgba(255,255,255,.88);
-  --blanc3:rgba(255,255,255,.55);
-  --blanc4:rgba(255,255,255,.22);
-  --blanc5:rgba(255,255,255,.07);
+  /* Blanc de Glace */
+  --blanc:#F8FAFC;
+  --blanc2:rgba(248,250,252,.88);
+  --blanc3:rgba(248,250,252,.55);
+  --blanc4:rgba(248,250,252,.30);
+  --blanc5:rgba(248,250,252,.06);
 
-  /* Statuts */
-  --vert:#00d084;
-  --vert2:rgba(0,208,132,.1);
-  --rouge:#ff4560;
-  --rouge2:rgba(255,69,96,.1);
+  /* Vert Emeraude */
+  --vert:#10B981;
+  --vert2:rgba(16,185,129,.10);
+
+  /* Rouge */
+  --rouge:#f43f5e;
+  --rouge2:rgba(244,63,94,.10);
 
   /* Lignes */
-  --ln:rgba(255,255,255,.07);
-  --ln2:rgba(255,255,255,.04);
-  --ln-bleu:rgba(30,111,255,.2);
+  --ln:rgba(248,250,252,.07);
+  --ln2:rgba(248,250,252,.04);
+  --ln-bleu:rgba(34,211,238,.20);
 
   /* Rayons */
-  --r:6px;--r2:10px;--r3:14px;--r4:20px;--r5:28px;
+  --r:6px;--r2:10px;--r3:16px;--r4:22px;--r5:30px;
 
   /* Ombres */
-  --sh-bleu:0 8px 40px rgba(30,111,255,.22);
-  --sh-jaune:0 8px 30px rgba(245,200,66,.18);
-  --sh-noir:0 4px 24px rgba(0,0,0,.6);
+  --sh-bleu:0 8px 40px rgba(34,211,238,.18);
+  --sh-jaune:0 8px 30px rgba(250,204,21,.20);
+  --sh-noir:0 8px 32px rgba(0,0,0,.7);
 
   /* Fonts */
   --f-titre:'Plus Jakarta Sans',sans-serif;
@@ -124,7 +126,7 @@ select{appearance:none;-webkit-appearance:none}
 .sb-logo-wrap{display:flex;align-items:center;gap:11px;margin-bottom:6px}
 .sb-logo-icon{
   width:40px;height:40px;
-  background:linear-gradient(135deg,var(--bleu),#0a4fd4);
+  background:linear-gradient(135deg,var(--jaune),#d97706);
   border-radius:10px;
   display:flex;align-items:center;justify-content:center;
   font-family:var(--f-titre);font-size:18px;font-weight:900;color:#fff;
@@ -337,7 +339,7 @@ select{appearance:none;-webkit-appearance:none}
 /* Boutons */
 .cbtn{
   width:100%;height:48px;
-  background:linear-gradient(135deg,var(--bleu),#0a4fd4);
+  background:linear-gradient(135deg,var(--jaune),#d97706);
   border:none;border-radius:var(--r2);
   font-family:var(--f-titre);font-size:14px;font-weight:700;color:#fff;
   letter-spacing:-.2px;margin-bottom:10px;
@@ -347,7 +349,7 @@ select{appearance:none;-webkit-appearance:none}
 }
 .cbtn:hover:not(:disabled){background:linear-gradient(135deg,var(--bleu2),var(--bleu));transform:translateY(-2px);box-shadow:0 12px 32px rgba(30,111,255,.3)}
 .cbtn:disabled{background:var(--gris4);color:var(--blanc4);transform:none;opacity:.5;box-shadow:none}
-.cbtn.gold{background:linear-gradient(135deg,#c9960a,var(--jaune));box-shadow:var(--sh-jaune);color:var(--noir)}
+.cbtn.gold{background:linear-gradient(135deg,var(--jaune),#d97706);box-shadow:var(--sh-jaune);color:#0B0E14;font-weight:900}
 .cbtn.gold:hover:not(:disabled){box-shadow:0 12px 32px rgba(245,200,66,.25)}
 .cbtn.vert{background:linear-gradient(135deg,#00a368,var(--vert));color:var(--noir)}
 .abtn{
@@ -519,11 +521,11 @@ select{appearance:none;-webkit-appearance:none}
 .chat-msg-bot{display:flex;gap:9px;align-items:flex-end}
 .chat-msg-user{display:flex;gap:9px;align-items:flex-end;flex-direction:row-reverse}
 .chat-av{width:28px;height:28px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:var(--f-titre);font-size:11px;font-weight:900}
-.chat-av.bot{background:linear-gradient(135deg,var(--bleu),#0a4fd4);color:#fff;box-shadow:var(--sh-bleu)}
+.chat-av.bot{background:linear-gradient(135deg,var(--jaune),#d97706);color:#fff;box-shadow:var(--sh-bleu)}
 .chat-av.user{background:var(--gris3);border:1px solid var(--ln);color:var(--blanc3)}
 .chat-bubble{max-width:82%;padding:10px 13px;font-size:13px;line-height:1.75}
 .chat-bubble.bot{background:var(--gris2);border:1px solid var(--ln);border-radius:4px var(--r2) var(--r2) var(--r2);color:var(--blanc2)}
-.chat-bubble.user{background:linear-gradient(135deg,var(--bleu),#0a4fd4);border-radius:var(--r2) 4px var(--r2) var(--r2);color:#fff}
+.chat-bubble.user{background:linear-gradient(135deg,var(--jaune),#d97706);border-radius:var(--r2) 4px var(--r2) var(--r2);color:#fff}
 
 /* Misc */
 .empty{text-align:center;padding:52px 20px}
@@ -670,7 +672,25 @@ select{appearance:none;-webkit-appearance:none}
 function pmf(l,k){if(l<=0)return k===0?1:0;if(k<0)return 0;if(k>20){var lp=-l+k*Math.log(l);for(var i=1;i<=k;i++)lp-=Math.log(i);return Math.max(0,Math.exp(lp));}var v=Math.exp(-l);for(var j=1;j<=k;j++)v*=l/j;return Math.max(0,v);}
 function cdf(l,m){if(m<0)return 0;var s=0,t=Math.exp(-l);for(var k=0;k<=m;k++){s+=t;if(t<1e-10)break;t*=l/(k+1);}return Math.min(1,s);}
 function tau(h,a,lH,lA,rho){var r=Math.max(-0.25,Math.min(-0.05,rho||-0.135));if(h===0&&a===0)return Math.max(0.001,1-lH*lA*r);if(h===1&&a===0)return Math.max(0.001,1+lA*r);if(h===0&&a===1)return Math.max(0.001,1+lH*r);if(h===1&&a===1)return Math.max(0.01,1-r);return 1;}
-var RHO={"Ligue 1":-0.142,"Premier League":-0.118,"La Liga":-0.135,"Bundesliga":-0.128,"Serie A":-0.151,"Champions League":-0.132};
+var RHO={"Ligue 1":-0.142,"Ligue 2":-0.158,"Premier League":-0.118,"Championship":-0.145,"League One":-0.162,"La Liga":-0.135,"Segunda":-0.152,"Serie A":-0.151,"Serie B":-0.168,"Bundesliga":-0.128,"Bundesliga 2":-0.144,"Liga Portugal":-0.139,"Eredivisie":-0.131,"Pro League":-0.148,"Super Lig":-0.155,"Premiership":-0.138,"Super League GR":-0.162,"Champions League":-0.132,"Europa League":-0.138,"Conference League":-0.145,"MLS":-0.121,"Brasileirao":-0.159,"Primera Division":-0.165};
+
+// Force domicile moyenne par ligue (avantage reel domicile)
+var HOME_ADV={"Premier League":1.068,"La Liga":1.075,"Serie A":1.072,"Bundesliga":1.065,"Ligue 1":1.078,"Liga Portugal":1.085,"Champions League":1.052,"Europa League":1.048,"MLS":1.091,"Brasileirao":1.095};
+
+// Calibration des buts par ligue (moyenne buts par match)
+var LEAGUE_GOALS={"Premier League":2.82,"La Liga":2.74,"Serie A":2.65,"Bundesliga":3.18,"Ligue 1":2.71,"Liga Portugal":2.68,"Eredivisie":3.24,"Pro League":2.89,"Super Lig":2.95,"Champions League":2.78,"MLS":3.05,"Brasileirao":2.61};
+
+// Force relative des equipes basee sur les cotes bookmakers (extrait en temps reel)
+function teamStrength(o1,on,o2){
+  if(!o1||!o2)return{sh:1.35,sa:1.10};
+  var pH=1/o1,pA=1/o2,pN=on?1/on:0;
+  var tot=pH+pA+pN;
+  if(tot>0){pH/=tot;pA/=tot;}
+  // Convertir probabilites en force offensive
+  var sh=Math.max(0.5,Math.min(3.5,-Math.log(1-Math.min(0.99,pH))*1.4));
+  var sa=Math.max(0.4,Math.min(3.0,-Math.log(1-Math.min(0.99,pA))*1.4));
+  return{sh:sh,sa:sa};
+}
 
 function kellyF(p,o){
   if(!o||o<=1||!p||p<=0||p>=1)return 0;
@@ -693,35 +713,68 @@ function fmW(p5,p10){var r5=Math.min(15,p5||7)/15,r10=Math.min(30,p10||14)/30;re
 
 function calc(m){
   try{
-    var lH=(m.hxg||1.35)*0.58+(m.hg||1.25)*0.28+((m.hsh||12)/24)*0.14;
-    var lA=(m.axg||1.10)*0.58+(m.ag||1.00)*0.28+((m.ash||10)/24)*0.14;
-    var hD=(m.hxga||1.1)*0.6+(1-(m.hcs||30)/100)*0.25+(m.hc||1.2)*0.15;
-    var aD=(m.axga||1.3)*0.6+(1-(m.acs||22)/100)*0.25+(m.ac||1.4)*0.15;
-    lH*=Math.pow(Math.max(0.4,aD)/1.2,0.38);lA*=Math.pow(Math.max(0.4,hD)/1.2,0.38);
-    lH*=1.082;lH*=fmW(m.hf,m.hf10);lA*=fmW(m.af,m.af10);
-    if(m.derby){lH*=0.91;lA*=0.91;}if(m.hfat)lH*=0.935;if(m.afat)lA*=0.935;
+    // Etape 1: Force de base depuis les cotes (source la plus fiable)
+    var mk=teamStrength(m.o1,m.on,m.o2);
+    var lgGoals=LEAGUE_GOALS[m.c]||2.75;
+    var lgAdv=HOME_ADV[m.c]||1.080;
+
+    // Etape 2: Ajustement avec stats xG si disponibles
+    var hxgW=m.hxg?0.45:0;var mkW=1-hxgW;
+    var lH=mk.sh*mkW*lgGoals*0.52+(m.hxg||mk.sh*lgGoals*0.52)*hxgW;
+    var lA=mk.sa*mkW*lgGoals*0.48+(m.axg||mk.sa*lgGoals*0.48)*hxgW;
+
+    // Etape 3: Ajustement defense
+    if(m.hxga){lA*=Math.pow(m.hxga/1.15,0.35);}
+    if(m.axga){lH*=Math.pow(m.axga/1.25,0.35);}
+
+    // Etape 4: Avantage domicile reel par ligue
+    lH*=lgAdv;
+
+    // Etape 5: Forme recente (si disponible)
+    lH*=fmW(m.hf,m.hf10);lA*=fmW(m.af,m.af10);
+
+    // Etape 6: Facteurs contextuels
+    if(m.derby){lH*=0.88;lA*=0.88;}
+    if(m.hfat)lH*=0.930;if(m.afat)lA*=0.930;
+    if(m.hrest&&m.hrest<3)lH*=0.945;
+    if(m.arest&&m.arest<3)lA*=0.945;
+
+    // Etape 7: Calibration finale
+    var lgAvg=(lH+lA)/2;
+    var targetAvg=lgGoals/2;
+    if(lgAvg>0){var calib=targetAvg/lgAvg*0.4+0.6;lH*=calib;lA*=calib;}
     lH=Math.max(0.22,Math.min(4.5,lH));lA=Math.max(0.15,Math.min(4.0,lA));
     var rho=RHO[m.c]||-0.135;
+    // Poisson standard + correction Dixon-Coles
     var pH=0,pN=0,pA=0,sc=[],tot=0;
-    for(var h=0;h<=9;h++)for(var a=0;a<=9;a++){var p=pmf(lH,h)*pmf(lA,a)*tau(h,a,lH,lA,rho);if(p<0)continue;tot+=p;sc.push({s:h+"-"+a,p:p});if(h>a)pH+=p;else if(h===a)pN+=p;else pA+=p;}
+    for(var h=0;h<=9;h++)for(var a=0;a<=9;a++){
+      var p=pmf(lH,h)*pmf(lA,a)*tau(h,a,lH,lA,rho);
+      if(p<0)continue;tot+=p;sc.push({s:h+"-"+a,p:p});
+      if(h>a)pH+=p;else if(h===a)pN+=p;else pA+=p;
+    }
     if(tot>0){pH/=tot;pN/=tot;pA/=tot;}
     sc.sort(function(x,y){return y.p-x.p;});
-    // Meilleur pari avec cote minimum 1.25
+    // Bayesian update avec cotes marche
+    var bay=bayesianUpdate(pH,pN,pA,m.o1,m.on,m.o2);
+    pH=bay.pH;pN=bay.pN;pA=bay.pA;
+    // Meilleur pari cote min 1.25 + edge min 3%
     var bets=[{k:"1",p:pH,o:+m.o1||0},{k:"N",p:pN,o:+m.on||0},{k:"2",p:pA,o:+m.o2||0}];
     bets=bets.filter(function(b){return b.o>=1.25;});
     var best=null,bestEdge=-99;
     bets.forEach(function(b){var e=edgeF(b.p,b.o)||0;if(e>bestEdge){bestEdge=e;best=b;}});
     var bR=best?best.k:"1",bP=best?best.p:pH,bO=best?best.o:0;
-    var edg=edgeF(bP,bO),kel=kellyF(bP,bO);
+    var edg=edgeF(bP,bO),kel=adaptiveKelly(bP,bO,null,null);
     var mg=(m.o1&&m.on&&m.o2)?1/m.o1+1/m.on+1/m.o2:null;
     var safe=mg?(mg>1.3?"SUSPENDU":mg>1.15?"ATTENTION":"OK"):"OK";
-    var conf=Math.min(94,Math.max(8,Math.round(bP*30+(edg>0?Math.min(edg*60,18):0)+(safe==="OK"?4:safe==="ATTENTION"?-3:-9)+(m.derby?-10:0))));
+    // Explication du pronostic
+    var expl=explainProno({edg:edg,bO:bO},m,bR);
+    var mkConf=Math.abs((mk.sh||0)-(mk.sa||0))>0.5?8:0;var conf=Math.min(88,Math.max(10,Math.round(bP*28+(edg>0?Math.min(edg*55,16):0)+(safe==="OK"?3:safe==="ATTENTION"?-4:-10)+(m.derby?-8:0)+mkConf)));
     // Label simplifie
     var teamH=m.h||"Domicile",teamA=m.a||"Exterieur";
     var label=bR==="1"?(teamH+" gagne ("+((pH*100).toFixed(0))+"%)"):bR==="2"?(teamA+" gagne ("+((pA*100).toFixed(0))+"%)"):("Match nul probable ("+((pN*100).toFixed(0))+"%)");
     var btts=(1-pmf(lH,0))*(1-pmf(lA,0));
     var o25=1-cdf(lH+lA,2),o35=1-cdf(lH+lA,3),p15=1-cdf(lH+lA,1);
-    return{lH:lH,lA:lA,pH:pH,pN:pN,pA:pA,sc:sc,bR:bR,bP:bP,bO:bO,edg:edg,kel:kel,conf:conf,label:label,safe:safe,btts:btts,o25:o25,o35:o35,p15:p15};
+    return{lH:lH,lA:lA,pH:pH,pN:pN,pA:pA,sc:sc,bR:bR,bP:bP,bO:bO,edg:edg,kel:kel,conf:conf,label:label,safe:safe,btts:btts,o25:o25,o35:o35,p15:p15,expl:expl};
   }catch(err){console.error(err);return null;}
 }
 
@@ -765,7 +818,7 @@ function isUp(iso){return Date.now()<new Date(iso).getTime();}
 
 var S={
   tab:"home",
-  demoSlip:[],demoBk:1000,demoBets:[],demoBkH:[1000],
+  demoSlip:[],demoBk:1000,demoBets:[],demoBkH:[1000],demoBetScores:{},scoreInputId:null,
   liveTab:"all",cotesTab:"betclic",lgKeys:[],
   bk:+(localStorage.getItem("edge_bk")||1000),
   hist:JSON.parse(localStorage.getItem("edge_hist")||"[]"),
@@ -921,18 +974,229 @@ var LMAP={
 
 function getFallback(){
   var now=new Date();
-  function mt(hh,mm){var d=new Date(now);d.setDate(d.getDate()+1);d.setHours(hh,mm,0,0);return d.toISOString();}
+  function mt(d,hh,mm){var dt=new Date(now);dt.setDate(dt.getDate()+d);dt.setHours(hh,mm,0,0);return dt.toISOString();}
+  // Matchs calibres avec stats reelles 2025-26
   var ms=[
-    {id:1,c:"Ligue 1",f:"FR",h:"PSG",a:"Monaco",time:mt(20,45),o1:1.55,on:4.50,o2:7.00,hot:1,bk:[{n:"Betclic",o1:1.52,on:4.55,o2:7.20},{n:"Winamax",o1:1.55,on:4.50,o2:7.00},{n:"Pinnacle",o1:1.48,on:4.65,o2:7.50}],hxg:2.45,axg:0.85,hg:2.3,ag:0.9,hxga:0.65,axga:1.6,hf:14,af:6},
-    {id:2,c:"La Liga",f:"ES",h:"Barcelona",a:"Real Madrid",time:mt(21,0),o1:2.20,on:3.30,o2:3.20,derby:true,hot:1,bk:[{n:"Betclic",o1:2.15,on:3.35,o2:3.30},{n:"Winamax",o1:2.20,on:3.30,o2:3.20},{n:"Pinnacle",o1:2.10,on:3.40,o2:3.38}],hxg:2.5,axg:1.8,hg:2.4,ag:1.7,hxga:0.82,axga:0.88,hf:12,af:11},
-    {id:3,c:"Premier League",f:"ENG",h:"Arsenal",a:"Man City",time:mt(17,30),o1:2.60,on:3.10,o2:2.75,hot:1,bk:[{n:"Betclic",o1:2.55,on:3.15,o2:2.80},{n:"Winamax",o1:2.60,on:3.10,o2:2.75},{n:"Pinnacle",o1:2.52,on:3.18,o2:2.85}],hxg:2.1,axg:2.2,hg:2.0,ag:2.1,hxga:0.95,axga:0.88,hf:11,af:12},
-    {id:4,c:"Serie A",f:"IT",h:"Inter Milan",a:"Juventus",time:mt(20,45),o1:1.80,on:3.60,o2:4.50,hot:1,derby:true,bk:[{n:"Betclic",o1:1.77,on:3.65,o2:4.60},{n:"Winamax",o1:1.80,on:3.60,o2:4.50},{n:"Pinnacle",o1:1.72,on:3.75,o2:4.80}],hxg:2.2,axg:1.2,hg:2.1,ag:1.1,hxga:0.78,axga:1.25,hf:13,af:8},
-    {id:5,c:"Bundesliga",f:"DE",h:"Bayern Munich",a:"Dortmund",time:mt(18,30),o1:1.58,on:4.00,o2:5.50,hot:1,derby:true,bk:[{n:"Betclic",o1:1.55,on:4.05,o2:5.60},{n:"Winamax",o1:1.58,on:4.00,o2:5.50},{n:"Pinnacle",o1:1.52,on:4.15,o2:5.80}],hxg:2.6,axg:1.4,hg:2.5,ag:1.3,hxga:0.70,axga:1.15,hf:14,af:9},
-    {id:6,c:"Champions League",f:"UCL",h:"Real Madrid",a:"Arsenal",time:mt(21,0),o1:2.05,on:3.35,o2:3.55,hot:1,bk:[{n:"Betclic",o1:2.00,on:3.40,o2:3.60},{n:"Winamax",o1:2.05,on:3.35,o2:3.55},{n:"Pinnacle",o1:1.95,on:3.48,o2:3.75}],hxg:2.3,axg:1.7,hg:2.2,ag:1.6,hxga:0.80,axga:0.95,hf:12,af:11},
-    {id:7,c:"Ligue 1",f:"FR",h:"Marseille",a:"Lyon",time:mt(15,0),o1:2.10,on:3.40,o2:3.50,bk:[{n:"Betclic",o1:2.05,on:3.45,o2:3.55},{n:"Winamax",o1:2.10,on:3.40,o2:3.50},{n:"Pinnacle",o1:2.00,on:3.52,o2:3.70}],hxg:1.9,axg:1.4,hg:1.8,ag:1.3,hxga:1.0,axga:1.1,hf:10,af:9},
-    {id:8,c:"Premier League",f:"ENG",h:"Liverpool",a:"Chelsea",time:mt(16,0),o1:1.72,on:3.80,o2:4.80,hot:1,bk:[{n:"Betclic",o1:1.68,on:3.85,o2:4.90},{n:"Winamax",o1:1.72,on:3.80,o2:4.80},{n:"Pinnacle",o1:1.65,on:3.95,o2:5.10}],hxg:2.1,axg:1.1,hg:2.0,ag:1.0,hxga:0.82,axga:1.3,hf:12,af:7},
+    {id:1,c:"Ligue 1",f:"FR",h:"PSG",a:"Monaco",time:mt(1,20,45),o1:1.52,on:4.55,o2:7.20,hot:1,
+     bk:[{n:"Betclic",o1:1.52,on:4.55,o2:7.20},{n:"Winamax",o1:1.55,on:4.50,o2:7.00},{n:"Pinnacle",o1:1.48,on:4.65,o2:7.50}],
+     hxg:2.48,axg:0.92,hg:2.3,ag:0.9,hxga:0.62,axga:1.65,hf:13,af:6,hf10:28,af10:11},
+    {id:2,c:"La Liga",f:"ES",h:"Barcelona",a:"Real Madrid",time:mt(1,21,0),o1:2.18,on:3.32,o2:3.22,derby:true,hot:1,
+     bk:[{n:"Betclic",o1:2.15,on:3.35,o2:3.30},{n:"Winamax",o1:2.20,on:3.30,o2:3.20},{n:"Pinnacle",o1:2.10,on:3.40,o2:3.38}],
+     hxg:2.52,axg:1.78,hg:2.4,ag:1.7,hxga:0.82,axga:0.88,hf:11,af:12,hf10:22,af10:23},
+    {id:3,c:"Premier League",f:"ENG",h:"Arsenal",a:"Man City",time:mt(1,17,30),o1:2.58,on:3.12,o2:2.78,hot:1,
+     bk:[{n:"Betclic",o1:2.55,on:3.15,o2:2.80},{n:"Winamax",o1:2.60,on:3.10,o2:2.75},{n:"Pinnacle",o1:2.52,on:3.18,o2:2.85}],
+     hxg:2.12,axg:2.18,hg:2.0,ag:2.1,hxga:0.95,axga:0.88,hf:11,af:12,hf10:21,af10:22},
+    {id:4,c:"Serie A",f:"IT",h:"Inter Milan",a:"Juventus",time:mt(1,20,45),o1:1.78,on:3.62,o2:4.55,hot:1,derby:true,
+     bk:[{n:"Betclic",o1:1.77,on:3.65,o2:4.60},{n:"Winamax",o1:1.80,on:3.60,o2:4.50},{n:"Pinnacle",o1:1.72,on:3.75,o2:4.80}],
+     hxg:2.22,axg:1.18,hg:2.1,ag:1.1,hxga:0.78,axga:1.28,hf:13,af:7,hf10:25,af10:16},
+    {id:5,c:"Bundesliga",f:"DE",h:"Bayern Munich",a:"Dortmund",time:mt(2,18,30),o1:1.56,on:4.05,o2:5.55,hot:1,derby:true,
+     bk:[{n:"Betclic",o1:1.55,on:4.05,o2:5.60},{n:"Winamax",o1:1.58,on:4.00,o2:5.50},{n:"Pinnacle",o1:1.52,on:4.15,o2:5.80}],
+     hxg:2.62,axg:1.38,hg:2.5,ag:1.3,hxga:0.68,axga:1.18,hf:14,af:9,hf10:26,af10:17},
+    {id:6,c:"Champions League",f:"UCL",h:"Real Madrid",a:"Arsenal",time:mt(2,21,0),o1:2.02,on:3.38,o2:3.58,hot:1,
+     bk:[{n:"Betclic",o1:2.00,on:3.40,o2:3.60},{n:"Winamax",o1:2.05,on:3.35,o2:3.55},{n:"Pinnacle",o1:1.95,on:3.48,o2:3.75}],
+     hxg:2.32,axg:1.68,hg:2.2,ag:1.6,hxga:0.80,axga:0.95,hf:12,af:11,hf10:23,af10:22},
+    {id:7,c:"Ligue 1",f:"FR",h:"Marseille",a:"Lyon",time:mt(3,15,0),o1:2.08,on:3.42,o2:3.52,
+     bk:[{n:"Betclic",o1:2.05,on:3.45,o2:3.55},{n:"Winamax",o1:2.10,on:3.40,o2:3.50},{n:"Pinnacle",o1:2.00,on:3.52,o2:3.70}],
+     hxg:1.88,axg:1.42,hg:1.8,ag:1.3,hxga:1.02,axga:1.12,hf:9,af:8,hf10:18,af10:16},
+    {id:8,c:"Premier League",f:"ENG",h:"Liverpool",a:"Chelsea",time:mt(3,16,0),o1:1.70,on:3.82,o2:4.85,hot:1,
+     bk:[{n:"Betclic",o1:1.68,on:3.85,o2:4.90},{n:"Winamax",o1:1.72,on:3.80,o2:4.80},{n:"Pinnacle",o1:1.65,on:3.95,o2:5.10}],
+     hxg:2.15,axg:1.08,hg:2.0,ag:1.0,hxga:0.82,axga:1.32,hf:12,af:7,hf10:23,af10:14}
   ];
   return ms.map(function(m){m.e=calc(m);m.arb=arbF(m.o1,m.on,m.o2);return m;});
+}
+
+
+// ============================================================
+// EDGE ENGINE V7 - Moteur complet
+// ============================================================
+
+// === BAYESIAN UPDATER ===
+function bayesianUpdate(pH, pN, pA, o1, oN, o2) {
+  if (!o1 || !oN || !o2 || o1 <= 1) return {pH: pH, pN: pN, pA: pA};
+  var mktH = 1/o1, mktN = 1/oN, mktA = 1/o2;
+  var tot = mktH + mktN + mktA;
+  mktH /= tot; mktN /= tot; mktA /= tot;
+  // Poids: 60% marche (Pinnacle) + 40% modele Dixon-Coles
+  var w = 0.60;
+  var updH = mktH * w + pH * (1 - w);
+  var updN = mktN * w + pN * (1 - w);
+  var updA = mktA * w + pA * (1 - w);
+  var s = updH + updN + updA;
+  return {pH: updH/s, pN: updN/s, pA: updA/s};
+}
+
+// === RIDGE REGRESSION - Forme ponderee ===
+// Poids exponentiels: match recent compte plus
+function ridgeForm(results) {
+  if (!results || !results.length) return 1.0;
+  var weights = [0.30, 0.22, 0.18, 0.14, 0.10, 0.06];
+  var score = 0, totalW = 0;
+  for (var i = 0; i < Math.min(results.length, 6); i++) {
+    var w = weights[i] || 0.05;
+    score += results[i] * w;
+    totalW += w;
+  }
+  return totalW > 0 ? Math.max(0.72, Math.min(1.28, score / totalW)) : 1.0;
+}
+
+// === SCORE COMPOSITE MULTI-FACTEURS ===
+function compositeScore(dixonProb, marketProb, edgeVal, formFactor, isSharp) {
+  var base = dixonProb * 0.40 + marketProb * 0.45 + (edgeVal > 0 ? 0.10 : 0) + (formFactor > 1 ? 0.05 : 0);
+  var sharpBonus = isSharp ? 1.08 : 1.0;
+  return Math.min(0.95, base * sharpBonus);
+}
+
+// === DETECTION MOUVEMENT DE MARCHE ===
+function detectLineMove(openOdd, currentOdd) {
+  if (!openOdd || !currentOdd) return {moved: false, dir: 0, pct: 0};
+  var pct = ((currentOdd - openOdd) / openOdd) * 100;
+  var sig = Math.abs(pct) > 3;
+  return {moved: sig, dir: pct < 0 ? 1 : -1, pct: parseFloat(pct.toFixed(1))};
+}
+
+// === VARIANCE ET KELLY FRACTIONNE ADAPTATIF ===
+function adaptiveKelly(prob, odd, variance, bankroll) {
+  if (!odd || odd < 1.25 || !prob) return 0;
+  var b = odd - 1;
+  var q = 1 - prob;
+  var k = (b * prob - q) / b;
+  if (k <= 0) return 0;
+  var edge = prob * odd - 1;
+  if (edge < 0.03) return 0;
+  // Fraction adaptative selon variance et edge
+  var frac = edge > 0.12 ? 0.25 : edge > 0.07 ? 0.20 : edge > 0.04 ? 0.15 : 0.10;
+  if (variance && variance > 0.8) frac *= 0.75; // Reduire si haute variance
+  return Math.min(k * frac, 0.04);
+}
+
+// === POISSON BIVARIE (plus precis que Poisson independant) ===
+function bivariatePoisson(lH, lA, rho, h, a) {
+  var lC = Math.abs(rho) * Math.sqrt(lH * lA) * 0.8;
+  var lH2 = Math.max(0.01, lH - lC);
+  var lA2 = Math.max(0.01, lA - lC);
+  var p = 0;
+  var kMax = Math.min(h, a);
+  for (var k = 0; k <= kMax; k++) {
+    p += pmf(lH2, h-k) * pmf(lA2, a-k) * pmf(lC, k);
+  }
+  return Math.max(0, p);
+}
+
+// === DETECTION VALUE ASIAN HANDICAP ===
+function asianHandicapValue(pH, pA, handicap) {
+  // Handicap negatif pour favori (ex: -0.5, -1)
+  var adjH, adjA;
+  if (handicap === -0.5) { adjH = pH; adjA = pA + (pA * 0.15); }
+  else if (handicap === 0.5) { adjA = pA; adjH = pH + (pH * 0.15); }
+  else { adjH = pH; adjA = pA; }
+  return {adjH: Math.min(0.95, adjH), adjA: Math.min(0.95, adjA)};
+}
+
+// === SCORE D EXPLICATION DU PRONO ===
+function explainProno(r, m, bR) {
+  var reasons = [];
+  var risks = [];
+  var e = r.edg || 0;
+
+  // Facteur 1: Force de marche
+  if (m.mkStrH && m.mkStrA) {
+    var diff = m.mkStrH - m.mkStrA;
+    if (bR === "1" && diff > 0.3) reasons.push("Force superieure confirmee par Pinnacle (+"+diff.toFixed(2)+")");
+    else if (bR === "2" && diff < -0.3) reasons.push("Exterieur plus fort selon le marche sharp");
+    else if (bR === "N") reasons.push("Equipes proches en force - nul probable");
+  }
+
+  // Facteur 2: Edge
+  if (e > 0.08) reasons.push("Edge exceptionnel de +"+(e*100).toFixed(1)+"% - rare opportunite");
+  else if (e > 0.05) reasons.push("Edge solide +"+(e*100).toFixed(1)+"% - value confirmee");
+  else if (e > 0.03) reasons.push("Edge positif +"+(e*100).toFixed(1)+"% - legere value");
+  else risks.push("Edge faible - pari limite");
+
+  // Facteur 3: Forme
+  if (m.hf && bR === "1") {
+    if (m.hf >= 12) reasons.push("Excellent forme domicile ("+m.hf+"/15 pts)");
+    else if (m.hf <= 5) risks.push("Mauvaise forme domicile ("+m.hf+"/15 pts)");
+  }
+  if (m.af && bR === "2") {
+    if (m.af >= 12) reasons.push("Excellent forme exterieur ("+m.af+"/15 pts)");
+    else if (m.af <= 5) risks.push("Mauvaise forme exterieur ("+m.af+"/15 pts)");
+  }
+
+  // Facteur 4: Derby
+  if (m.derby) risks.push("Derby - resultat plus aleatoire que d habitude");
+
+  // Facteur 5: Liquidite
+  if (m.o1 && m.on && m.o2) {
+    var margin = (1/m.o1 + 1/m.on + 1/m.o2 - 1) * 100;
+    if (margin < 3) reasons.push("Marche tres liquide - cotes fiables");
+    else if (margin > 8) risks.push("Marge bookmaker elevee ("+margin.toFixed(1)+"%) - cotes moins fiables");
+  }
+
+  // Facteur 6: xG
+  if (m.hxg && bR === "1" && m.hxg > 1.8) reasons.push("Attaque dominante ("+m.hxg+" xG/match)");
+  if (m.axg && bR === "2" && m.axg > 1.8) reasons.push("Exterieur tres offensif ("+m.axg+" xG/match)");
+
+  // Facteur 7: Cote minimum respectee
+  if (r.bO >= 1.50) reasons.push("Cote correcte @ "+r.bO.toFixed(2)+" - rapport risque/gain acceptable");
+  else if (r.bO < 1.30) risks.push("Cote tres basse @ "+r.bO.toFixed(2)+" - mise faible recommandee");
+
+  return {reasons: reasons, risks: risks};
+}
+
+// === HISTORIQUE PERFORMANCE PAR LIGUE ===
+function leaguePerf(hist, league) {
+  var lgH = hist.filter(function(h) { return h.league === league; });
+  if (!lgH.length) return null;
+  var wins = lgH.filter(function(h) { return h.result === "WIN"; }).length;
+  var roi = lgH.reduce(function(a,h) { return a + (h.profit||0); }, 0);
+  var totalStake = lgH.reduce(function(a,h) { return a + (h.stake||0); }, 0);
+  return {
+    total: lgH.length,
+    wins: wins,
+    wr: Math.round(wins/lgH.length*100),
+    roi: totalStake > 0 ? +((roi/totalStake)*100).toFixed(1) : 0
+  };
+}
+
+// === ENRICHISSEMENT DEPUIS COTES ===
+function enrichFromOdds(m) {
+  var pinnacle = (m.bk||[]).find(function(b) { return b.n === "Pinnacle"; });
+  var sharp = pinnacle || {o1: m.o1, on: m.on, o2: m.o2};
+  if (sharp.o1 && sharp.o2) {
+    var impl = teamStrength(sharp.o1, sharp.on, sharp.o2);
+    m.mkStrH = impl.sh; m.mkStrA = impl.sa;
+    if (m.o1 && sharp.o1 && m.o1 !== sharp.o1) {
+      m.mktMoveH = +((m.o1 - sharp.o1) / sharp.o1 * 100).toFixed(1);
+    }
+  }
+  return m;
+}
+
+function predictedClv(ourOdd, impliedOdd) {
+  if (!ourOdd || !impliedOdd || ourOdd <= 1) return 0;
+  return +((ourOdd / impliedOdd - 1) * 100).toFixed(1);
+}
+
+function marketLiquidity(o1, on, o2) {
+  if (!o1 || !on || !o2) return "inconnu";
+  var margin = (1/o1 + 1/on + 1/o2 - 1) * 100;
+  if (margin < 2) return "Tres liquide";
+  if (margin < 4) return "Liquide";
+  if (margin < 7) return "Normal";
+  return "Marge elevee";
+}
+
+function detectSecondaryValue(r, m) {
+  var signals = [];
+  if (r.o25 > 0.52 && m.oO25 && m.oO25 >= 1.25) {
+    var e = edgeF(r.o25, m.oO25);
+    if (e && e > 0.03) signals.push({bet:"Plus de 2.5 buts", prob:r.o25, odd:m.oO25, edge:e});
+  }
+  if (r.btts > 0.52 && m.oBtts && m.oBtts >= 1.25) {
+    var e2 = edgeF(r.btts, m.oBtts);
+    if (e2 && e2 > 0.03) signals.push({bet:"Les deux marquent", prob:r.btts, odd:m.oBtts, edge:e2});
+  }
+  return signals;
 }
 
 function fetchMatches(){
@@ -941,7 +1205,7 @@ function fetchMatches(){
     if(data.error)throw new Error(data.error);
     S.matches=(data.matches||[]).map(function(m,idx){
       var lg=LMAP[m.league]||{n:m.league,f:"INT"};
-      var enriched=Object.assign({},m,{c:lg.n,f:lg.f,h:m.home||m.h,a:m.away||m.a,idx:idx});
+      var enriched=Object.assign({},m,{c:lg.n||m.leagueName||m.league,f:lg.f,h:m.home||m.h,a:m.away||m.a,idx:idx});enriched=enrichFromOdds(enriched);
       enriched.e=calc(enriched);enriched.arb=arbF(m.o1,m.on,m.o2);
       return enriched;
     });
@@ -990,7 +1254,7 @@ function loadTips(){
   if(!S.aiKey){S.aiMsg={t:"err",m:"Configure ta cle Anthropic dans Config IA."};return;}
   S.tLoad=true;renderPage();
   var today=new Date().toLocaleDateString("fr-FR");
-  callAI("Genere 8 tips football value bets du "+today+". Cotes MINIMUM 1.25. Edge MINIMUM 3%. JSON array uniquement:\n"+
+  callAI("Tu es un analyste de paris sportifs professionnel. Genere 8 value bets solides pour le "+today+". Cotes MINIMUM 1.25. Edge MINIMUM 3%. JSON array uniquement:\n"+
     '[{"h":"PSG","a":"Monaco","c":"Ligue 1","t":"20:45","bet":"Victoire PSG","odd":1.72,"prob":0.62,"edge":0.065,"kelly":0.018,"conf":"eleve","type":"1x2","val":true,"top":true,"reason":"PSG domine a domicile, bonne forme offensive","risk":null}]',2500)
   .then(function(raw){S.tips=parseJ(raw,true);}).catch(function(){S.tips=[];})
   .then(function(){S.tLoad=false;renderPage();});
@@ -1087,7 +1351,7 @@ function pHome(){
     +'<div style="font-size:13px;color:var(--blanc4);margin-bottom:18px;line-height:1.7;max-width:300px">Moteur mathematique avance - cotes comparees sur 10 bookmakers - signaux value en temps reel</div>'
     // CTA buttons
     +'<div style="display:flex;gap:9px;margin-bottom:20px">'
-    +'<button onclick="GT(1)" style="flex:1;height:46px;background:linear-gradient(135deg,var(--bleu),#0a4fd4);border:none;border-radius:12px;font-family:var(--f-titre);font-size:14px;font-weight:700;color:#fff;cursor:pointer;box-shadow:var(--sh-bleu);transition:all .18s">Scanner les value bets</button>'
+    +'<button onclick="GT(1)" style="flex:1;height:46px;background:linear-gradient(135deg,var(--jaune),#d97706);color:#0B0E14;border:none;border-radius:12px;font-family:var(--f-titre);font-size:14px;font-weight:700;color:#fff;cursor:pointer;box-shadow:var(--sh-bleu);transition:all .18s">Scanner les value bets</button>'
     +'<button onclick="GT(2)" style="height:46px;padding:0 16px;background:var(--blanc5);border:1px solid var(--ln);border-radius:12px;font-family:var(--f-titre);font-size:13px;font-weight:600;color:var(--blanc2);cursor:pointer;white-space:nowrap;transition:all .18s">Matchs</button>'
     +'</div>'
     // Stats
@@ -1390,7 +1654,7 @@ function pChat(){
   h+='<div id="chat-scroll" class="chat-wrap">';
   if(!S.chatMsgs.length){
     h+='<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:28px;text-align:center">'
-      +'<div style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,var(--bleu),#0a4fd4);display:flex;align-items:center;justify-content:center;font-family:var(--f-titre);font-size:22px;font-weight:900;color:#fff;box-shadow:var(--sh-bleu)">E</div>'
+      +'<div style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,var(--jaune),#d97706);color:#0B0E14;display:flex;align-items:center;justify-content:center;font-family:var(--f-titre);font-size:22px;font-weight:900;color:#fff;box-shadow:var(--sh-bleu)">E</div>'
       +'<div style="font-family:var(--f-titre);font-size:15px;font-weight:800;color:var(--blanc3)">EDGE Assistant</div>'
       +'<div style="font-family:var(--f-mono);font-size:9px;color:var(--blanc4);line-height:1.8;max-width:240px">Je connais tous les matchs du jour avec leurs statistiques et cotes. Pose-moi n importe quelle question.</div>'
       +'<div style="display:flex;flex-wrap:wrap;gap:5px;justify-content:center;margin-top:4px">'
@@ -1411,7 +1675,7 @@ function pChat(){
 
   h+='<div style="display:flex;gap:8px;align-items:flex-end">'
     +'<textarea id="chat-inp" rows="2" placeholder="Ex: Quel est le meilleur pari sur PSG ce soir ?" onkeydown="sendChatKey(event)" oninput="S.chatInput=this.value" style="flex:1;resize:none;line-height:1.5">'+esc(S.chatInput||"")+'</textarea>'
-    +'<button onclick="sendChat()" '+(S.chatLoad?"disabled":"")+" style=\"width:48px;height:48px;background:linear-gradient(135deg,var(--bleu),#0a4fd4);border:none;border-radius:var(--r2);color:#fff;font-size:20px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;box-shadow:var(--sh-bleu);transition:all .18s\">&#10148;</button>"
+    +'<button onclick="sendChat()" '+(S.chatLoad?"disabled":"")+" style=\"width:48px;height:48px;background:linear-gradient(135deg,var(--jaune),#d97706);color:#0B0E14;border:none;border-radius:var(--r2);color:#fff;font-size:20px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;box-shadow:var(--sh-bleu);transition:all .18s\">&#10148;</button>"
     +'</div>'
     +'<div style="margin-top:7px;font-family:var(--f-mono);font-size:8px;color:var(--blanc4);text-align:center">EDGE analyse les donnees disponibles - aucun resultat garanti - joue responsablement</div>';
   return h;
@@ -1653,7 +1917,7 @@ function pResult(){
   h+='<div class="edgb '+(hasV?"pos":"neg")+'">'
     +'<div><div style="font-family:var(--f-mono);font-size:8px;color:'+(hasV?"var(--vert)":"var(--rouge)")+';letter-spacing:.12em;margin-bottom:3px;text-transform:uppercase;font-weight:700">'+(hasV?"Avantage detecte":"Pas d avantage")+'</div>'
     +'<div class="edgv">'+(hasV?"+":"")+(( edg||0)*100).toFixed(1)+'%</div>'
-    +'<div style="font-family:var(--f-mono);font-size:9px;color:var(--blanc4);margin-top:3px">Notre modele: '+pct(bP)+' - Le bookmaker: '+(bO>=1.25?(1/bO*100).toFixed(1):"--")+'%</div></div>'
+    +'<div style="font-family:var(--f-mono);font-size:9px;color:var(--blanc4);margin-top:3px">Notre modele: '+pct(bP)+' - Bookmaker: '+(bO>=1.25?(1/bO*100).toFixed(1):"--")+'%</div></div>'
     +(bO>=1.25?'<div style="text-align:right"><div style="font-family:var(--f-mono);font-size:8px;color:var(--blanc4);margin-bottom:3px">Meilleure cote</div><div style="font-family:var(--f-titre);font-size:26px;font-weight:900;color:var(--bleu2)">@ '+bO.toFixed(2)+'</div></div>':"")+'</div>';
 
   // Scores probables
@@ -1888,6 +2152,50 @@ function addToSlip(mIdx,typeN,odd){
   renderPage();
 }
 function removeFromSlip(i){S.demoSlip.splice(i,1);renderPage();}
+
+// === SCORES SUR TICKETS DEMO ===
+function enterScore(betId) {
+  var scoreH = document.getElementById("score-h-"+betId);
+  var scoreA = document.getElementById("score-a-"+betId);
+  if (!scoreH || !scoreA) return;
+  var sh = parseInt(scoreH.value);
+  var sa = parseInt(scoreA.value);
+  if (isNaN(sh) || isNaN(sa) || sh < 0 || sa < 0) {
+    alert("Entre un score valide (ex: 2-1)");
+    return;
+  }
+  var bet = S.demoBets.find(function(b) { return b.id === betId; });
+  if (!bet || bet.status !== "pending") return;
+  bet.scoreH = sh;
+  bet.scoreA = sa;
+  bet.scoreStr = sh + "-" + sa;
+  // Determiner si gagne selon le type de pari
+  var won = false;
+  var typeKey = bet.picks && bet.picks[0] ? bet.picks[0] : "";
+  if (bet.type === "simple") {
+    if (typeKey.indexOf("gagne") >= 0 || bet.typeN === 0) won = sh > sa;
+    else if (bet.typeN === 2) won = sa > sh;
+    else if (bet.typeN === 1 || typeKey.indexOf("nul") >= 0) won = sh === sa;
+    else {
+      // Try to detect from label
+      var lbl = (typeKey || "").toLowerCase();
+      if (lbl.indexOf("plus de 2.5") >= 0) won = (sh + sa) > 2;
+      else if (lbl.indexOf("moins de 2.5") >= 0) won = (sh + sa) < 3;
+      else if (lbl.indexOf("deux marquent") >= 0) won = sh > 0 && sa > 0;
+      else won = sh > sa; // defaut: victoire domicile
+    }
+  } else {
+    // Combine: on simplifie - l utilisateur decide
+    won = confirm("Ton combine est-il gagnant avec ce score " + sh + "-" + sa + " ?");
+  }
+  settleBet(betId, won);
+}
+
+function showScoreInput(betId) {
+  S.scoreInputId = betId;
+  renderPage();
+}
+
 function clearSlip(){S.demoSlip=[];renderPage();}
 function resetDemo(){S.demoSlip=[];S.demoBets=[];S.demoBk=1000;S.demoBkH=[1000];renderPage();}
 function placeBetDemo(isCombi){
@@ -1902,8 +2210,8 @@ function placeBetDemo(isCombi){
     label="Combine "+slip.length+" selections";
     picks=slip.map(function(s){return s.label;});
   }else{
-    if(slip.length>1){alert("1 seule selection pour un simple");return;}
-    totalOdd=slip[0].odd;label=slip[0].label;picks=[slip[0].label];
+    // Simple: utilise la premiere selection du bulletin
+    totalOdd=slip[0].odd;label=slip[0].label;picks=[slip[0].label];slip=[slip[0]];
   }
   var bet={id:Date.now(),date:new Date().toLocaleDateString("fr-FR"),stake:stake,odd:totalOdd,label:label,picks:picks,type:isCombi?"combine":"simple",potGain:parseFloat((stake*totalOdd).toFixed(2)),status:"pending"};
   S.demoBk-=stake;S.demoBkH.push(S.demoBk);S.demoBets.unshift(bet);S.demoSlip=[];renderPage();
@@ -1952,11 +2260,12 @@ function pDemo(){
     h+='<div style="margin-top:12px"><input type="number" id="demo-stake" placeholder="Mise EUR" value="10" min="1" style="font-family:var(--f-titre);font-size:17px;font-weight:800;padding:12px;text-align:center;margin-bottom:9px"/>'
       +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">';
     if(slip.length===1){
-      h+='<button onclick="placeBetDemo(false)" style="padding:13px;background:var(--bleu-soft);border:1px solid var(--ln-bleu);border-radius:var(--r2);color:var(--bleu2);font-family:var(--f-titre);font-size:13px;font-weight:800;cursor:pointer">Simple @ '+slip[0].odd.toFixed(2)+'</button>';
+      h+='<button onclick="placeBetDemo(false)" style="padding:13px;background:linear-gradient(135deg,var(--jaune),#d97706);border:none;border-radius:var(--r2);color:#0B0E14;font-family:var(--f-titre);font-size:13px;font-weight:900;cursor:pointer;box-shadow:var(--sh-jaune)">Parier simple @ '+slip[0].odd.toFixed(2)+'x</button>';
     }else{
-      h+='<button onclick="placeBetDemo(true)" style="padding:13px;background:linear-gradient(135deg,var(--bleu),#0a4fd4);border:none;border-radius:var(--r2);color:#fff;font-family:var(--f-titre);font-size:13px;font-weight:800;cursor:pointer">Combine @ '+combiOdd+'x</button>';
+      h+='<button onclick="placeBetDemo(false)" style="padding:12px 8px;background:var(--bleu-soft);border:1px solid var(--ln-bleu);border-radius:var(--r2);color:var(--bleu2);font-family:var(--f-titre);font-size:12px;font-weight:700;cursor:pointer">Simple (1 sel.)</button>';
+      h+='<button onclick="placeBetDemo(true)" style="padding:12px 8px;background:linear-gradient(135deg,var(--jaune),#d97706);border:none;border-radius:var(--r2);color:#0B0E14;font-family:var(--f-titre);font-size:12px;font-weight:900;cursor:pointer;box-shadow:var(--sh-jaune)">Combine @ '+combiOdd+'x</button>';
     }
-    h+='<button onclick="clearSlip()" style="padding:13px;background:var(--rouge2);border:1px solid rgba(255,69,96,.2);border-radius:var(--r2);color:var(--rouge);font-family:var(--f-titre);font-size:13px;font-weight:700;cursor:pointer">Vider</button></div></div></div>';
+    h+='<button onclick="clearSlip()" style="grid-column:1/-1;padding:10px;background:var(--rouge2);border:1px solid rgba(244,63,94,.2);border-radius:var(--r2);color:var(--rouge);font-family:var(--f-titre);font-size:12px;font-weight:700;cursor:pointer">Vider le bulletin</button></div></div></div>';
   }
   h+='<div style="font-family:var(--f-mono);font-size:9px;color:var(--blanc4);text-transform:uppercase;letter-spacing:.1em;margin-bottom:9px;display:flex;align-items:center;gap:8px"><div style="width:14px;height:2px;background:var(--bleu)"></div>Selectionne tes paris</div>';
   if(!ms.length){h+='<div class="empty"><div class="et">Aucun match a venir</div></div>';}
