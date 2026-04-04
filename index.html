@@ -1003,7 +1003,7 @@ function doAnalyse(){
   if(!r){S.aiMsg={t:"err",m:"Erreur calcul - verifie les donnees."};renderPage();return;}
   var extra=buildBets(r,d);
   S.res=Object.assign({},r,extra,{d:d});
-  GT(8);
+  GT(6);
 }
 
 function logBet(win){
@@ -1527,7 +1527,7 @@ function pComp(){
           +'<div style="font-family:var(--f-titre);font-size:22px;font-weight:900;color:'+(win?"var(--bleu2)":"var(--blanc)")+';font-variant-numeric:tabular-nums">'+pct(it.p)+'</div>'
           +'<div style="font-family:var(--f-mono);font-size:9px;color:'+(win?"var(--bleu2)":"var(--blanc4)")+';margin-top:3px">'+it.l+'</div></div>';
       }).join("")+'</div></div>'
-      +'<button class="cbtn" onclick="GT(7)" style="margin-top:4px">Analyse complete</button>';
+      +'<button class="cbtn" onclick="GT(5)" style="margin-top:4px">Analyse complete</button>';
   }
   return h;
 }
