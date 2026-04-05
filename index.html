@@ -2773,3 +2773,33 @@ fetchMatches();
 </script>
 </body>
 </html>
+<!-- Début du bloc Score Foot -->
+<div id="resultats-foot" style="text-align:center; padding: 20px; background: #fff; border: 1px solid #ddd; margin: 20px auto; width: 80%; border-radius: 10px; font-family: sans-serif;">
+    <h3>Matchs en Direct ⚽</h3>
+    <div id="liste-matchs">Chargement des scores...</div>
+</div>
+
+<script>
+    const maCle = " 1b0e438b9c43c15718edc46efc601c28 "; // <--- Mets ta clé ici !
+
+    fetch("https://v3.football.api-sports.io/fixtures?live=all", {
+        "method": "GET",
+        "headers": { "x-apisports-key": maCle }
+    })
+    .then(r => r.json())
+    .then(data => {
+        let html = "";
+        if (data.response.length === 0) {
+            html = "Aucun match en direct.";
+        } else {
+            data.response.forEach(m => {
+                html += `<p><b>${m.teams.home.name}</b> ${m.goals.home} - ${m.goals.away} <b>${m.teams.away.name}</b></p>`;
+            });
+        }
+        document.getElementById("liste-matchs").innerHTML = html;
+    })
+    .catch(err => {
+        document.getElementById("liste-matchs").innerHTML = "Erreur de connexion.";
+    });
+</script>
+<!-- Fin du bloc Score Foot -->
