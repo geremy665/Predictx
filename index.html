@@ -741,7 +741,7 @@ function saveHist(h){S.hist=h;localStorage.setItem("edge_hist",JSON.stringify(h)
 function saveKey(k){S.aiKey=k;localStorage.setItem("edge_ai",k);updTop();}
 function goTab(t){S.tab=t;closeSide();render();}
 function PM(idx){pickM(idx);}
-var TABS=["home","scanner","matchs","tips","comp","analyse","result","money","risk","bankroll","stats","methode","chat","combi"];
+var TABS=["home","scanner","matchs","tips","comp","analyse","result","money","risk","bankroll","stats","methode","chat","combi","demo","live","cotes"];
 function GT(i){goTab(TABS[i]);}
 function gWins(){return S.hist.filter(function(h){return h.result==="WIN";}).length;}
 function gRoi(){if(!S.hist.length)return null;var p=S.hist.reduce(function(a,h){return a+(h.profit||0);},0),s=Math.max(1,S.hist.reduce(function(a,h){return a+(h.stake||20);},0));return+(p/s*100).toFixed(1);}
@@ -791,7 +791,8 @@ function buildSide(){
       if(n.id==="matchs")badges+='<span class="nbadge">'+S.matches.length+'</span>';
       if(n.id==="tips"&&gLive()>0)badges+='<span class="nbadge live">Live</span>';
       if(n.id==="result"&&S.res)badges+='<span class="nbadge ok">ok</span>';
-      h+='<button class="nb'+(S.tab===n.id?" on":"")+'" onclick="GT('+TABS.indexOf(n.id)+')">'
+            var _nIdx=TABS.indexOf(n.id);
+      h+='<button class="nb'+(S.tab===n.id?" on":"")+'" onclick="GT('+_nIdx+')">'
         +'<span class="nb-ic">'+n.ic+'</span><span>'+n.l+'</span>'+badges+'</button>';
     });
   });
@@ -924,6 +925,7 @@ function fetchMatches(){
   }).catch(function(){S.matches=getFallback();S.mErr="demo";S.mLoad=false;renderPage();});
 }
 
+function loadMatches(){fetchMatches();}
 function callAI(prompt,max){
   max=max||2000;
   if(!S.aiKey)return Promise.reject(new Error("Cle manquante"));
@@ -1090,7 +1092,8 @@ function pHome(){
       var tH=esc(m.h||m.home||"");var tA=esc(m.a||m.away||"");
       var isV=(e&&e.edg||0)>0.05;var conf=e?e.conf:0;
       var cc=conf>=75?"#22d3ee":conf>=60?"#a78bfa":"rgba(248,250,252,.6)";
-      h+='<div onclick="PM('+S.matches.indexOf(m)+')" style="background:linear-gradient(145deg,var(--gris2),var(--gris1));border:1px solid '+(isV?"rgba(109,40,217,.25)":"rgba(255,255,255,.06)")+';border-radius:16px;padding:15px 16px;margin-bottom:9px;cursor:pointer;position:relative;overflow:hidden">';
+      var _pmi=S.matches.indexOf(m);
+      h+='<div onclick="PM('+_pmi+')" style="background:linear-gradient(145deg,var(--gris2),var(--gris1));border:1px solid '+(isV?"rgba(109,40,217,.25)":"rgba(255,255,255,.06)")+';border-radius:16px;padding:15px 16px;margin-bottom:9px;cursor:pointer;position:relative;overflow:hidden">';
       h+='<div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#6d28d9,#ec4899,transparent)"></div>';
       h+='<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">';
       h+='<div style="flex:1;min-width:0">';
@@ -1150,10 +1153,11 @@ function pScanner(){
   if(aN>0){
     h+='<div class="card-vert" style="margin-bottom:12px"><div class="clbl" style="color:var(--vert)">Arbitrages detectes ('+aN+')</div>';
     S.matches.filter(function(m){return m.arb!==null&&m.arb!==undefined;}).forEach(function(m,mi){
+      var _pmi=S.matches.indexOf(m);
       h+='<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;'+(mi>0?"border-top:1px solid rgba(0,208,132,.08)":"")+'">'
         +'<div><div style="font-family:var(--f-titre);font-size:14px;font-weight:700">'+esc(m.h||m.home)+' vs '+esc(m.a||m.away)+'</div>'
         +'<div style="font-family:var(--f-mono);font-size:9px;color:var(--blanc4);margin-top:2px">'+flagBadge(m.f)+' '+esc(m.leagueName||m.c||"")+' - '+fmtDate(m.time||m.t)+' '+fmtTime(m.time||m.t)+'</div></div>'
-        +'<div style="display:flex;gap:7px;align-items:center">'+tag("te","+"+m.arb+"% garanti")+'<button class="abtn" onclick="PM('+S.matches.indexOf(m)+')">Analyser</button></div></div>';
+        +'<div style="display:flex;gap:7px;align-items:center">'+tag("te","+"+m.arb+"% garanti")+'<button class="abtn" onclick="PM('+_pmi+')">Analyser</button></div></div>';
     });
     h+='</div>';
   }
@@ -1177,7 +1181,8 @@ function runScan(){
         var isV=(e&&e.edg||0)>0.03;
         var teamH=esc(m.h||m.home||"");
         var teamA=esc(m.a||m.away||"");
-        h+='<div class="sig'+(e&&e.conf>=70?" top":"")+'" style="animation:fu .2s '+(i*0.04)+'s ease both" onclick="PM('+S.matches.indexOf(m)+')">'
+        var _pmi=S.matches.indexOf(m);
+        h+='<div class="sig'+(e&&e.conf>=70?" top":"")+'" style="animation:fu .2s '+(i*0.04)+'s ease both" onclick="PM('+_pmi+')">'
           +'<div class="sig-glow"></div>'
           +'<div class="sig-bd">'
           +'<div class="sig-meta">'+flagBadge(m.f)+'<span>'+esc(m.leagueName||m.c||'')+'</span><span>'+fmtDate(m.time||m.t)+'</span><span>'+fmtTime(m.time||m.t)+'</span>'
@@ -1634,6 +1639,11 @@ function pComp(){
 }
 
 function pAnalyse(){
+  var selM=S.selM;
+  if(!selM&&(!S.d||!S.d.home)){
+    return '<div class="empty"><div class="ei">A</div><div class="et">Selectionne un match</div><div class="es">Va dans Matchs et clique sur un match pour l analyser</div><button class="cbtn" style="width:auto;padding:0 24px;margin:16px auto 0" onclick="GT(2)">Voir les matchs</button></div>';
+  }
+
   var d=S.d,aiLoad=S.aiLoad,aiMsg=S.aiMsg,nar=S.nar;
   var h="";
 
@@ -2760,9 +2770,7 @@ function renderPage(){
   else if(t==="bankroll")h=pBankroll();
   else if(t==="stats")h=pStats();
   else if(t==="methode")h=pMethode();
-  else if(t==="chat")h=pChat();
-  else if(t==="combi")h=pCombi();
-  else if(t==="demo")h=pDemo();
+      else if(t==="demo")h=pDemo();
   else if(t==="live")h=pLive();
   else if(t==="cotes")h=pCotes();
   pg.innerHTML=h;
