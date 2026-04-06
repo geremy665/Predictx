@@ -727,6 +727,15 @@ function buildBets(r,d){
 
 var BKL={"Betclic":"https://www.betclic.fr","Winamax":"https://www.winamax.fr","Unibet":"https://www.unibet.fr","Pinnacle":"https://www.pinnacle.com","Bet365":"https://www.bet365.com","William Hill":"https://www.williamhill.com","Bwin":"https://www.bwin.com","Ladbrokes":"https://www.ladbrokes.com"};
 
+function fmtDate2(dateStr){
+  if(!dateStr||dateStr==="?")return "?";
+  try{
+    var d=new Date(dateStr+"T00:00:00");
+    var days=["Dim","Lun","Mar","Mer","Jeu","Ven","Sam"];
+    var months=["Jan","Fev","Mar","Avr","Mai","Juin","Juil","Aout","Sep","Oct","Nov","Dec"];
+    return days[d.getDay()]+" "+d.getDate()+" "+months[d.getMonth()];
+  }catch(e){return dateStr;}
+}
 function fmtDate(iso){var d=new Date(iso);var days=["Dim","Lun","Mar","Mer","Jeu","Ven","Sam"];var months=["Jan","Fev","Mar","Avr","Mai","Jun","Jul","Aou","Sep","Oct","Nov","Dec"];return days[d.getDay()]+" "+d.getDate()+" "+months[d.getMonth()];}
 function fmtTime(iso){var d=new Date(iso);return pad(d.getHours())+":"+pad(d.getMinutes());}
 function pad(n){return n<10?"0"+n:String(n);}
@@ -957,27 +966,91 @@ var LMAP={
   "soccer_japan_j_league":{n:"J-League",f:"INT"}
 };
 var LMAP_EXT={
+  /* France */
   "l61":{n:"Ligue 1",f:"FR"},"l62":{n:"Ligue 2",f:"FR"},
-  "l140":{n:"La Liga",f:"ES"},"l39":{n:"Premier League",f:"ENG"},
-  "l40":{n:"Championship",f:"ENG"},"l135":{n:"Serie A",f:"IT"},
-  "l136":{n:"Serie B",f:"IT"},"l78":{n:"Bundesliga",f:"DE"},
-  "l79":{n:"Bundesliga 2",f:"DE"},"l94":{n:"Liga Portugal",f:"PT"},
-  "l88":{n:"Eredivisie",f:"NL"},"l144":{n:"Pro League",f:"BE"},
-  "l203":{n:"Super Lig",f:"TR"},"l179":{n:"Premiership",f:"SCO"},
-  "l197":{n:"Super League GR",f:"GR"},"l2":{n:"Champions League",f:"UCL"},
-  "l3":{n:"Europa League",f:"UEL"},"l848":{n:"Conference League",f:"UEL"},
-  "l253":{n:"MLS",f:"USA"},"l71":{n:"Brasileirao",f:"BRA"},
-  "l128":{n:"Primera Division",f:"ARG"},"l262":{n:"Liga MX",f:"MEX"},
   "api_61":{n:"Ligue 1",f:"FR"},"api_62":{n:"Ligue 2",f:"FR"},
-  "api_140":{n:"La Liga",f:"ES"},"api_39":{n:"Premier League",f:"ENG"},
-  "api_40":{n:"Championship",f:"ENG"},"api_135":{n:"Serie A",f:"IT"},
+  /* Angleterre */
+  "l39":{n:"Premier League",f:"ENG"},"l40":{n:"Championship",f:"ENG"},
+  "l41":{n:"League One",f:"ENG"},"l42":{n:"League Two",f:"ENG"},
+  "api_39":{n:"Premier League",f:"ENG"},"api_40":{n:"Championship",f:"ENG"},
+  "api_41":{n:"League One",f:"ENG"},
+  /* Espagne */
+  "l140":{n:"La Liga",f:"ES"},"l141":{n:"Segunda Division",f:"ES"},
+  "api_140":{n:"La Liga",f:"ES"},"api_141":{n:"Segunda Division",f:"ES"},
+  /* Italie */
+  "l135":{n:"Serie A",f:"IT"},"l136":{n:"Serie B",f:"IT"},
+  "api_135":{n:"Serie A",f:"IT"},"api_136":{n:"Serie B",f:"IT"},
+  /* Allemagne */
+  "l78":{n:"Bundesliga",f:"DE"},"l79":{n:"Bundesliga 2",f:"DE"},
+  "l80":{n:"3. Liga",f:"DE"},
   "api_78":{n:"Bundesliga",f:"DE"},"api_79":{n:"Bundesliga 2",f:"DE"},
-  "api_94":{n:"Liga Portugal",f:"PT"},"api_88":{n:"Eredivisie",f:"NL"},
-  "api_144":{n:"Pro League",f:"BE"},"api_203":{n:"Super Lig",f:"TR"},
-  "api_179":{n:"Premiership",f:"SCO"},"api_2":{n:"Champions League",f:"UCL"},
-  "api_3":{n:"Europa League",f:"UEL"},"api_848":{n:"Conference League",f:"UEL"},
-  "api_253":{n:"MLS",f:"USA"},"api_71":{n:"Brasileirao",f:"BRA"},
-  "api_128":{n:"Primera Division",f:"ARG"}
+  /* Portugal */
+  "l94":{n:"Liga Portugal",f:"PT"},"l95":{n:"Liga Portugal 2",f:"PT"},
+  "api_94":{n:"Liga Portugal",f:"PT"},"api_95":{n:"Liga Portugal 2",f:"PT"},
+  /* Pays-Bas */
+  "l88":{n:"Eredivisie",f:"NL"},"l89":{n:"Eerste Divisie",f:"NL"},
+  "api_88":{n:"Eredivisie",f:"NL"},
+  /* Belgique */
+  "l144":{n:"Pro League",f:"BE"},"l145":{n:"Challenger Pro League",f:"BE"},
+  "api_144":{n:"Pro League",f:"BE"},
+  /* Turquie */
+  "l203":{n:"Super Lig",f:"TR"},"l204":{n:"1. Lig",f:"TR"},
+  "api_203":{n:"Super Lig",f:"TR"},
+  /* Ecosse */
+  "l179":{n:"Premiership",f:"SCO"},"l180":{n:"Championship SCO",f:"SCO"},
+  "api_179":{n:"Premiership",f:"SCO"},
+  /* Grece */
+  "l197":{n:"Super League",f:"GR"},"api_197":{n:"Super League",f:"GR"},
+  /* Russie */
+  "l235":{n:"Premier Liga",f:"INT"},"api_235":{n:"Premier Liga",f:"INT"},
+  /* Ukraine */
+  "l333":{n:"Premier League UKR",f:"INT"},
+  /* Autriche */
+  "l218":{n:"Bundesliga AUT",f:"INT"},"api_218":{n:"Bundesliga AUT",f:"INT"},
+  /* Suisse */
+  "l207":{n:"Super League SUI",f:"INT"},"api_207":{n:"Super League SUI",f:"INT"},
+  /* Danemark */
+  "l119":{n:"Superliga DAN",f:"INT"},"api_119":{n:"Superliga DAN",f:"INT"},
+  /* Norvege */
+  "l103":{n:"Eliteserien",f:"INT"},"api_103":{n:"Eliteserien",f:"INT"},
+  /* Suede */
+  "l113":{n:"Allsvenskan",f:"INT"},"api_113":{n:"Allsvenskan",f:"INT"},
+  /* Finlande */
+  "l244":{n:"Veikkausliiga",f:"INT"},
+  /* Croatie */
+  "l210":{n:"HNL Croatie",f:"INT"},
+  /* Serbie */
+  "l392":{n:"Super Liga SRB",f:"INT"},
+  /* Republique Tcheque */
+  "l345":{n:"Czech Liga",f:"INT"},
+  /* Pologne */
+  "l106":{n:"Ekstraklasa",f:"INT"},"api_106":{n:"Ekstraklasa",f:"INT"},
+  /* Roumanie */
+  "l283":{n:"Liga 1 ROM",f:"INT"},
+  /* Hongrie */
+  "l271":{n:"NB I Hongrie",f:"INT"},
+  /* Slovaquie */
+  "l332":{n:"Super Liga SVK",f:"INT"},
+  /* Slovenie */
+  "l385":{n:"PrvaLiga SVN",f:"INT"},
+  /* Bulgarie */
+  "l172":{n:"First League BUL",f:"INT"},
+  /* Israel */
+  "l274":{n:"Ligat HaAl",f:"INT"},
+  /* Coupe Europe */
+  "l2":{n:"Champions League",f:"UCL"},"l3":{n:"Europa League",f:"UEL"},
+  "l848":{n:"Conference League",f:"UEL"},
+  "api_2":{n:"Champions League",f:"UCL"},"api_3":{n:"Europa League",f:"UEL"},
+  "api_848":{n:"Conference League",f:"UEL"},
+  /* Reste du monde */
+  "l253":{n:"MLS",f:"USA"},"api_253":{n:"MLS",f:"USA"},
+  "l71":{n:"Brasileirao",f:"BRA"},"api_71":{n:"Brasileirao",f:"BRA"},
+  "l128":{n:"Primera Division ARG",f:"ARG"},"api_128":{n:"Primera Division ARG",f:"ARG"},
+  "l262":{n:"Liga MX",f:"MEX"},"l188":{n:"Liga Profesional COL",f:"INT"},
+  "l239":{n:"Primera Division URU",f:"INT"},"l242":{n:"Primera Division CHI",f:"INT"},
+  "l13":{n:"Ligue 1 CAF",f:"INT"},"l29":{n:"Saudi Pro League",f:"INT"},
+  "l98":{n:"J-League",f:"INT"},"l169":{n:"K-League",f:"INT"},
+  "l17":{n:"AFC Champions",f:"INT"}
 };
 
 function getFallback(){
@@ -1005,6 +1078,10 @@ function fetchMatches(){
       var lg2=LMAP_EXT[m.league]||{n:m.leagueName||m.c||m.league||"",f:m.f||"INT"};var lgN=lg2.n||m.leagueName||m.c||m.league||"";var lgF=lg2.f||m.f||"INT";var enriched=Object.assign({},m,{c:lgN,leagueName:lgN,f:lgF,h:m.home||m.h||"",a:m.away||m.a||"",fixtureId:m.id,homeId:m.homeId,awayId:m.awayId,leagueId:m.leagueId,idx:idx});enriched=enrichFromOdds(enriched);
       enriched.e=calc(enriched);enriched.arb=arbF(m.o1,m.on,m.o2);
       return enriched;
+    });
+    S.matches.sort(function(a,b){
+      var ta=a.time||a.t||"";var tb=b.time||b.t||"";
+      return ta<tb?-1:ta>tb?1:0;
     });
     S.mUpd=data.updated;S.mLoad=false;S.scanDone=false;renderPage();notifyValue();
   }).catch(function(){S.matches=getFallback();S.mErr="demo";S.mLoad=false;renderPage();});
@@ -1321,26 +1398,31 @@ function pMatchs(){
   var fil=S.fil||"all";
   var h="";
 
-  h+='<div style="background:var(--c2);border:1px solid rgba(0,245,255,.08);border-radius:18px;padding:16px;margin-bottom:14px;position:relative;overflow:hidden">';
-  h+='<div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--cyan),var(--violet2),transparent)"></div>';
-  h+='<div style="font-family:var(--f-titre);font-size:20px;font-weight:900;letter-spacing:-.02em;margin-bottom:10px">Matchs du jour</div>';
+  // Header stats
+  h+='<div style="background:var(--s1);border:1px solid var(--ln);border-radius:var(--r3);padding:16px;margin-bottom:14px">';
+  h+='<div style="font-family:var(--f-titre);font-size:22px;color:var(--beige);letter-spacing:.08em;margin-bottom:12px">Matchs du jour</div>';
   h+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px">';
-  var HS=[{v:up.length,l:"A venir",c:"var(--blanc)"},{v:lv.length,l:"Live",c:"var(--rouge)"},{v:gVal(),l:"Value",c:"var(--cyan)"},{v:gArb(),l:"Arb",c:"var(--vert)"}];
+  var HS=[{v:up.length,l:"A venir",c:"var(--beige)"},{v:lv.length,l:"Live",c:"var(--red)"},{v:gVal(),l:"Value",c:"var(--g)"},{v:gArb(),l:"Arb",c:"var(--beige3)"}];
   for(var si=0;si<4;si++){
-    h+='<div style="background:rgba(0,245,255,.03);border:1px solid rgba(0,245,255,.06);border-radius:10px;padding:8px 5px;text-align:center"><div style="font-family:var(--f-titre);font-size:20px;font-weight:800;color:'+HS[si].c+';font-variant-numeric:tabular-nums;line-height:1">'+HS[si].v+'</div><div style="font-family:var(--f-mono);font-size:7px;color:var(--blanc4);text-transform:uppercase;letter-spacing:.08em;margin-top:3px">'+HS[si].l+'</div></div>';
+    h+='<div style="background:var(--s2);border:1px solid var(--ln2);border-radius:var(--r2);padding:10px 5px;text-align:center">'
+     +'<div style="font-family:var(--f-titre);font-size:24px;color:'+HS[si].c+';font-variant-numeric:tabular-nums;line-height:1;letter-spacing:.04em">'+HS[si].v+'</div>'
+     +'<div style="font-family:var(--f-mono);font-size:7px;color:var(--beige4);text-transform:uppercase;letter-spacing:.1em;margin-top:3px">'+HS[si].l+'</div>'
+     +'</div>';
   }
   h+='</div></div>';
 
+  // Tabs
   h+='<div style="display:flex;gap:6px;margin-bottom:10px">';
   var TM=[["upcoming","A venir ("+up.length+")"],["live","Live ("+lv.length+")"],["finished","Termines ("+fn.length+")"]];
   for(var ti=0;ti<3;ti++){
     var isOn=mTab===TM[ti][0];
-    h+='<button onclick="setMTabN('+ti+')" style="flex:1;padding:9px 5px;border-radius:10px;font-family:var(--f-titre);font-size:11px;font-weight:700;cursor:pointer;border:1px solid '+(isOn?"rgba(0,245,255,.2)":"var(--ln)")+';background:'+(isOn?"rgba(0,245,255,.06)":"transparent")+';color:'+(isOn?"var(--cyan)":"var(--blanc4)")+';text-align:center">'+TM[ti][1]+'</button>';
+    h+='<button onclick="setMTabN('+ti+')" style="flex:1;padding:9px 5px;border-radius:var(--r2);font-family:var(--f-titre);font-size:13px;cursor:pointer;border:1px solid '+(isOn?"rgba(93,191,138,.3)":"var(--ln)")+';background:'+(isOn?"var(--gl)":"transparent")+';color:'+(isOn?"var(--g)":"var(--beige4)")+';letter-spacing:.04em;text-align:center">'+TM[ti][1]+'</button>';
   }
   h+='</div>';
 
+  // Filtres
   h+='<div class="fils">';
-  var FILS=[["all","Tous"],["fr","France"],["eu","Europe"],["cup","Coupes"],["val","Value"],["arb","Arb"]];
+  var FILS=[["all","Tous"],["fr","France"],["eu","Europe"],["eng","Angleterre"],["esp","Espagne"],["cup","Coupes EUR"],["val","Value"],["arb","Arb"]];
   for(var fi=0;fi<FILS.length;fi++){
     h+='<button class="fib'+(fil===FILS[fi][0]?" on":"")+'" onclick="setFilN('+fi+')">'+FILS[fi][1]+'</button>';
   }
@@ -1348,84 +1430,110 @@ function pMatchs(){
 
   if(S.mLoad){h+='<div style="text-align:center;padding:60px">'+ldr()+'</div>';return h;}
 
-  var leagues=[];
-  disp.forEach(function(m){var k=m.leagueName||m.c||"";if(leagues.indexOf(k)<0)leagues.push(k);});
-  var filtL=leagues.filter(function(lg){
+  // Filter
+  var filtered=disp.filter(function(m){
     if(fil==="all")return true;
-    var sample=disp.find(function(x){return (x.leagueName||x.c||"")===lg;})||{};
-    var f=sample.f||"";
+    var f=m.f||"INT";
     if(fil==="fr")return f==="FR";
-    if(fil==="eu")return["ENG","ES","IT","DE","PT","NL","BE","SCO","GR"].indexOf(f)>=0;
+    if(fil==="eu")return["ENG","ES","IT","DE","PT","NL","BE","SCO","GR","TR"].indexOf(f)>=0;
+    if(fil==="eng")return f==="ENG";
+    if(fil==="esp")return f==="ES";
     if(fil==="cup")return f==="UCL"||f==="UEL";
-    if(fil==="val")return disp.filter(function(x){return (x.leagueName||x.c||"")===lg;}).some(function(x){return(x.e&&x.e.edg||0)>0.03;});
-    if(fil==="arb")return disp.filter(function(x){return (x.leagueName||x.c||"")===lg;}).some(function(x){return x.arb!==null&&x.arb!==undefined;});
+    if(fil==="val")return m.e&&(m.e.edg||0)>0.03;
+    if(fil==="arb")return m.arb!==null&&m.arb!==undefined;
     return true;
   });
 
-  if(!disp.length||!filtL.length){
-    h+='<div class="empty"><div class="ei">0</div><div class="et">Aucun match</div><div class="es">Actualise pour voir les matchs</div></div>';
+  if(!filtered.length){
+    h+='<div class="empty"><div class="ei">0</div><div class="et">Aucun match</div><div class="es">Recharge pour voir les matchs</div></div>';
     return h;
   }
 
-  for(var lgi=0;lgi<filtL.length;lgi++){
-    var lg=filtL[lgi];
-    var lgMs=disp.filter(function(m){return (m.leagueName||m.c||"")===lg;});
-    if(!lgMs.length)continue;
-    var isO=!!S.openL[lg];
-    var hasVal=lgMs.some(function(m){return(m.e&&m.e.edg||0)>0.03;});
-    var hasLv=lgMs.some(function(m){return isLive(m.time||m.t);});
-    var hasArb=lgMs.some(function(m){return m.arb!==null&&m.arb!==undefined;});
+  // === TRI CHRONOLOGIQUE STRICT ===
+  // 1. Trier par date+heure
+  filtered.sort(function(a,b){
+    var ta=a.time||a.t||"";var tb=b.time||b.t||"";
+    return ta<tb?-1:ta>tb?1:0;
+  });
 
-    h+='<div class="lg-row">';
-    h+='<div class="lg-head" onclick="togLN('+lgi+')">'+flagBadge(lgMs[0].f||"INT");
-    h+='<span class="lg-nm">'+esc(lg)+'</span><span class="lg-cnt">'+lgMs.length+'</span>';
-    if(hasLv)h+='<span class="tr" style="font-size:8px;padding:1px 7px;border-radius:4px;animation:pulse 2s infinite">LIVE</span>';
-    if(hasVal)h+='<span class="tg" style="font-size:8px;padding:1px 7px;border-radius:4px">VALUE</span>';
-    if(hasArb)h+='<span class="te" style="font-size:8px;padding:1px 7px;border-radius:4px">ARB</span>';
-    h+='<span class="lg-arr'+(isO?" open":"")+'">&#9660;</span></div>';
+  // 2. Grouper par tranche horaire (YYYY-MM-DD HH:00)
+  var groups={};var groupOrder=[];
+  filtered.forEach(function(m){
+    var t=m.time||m.t||"";
+    // Extraire date + heure
+    var dt=t.substring(0,10)||"?";
+    var hr=t.substring(11,16)||"?";
+    var key=dt+"|"+hr;
+    if(!groups[key]){groups[key]=[];groupOrder.push(key);}
+    groups[key].push(m);
+  });
 
-    if(isO){
-      h+='<div class="match-grid">';
-      for(var mgi=0;mgi<lgMs.length;mgi++){
-        var m=lgMs[mgi];if(!m)continue;var e=m.e||null;var mIdx=ms.indexOf(m);if(mIdx<0)continue;
-        var tH=esc(m.h||m.home||"");var tA=esc(m.a||m.away||"");
-        var isV=(e&&e.edg||0)>0.03;var isLv2=isLive(m.time||m.t);
-        var conf=e?e.conf:0;
-        var cc2=conf>=75?"var(--cyan)":conf>=60?"var(--violet3)":"var(--blanc4)";
-        var bR=e?e.bR:"";
-        var oddCls0=bR==="1"?"mc-odd best":"mc-odd";
-        var oddClsN="mc-odd";
-        var oddCls2=bR==="2"?"mc-odd best":"mc-odd";
-        h+='<div class="mc'+(isV?" val":"")+(isLv2?" live-m":"")+'" onclick="PM('+mIdx+')">';
-        h+='<div class="mc-top '+(isV?"val":isLv2?"live-m":"norm")+'"></div>';
-        h+='<div class="mc-body">';
-        h+='<div class="mc-league">'+flagBadge(m.f||"INT")+'<span>'+esc(m.leagueName||m.c||"")+'</span></div>';
-        h+='<div class="mc-teams">';
-        h+='<div class="mc-home" style="color:'+(bR==="1"?"var(--blanc)":"var(--blanc2)")+'">'+tH+'</div>';
-        h+='<div class="mc-away" style="color:'+(bR==="2"?"var(--blanc)":"var(--blanc3)")+'">'+tA+'</div>';
-        h+='</div>';
-        h+='<div class="mc-odds-row">';
-        h+='<div class="'+oddCls0+'" onclick="event.stopPropagation();PM('+mIdx+')">'
-         +'<div class="mc-odd-l">1</div><div class="mc-odd-v">'+(m.o1?m.o1.toFixed(2):"--")+'</div></div>';
-        h+='<div class="'+oddClsN+'" onclick="event.stopPropagation();PM('+mIdx+')">'
-         +'<div class="mc-odd-l">N</div><div class="mc-odd-v">'+(m.on?m.on.toFixed(2):"--")+'</div></div>';
-        h+='<div class="'+oddCls2+'" onclick="event.stopPropagation();PM('+mIdx+')">'
-         +'<div class="mc-odd-l">2</div><div class="mc-odd-v">'+(m.o2?m.o2.toFixed(2):"--")+'</div></div>';
-        h+='</div>';
-        h+='<div class="mc-foot"><div class="mc-conf" style="color:'+cc2+'">'+conf+'%</div>';
-        if(isLv2)h+='<span class="mc-time-badge live">LIVE</span>';
-        else h+='<span class="mc-time-badge">'+fmtTime(m.time||m.t)+'</span>';
-        h+='</div>';
-        if(isV&&e)h+='<div class="mc-val-tag"><span>VALUE</span><span style="color:var(--vert)">+'+((e.edg||0)*100).toFixed(1)+'%</span><span style="color:var(--blanc3)">@ '+(e.bO||0).toFixed(2)+'x</span></div>';
-        h+='</div></div>';
+  // 3. Afficher par tranche
+  for(var gi=0;gi<groupOrder.length;gi++){
+    var gk=groupOrder[gi];
+    var gms=groups[gk];
+    var parts=gk.split("|");
+    var gDate=parts[0];var gHour=parts[1];
+
+    // Header tranche horaire
+    h+='<div style="display:flex;align-items:center;gap:10px;margin:14px 0 8px">';
+    h+='<div style="font-family:var(--f-titre);font-size:13px;color:var(--g);letter-spacing:.1em;background:var(--gl);border:1px solid rgba(93,191,138,.2);border-radius:4px;padding:4px 10px;">'+fmtDate2(gDate)+' - '+gHour+'</div>';
+    h+='<div style="flex:1;height:1px;background:var(--ln)"></div>';
+    h+='<div style="font-family:var(--f-mono);font-size:9px;color:var(--beige4)">'+gms.length+' match'+(gms.length>1?"s":"")+'</div>';
+    h+='</div>';
+
+    // Matchs de cette tranche
+    for(var mgi=0;mgi<gms.length;mgi++){
+      var m=gms[mgi];if(!m)continue;
+      var e=m.e||null;var mIdx=ms.indexOf(m);
+      var tH=esc(m.h||m.home||"");var tA=esc(m.a||m.away||"");
+      var isV=(e&&e.edg||0)>0.03;var isLv2=isLive(m.time||m.t);
+      var conf=e?e.conf:0;var bR=e?e.bR:"";
+
+      h+='<div class="mc'+(isV?" val":"")+(isLv2?" live-m":"")+'" onclick="PM('+mIdx+')">';
+      h+='<div class="mc-stripe '+(isV?"val":isLv2?"live-m":"norm")+'"></div>';
+      h+='<div class="mc-body">';
+      // League + time
+      h+='<div class="mc-header">';
+      h+='<div class="mc-league">'+flagBadge(m.f||"INT")+'<span>'+esc(m.leagueName||m.c||"")+'</span></div>';
+      if(isLv2){
+        h+='<span class="tr" style="font-size:8px;padding:2px 8px;">LIVE</span>';
+      } else {
+        h+='<div class="mc-time">'+fmtTime(m.time||m.t)+'</div>';
       }
       h+='</div>';
+      // Teams
+      h+='<div class="mc-teams">';
+      h+='<div class="mc-team-h" style="color:'+(bR==="1"?"var(--beige)":"var(--beige2)")+'">'+tH+'</div>';
+      h+='<div class="mc-vs">vs</div>';
+      h+='<div class="mc-team-a" style="color:'+(bR==="2"?"var(--beige)":"var(--beige3)")+'">'+tA+'</div>';
+      h+='</div>';
+      // Cotes
+      h+='<div class="mc-odds">';
+      var ODS=[{v:m.o1,k:"1"},{v:m.on,k:"N"},{v:m.o2,k:"2"}];
+      var OLS=["1","N","2"];
+      for(var oi=0;oi<3;oi++){
+        var isBest=e&&e.bR===ODS[oi].k&&(e.edg||0)>0.02&&(ODS[oi].v||0)>=1.25;
+        h+='<div class="mc-odd'+(isBest?" best":"")+'" onclick="event.stopPropagation();PM('+mIdx+')">'
+         +'<div class="mc-odd-l">'+OLS[oi]+'</div>'
+         +'<div class="mc-odd-v">'+(ODS[oi].v?ODS[oi].v.toFixed(2):"--")+'</div>'
+         +'</div>';
+      }
+      h+='</div>';
+      // Footer
+      h+='<div class="mc-footer">';
+      h+='<button class="mc-analyse-btn" onclick="event.stopPropagation();PM('+mIdx+')">Analyser</button>';
+      if(isV&&e){h+='<span class="mc-val-badge">VALUE +'+((e.edg||0)*100).toFixed(1)+'%</span>';}
+      else if(conf>0){
+        h+='<div class="mc-conf"><div class="mc-conf-bar"><div class="mc-conf-fill" style="width:'+conf+'%"></div></div>'+conf+'%</div>';
+      }
+      h+='</div>';
+      if(isV&&e)h+='<div class="mc-val-tag"><span>'+esc(e.label||"")+'</span><span style="margin-left:auto">@ '+(e.bO||0).toFixed(2)+'x</span></div>';
+      h+='</div></div>';
     }
-    h+='</div>';
   }
   return h;
 }
-
 function pTips(){
   var tFil=S.tFil,tips=S.tips,tLoad=S.tLoad;
   var filt=tips.filter(function(t){if(tFil==="all")return true;if(tFil==="h")return t.conf==="eleve";if(tFil==="v")return t.val;if(tFil==="o")return t.type==="over";if(tFil==="b")return t.type==="btts";return t.type==="1x2";});
