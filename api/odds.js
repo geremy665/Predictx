@@ -1,108 +1,166 @@
-// EDGE - API Odds simple et rapide
-// ODDS_API_KEY requis dans Vercel env vars
+// EDGE - API Football PRO - endpoint /odds direct
+// FOOTBALL_API_KEY dans Vercel env vars
 
 const LEAGUES = [
-  "soccer_france_ligue_one",
-  "soccer_france_ligue_two", 
-  "soccer_spain_la_liga",
-  "soccer_epl",
-  "soccer_italy_serie_a",
-  "soccer_germany_bundesliga",
-  "soccer_portugal_primeira_liga",
-  "soccer_netherlands_eredivisie",
-  "soccer_uefa_champs_league",
-  "soccer_uefa_europa_league",
-  "soccer_brazil_campeonato",
-  "soccer_usa_mls"
+  {id:61,name:"Ligue 1",f:"FR"},
+  {id:62,name:"Ligue 2",f:"FR"},
+  {id:140,name:"La Liga",f:"ES"},
+  {id:39,name:"Premier League",f:"ENG"},
+  {id:40,name:"Championship",f:"ENG"},
+  {id:135,name:"Serie A",f:"IT"},
+  {id:78,name:"Bundesliga",f:"DE"},
+  {id:79,name:"Bundesliga 2",f:"DE"},
+  {id:94,name:"Liga Portugal",f:"PT"},
+  {id:88,name:"Eredivisie",f:"NL"},
+  {id:144,name:"Pro League",f:"BE"},
+  {id:203,name:"Super Lig",f:"TR"},
+  {id:179,name:"Premiership",f:"SCO"},
+  {id:197,name:"Super League GR",f:"GR"},
+  {id:2,name:"Champions League",f:"UCL"},
+  {id:3,name:"Europa League",f:"UEL"},
+  {id:848,name:"Conference League",f:"UEL"},
+  {id:253,name:"MLS",f:"USA"},
+  {id:71,name:"Brasileirao",f:"BRA"},
+  {id:128,name:"Primera Division",f:"ARG"}
 ];
 
-const LMAP = {
-  "soccer_france_ligue_one":"Ligue 1",
-  "soccer_france_ligue_two":"Ligue 2",
-  "soccer_spain_la_liga":"La Liga",
-  "soccer_epl":"Premier League",
-  "soccer_italy_serie_a":"Serie A",
-  "soccer_germany_bundesliga":"Bundesliga",
-  "soccer_portugal_primeira_liga":"Liga Portugal",
-  "soccer_netherlands_eredivisie":"Eredivisie",
-  "soccer_uefa_champs_league":"Champions League",
-  "soccer_uefa_europa_league":"Europa League",
-  "soccer_brazil_campeonato":"Brasileirao",
-  "soccer_usa_mls":"MLS"
-};
-
-const FLAGS = {
-  "soccer_france_ligue_one":"FR","soccer_france_ligue_two":"FR",
-  "soccer_spain_la_liga":"ES","soccer_epl":"ENG",
-  "soccer_italy_serie_a":"IT","soccer_germany_bundesliga":"DE",
-  "soccer_portugal_primeira_liga":"PT","soccer_netherlands_eredivisie":"NL",
-  "soccer_uefa_champs_league":"UCL","soccer_uefa_europa_league":"UEL",
-  "soccer_brazil_campeonato":"BRA","soccer_usa_mls":"USA"
-};
+const season = new Date().getFullYear();
 
 module.exports = async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin","*");
   res.setHeader("Cache-Control","s-maxage=300,stale-while-revalidate=600");
   if(req.method==="OPTIONS") return res.status(200).end();
 
-  const KEY = process.env.ODDS_API_KEY;
-  if(!KEY) return res.status(500).json({error:"ODDS_API_KEY manquante",matches:[]});
+  const KEY = process.env.FOOTBALL_API_KEY;
+  if(!KEY) return res.status(500).json({error:"FOOTBALL_API_KEY manquante",matches:[]});
+
+  const h = {"x-apisports-key":KEY,"Accept":"application/json"};
+  const now = new Date();
+  const today = now.toISOString().split("T")[0];
+  const in2days = new Date(now.getTime()+48*3600000).toISOString().split("T")[0];
 
   try {
-    const results = await Promise.all(
-      LEAGUES.map(league =>
-        fetch(
-          `https://api.the-odds-api.com/v4/sports/${league}/odds/?apiKey=${KEY}&regions=eu&markets=h2h&oddsFormat=decimal&bookmakers=betclic,winamax,unibet,pinnacle,bet365`,
-          {signal: AbortSignal.timeout(7000)}
+    // STEP 1: fixtures du jour et demain
+    const [fixToday, fixTomorrow] = await Promise.all([
+      fetch(`https://v3.football.api-sports.io/fixtures?date=${today}`,{headers:h,signal:AbortSignal.timeout(8000)}).then(r=>r.ok?r.json():null).catch(()=>null),
+      fetch(`https://v3.football.api-sports.io/fixtures?date=${in2days}`,{headers:h,signal:AbortSignal.timeout(8000)}).then(r=>r.ok?r.json():null).catch(()=>null)
+    ]);
+
+    const lgIds = new Set(LEAGUES.map(l=>l.id));
+    const lgMap = {};
+    LEAGUES.forEach(l=>{lgMap[l.id]=l;});
+
+    const fixtureMap = {};
+    const allFixtures = [
+      ...((fixToday&&fixToday.response)||[]),
+      ...((fixTomorrow&&fixTomorrow.response)||[])
+    ];
+
+    allFixtures.forEach(fix=>{
+      const lgId = fix.league?.id;
+      if(!lgIds.has(lgId)) return;
+      const fId = fix.fixture?.id;
+      if(!fId) return;
+      fixtureMap[fId] = fix;
+    });
+
+    const fixtureIds = Object.keys(fixtureMap);
+    if(!fixtureIds.length) {
+      return res.status(200).json({matches:[],count:0,updated:now.toISOString(),source:"API-Football PRO"});
+    }
+
+    // STEP 2: fetch cotes pour ces fixtures (par batch de 20)
+    const oddsMap = {};
+    const idBatches = [];
+    for(let i=0;i<fixtureIds.length;i+=20) idBatches.push(fixtureIds.slice(i,i+20));
+
+    for(const batch of idBatches.slice(0,3)) {
+      const oddsResults = await Promise.all(
+        batch.map(fId=>
+          fetch(`https://v3.football.api-sports.io/odds?fixture=${fId}&bookmaker=6&bet=1`,{headers:h,signal:AbortSignal.timeout(5000)})
+          .then(r=>r.ok?r.json():null)
+          .catch(()=>null)
         )
-        .then(r => r.ok ? r.json() : [])
-        .catch(() => [])
-      )
-    );
+      );
+      oddsResults.forEach((data,i)=>{
+        if(!data||!data.response||!data.response.length) return;
+        oddsMap[batch[i]] = data.response[0];
+      });
+    }
 
+    // STEP 3: construire les matchs
     const matches = [];
-    const now = new Date();
+    fixtureIds.forEach(fId=>{
+      const fix = fixtureMap[fId];
+      const lgId = fix.league?.id;
+      const lg = lgMap[lgId];
+      if(!lg) return;
 
-    results.forEach((data, i) => {
-      if(!Array.isArray(data)) return;
-      const league = LEAGUES[i];
-      data.forEach(g => {
-        const t = new Date(g.commence_time);
-        const h = (t - now) / 3600000;
-        if(h < -2 || h > 72) return;
+      const home = fix.teams?.home?.name;
+      const away = fix.teams?.away?.name;
+      const time = fix.fixture?.date;
+      if(!home||!away||!time) return;
 
-        let o1=0,on=0,o2=0;
-        const bk = [];
-        (g.bookmakers||[]).forEach(b => {
-          const m = (b.markets||[]).find(x=>x.key==="h2h");
-          if(!m) return;
-          const home = m.outcomes.find(x=>x.name===g.home_team);
-          const away = m.outcomes.find(x=>x.name===g.away_team);
-          const draw = m.outcomes.find(x=>x.name==="Draw");
-          if(!home||!away) return;
-          if(home.price>o1) o1=home.price;
-          if(draw&&draw.price>on) on=draw.price;
-          if(away.price>o2) o2=away.price;
-          bk.push({n:b.title,o1:+home.price.toFixed(2),on:draw?+draw.price.toFixed(2):0,o2:+away.price.toFixed(2)});
+      const t = new Date(time);
+      const diff = (t-now)/3600000;
+      if(diff<-2||diff>72) return;
+
+      const status = fix.fixture?.status?.short||"NS";
+      const isLive = ["1H","2H","HT","ET","BT","P"].includes(status);
+
+      // Extraire cotes
+      let o1=0,on=0,o2=0;
+      const bkArr = [];
+      const oddsData = oddsMap[fId];
+      if(oddsData) {
+        (oddsData.bookmakers||[]).forEach(bk=>{
+          const bet = (bk.bets||[]).find(b=>b.id===1||b.name==="Match Winner");
+          if(!bet) return;
+          const hv=bet.values?.find(v=>v.value==="Home")?.odd;
+          const dv=bet.values?.find(v=>v.value==="Draw")?.odd;
+          const av=bet.values?.find(v=>v.value==="Away")?.odd;
+          if(!hv) return;
+          const ho=parseFloat(hv),do_=parseFloat(dv||0),ao=parseFloat(av||0);
+          if(ho>o1)o1=ho;
+          if(do_>on)on=do_;
+          if(ao>o2)o2=ao;
+          bkArr.push({n:bk.bookmaker?.name||"Bk",o1:ho,on:do_,o2:ao});
         });
-        if(!o1||!o2) return;
+      }
 
-        matches.push({
-          id:g.id, league,
-          leagueName:LMAP[league]||league,
-          f:FLAGS[league]||"INT",
-          home:g.home_team, away:g.away_team,
-          time:g.commence_time,
-          o1:+o1.toFixed(2), on:+on.toFixed(2), o2:+o2.toFixed(2),
-          bk:bk.slice(0,6)
-        });
+      // Fallback cotes si vide
+      if(!o1) { o1=2.20; on=3.30; o2=3.20; }
+
+      matches.push({
+        id:parseInt(fId),
+        league:"api_"+lgId,
+        leagueName:lg.name,
+        f:lg.f,
+        home,away,time,
+        homeId:fix.teams?.home?.id,
+        awayId:fix.teams?.away?.id,
+        leagueId:lgId,
+        o1:+o1.toFixed(2),
+        on:+on.toFixed(2),
+        o2:+o2.toFixed(2),
+        bk:bkArr.slice(0,6),
+        isLive,
+        liveScore:isLive?{home:fix.goals?.home??null,away:fix.goals?.away??null,elapsed:fix.fixture?.status?.elapsed??null}:null,
+        status,
+        venue:fix.fixture?.venue?.name||null
       });
     });
 
     matches.sort((a,b)=>new Date(a.time)-new Date(b.time));
 
-    res.status(200).json({matches, count:matches.length, updated:new Date().toISOString()});
+    return res.status(200).json({
+      matches,
+      count:matches.length,
+      updated:now.toISOString(),
+      source:"API-Football PRO"
+    });
+
   } catch(e) {
-    res.status(500).json({error:e.message, matches:[]});
+    return res.status(500).json({error:e.message,matches:[]});
   }
 };
