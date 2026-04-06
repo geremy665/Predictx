@@ -1,0 +1,17 @@
+{
+  "name": "EDGE - Betting Intelligence",
+  "short_name": "EDGE",
+  "description": "Pronostics premium avec moteur Bayesien",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#04040a",
+  "theme_color": "#00f5ff",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='32' fill='%2304040a'/><rect width='192' height='192' rx='32' fill='url(%23g)' opacity='.15'/><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0%25' stop-color='%2300f5ff'/><stop offset='100%25' stop-color='%238b00ff'/></linearGradient></defs><text x='96' y='130' font-family='Arial Black' font-weight='900' font-size='110' fill='%2300f5ff' text-anchor='middle'>E</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    }
+  ]
+}
