@@ -13,7 +13,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="description" content="EDGE - Analyse de paris sportifs premium avec moteur Dixon-Coles Bayesien. Value bets, compositions, H2H et tips IA."/>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
 
 /* ============================================================
    EDGE — Intelligence Premium
@@ -76,13 +76,13 @@
   --sh-jaune:0 0 24px rgba(93,191,138,.15);--sh-noir:0 4px 32px rgba(0,0,0,.5);
   --c1:var(--s1);--c2:var(--s2);--c3:var(--s3);--c4:var(--s4);--c5:var(--s5);
   --r:6px;--r2:10px;--r3:16px;--r4:22px;--r5:28px;
-  --f-titre:'Bebas Neue',sans-serif;
-  --f-body:'Instrument Sans',sans-serif;
+  --f-titre:'Barlow Condensed','Arial Narrow',Arial,sans-serif;
+  --f-body:'Inter','DM Sans',system-ui,-apple-system,sans-serif;
   --f-mono:'JetBrains Mono',monospace;
 }
 
 html,body{
-  background:var(--bg);color:var(--beige);
+  background:#0E0E0E;color:#F0E6D3;
   font-family:var(--f-body);font-size:14px;overflow-x:hidden;
 }
 button{font-family:var(--f-body);cursor:pointer;}
@@ -100,13 +100,13 @@ input::placeholder{color:var(--beige4);}
 #particles{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.25;}
 
 /* ===== LAYOUT ===== */
-#app{display:flex;min-height:100vh;position:relative;z-index:1;}
+#app{display:flex;min-height:100vh;position:relative;z-index:1;background:#0E0E0E;}
 
 #sidebar{
   width:240px;position:fixed;top:0;left:0;height:100vh;z-index:100;
   display:flex;flex-direction:column;
-  background:var(--s1);
-  border-right:1px solid var(--ln);
+  background:#141414;
+  border-right:1px solid rgba(240,230,211,.08);
   transition:transform .3s cubic-bezier(.16,1,.3,1);
 }
 #sidebar.open{transform:none!important;}
@@ -177,7 +177,7 @@ input::placeholder{color:var(--beige4);}
 
 /* ===== TOPBAR ===== */
 #topbar{
-  height:52px;background:var(--bg);border-bottom:1px solid var(--ln);
+  height:52px;background:#0E0E0E;border-bottom:1px solid rgba(240,230,211,.08);
   padding:0 18px;display:flex;align-items:center;gap:10px;
   position:sticky;top:0;z-index:90;
 }
@@ -199,7 +199,7 @@ input::placeholder{color:var(--beige4);}
 .livedot{width:5px;height:5px;border-radius:50%;background:var(--red);animation:pulse 1.4s infinite;flex-shrink:0;}
 
 /* ===== PAGE ===== */
-#page{padding:14px;animation:fadeUp .2s ease;position:relative;z-index:1;overflow-x:hidden;max-width:100vw;}
+#page{padding:14px;animation:fadeUp .2s ease;position:relative;z-index:1;overflow-x:hidden;max-width:100vw;background:#0E0E0E;color:#F0E6D3;min-height:100vh;}
 
 /* ===== HERO — la pièce maîtresse ===== */
 .hero{
