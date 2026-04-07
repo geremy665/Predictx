@@ -203,7 +203,7 @@ input::placeholder{color:var(--beige4);}
   padding:32px 22px 26px;position:relative;overflow:hidden;
 }
 /* Grand numéro décoratif en fond */
-.hero-top::before{
+.hero-top::before-DISABLED{
   content:'EDGE';
   position:absolute;right:-10px;top:50%;transform:translateY(-50%);
   font-family:var(--f-titre);font-size:160px;color:rgba(240,230,211,.025);
@@ -552,6 +552,97 @@ input::placeholder{color:var(--beige4);}
 @keyframes ldot{0%,80%,100%{transform:scale(0);opacity:.3}40%{transform:scale(1);opacity:1}}
 @keyframes scan{0%{left:-60%}100%{left:110%}}
 @keyframes cffall{0%{transform:translateY(-10px) rotate(0deg);opacity:1}100%{transform:translateY(110vh) rotate(720deg);opacity:0}}
+
+/* ===== HERO ENHANCEMENTS ===== */
+.hero-glow1{
+  position:absolute;width:400px;height:400px;border-radius:50%;
+  background:radial-gradient(circle,rgba(93,191,138,.20) 0%,transparent 65%);
+  top:-120px;right:-100px;pointer-events:none;
+  animation:glowPulse 4s ease-in-out infinite;
+}
+.hero-glow2{
+  position:absolute;width:250px;height:250px;border-radius:50%;
+  background:radial-gradient(circle,rgba(93,191,138,.12) 0%,transparent 65%);
+  bottom:-80px;left:-40px;pointer-events:none;
+  animation:glowPulse 5s ease-in-out infinite reverse;
+}
+/* ===== ANIMATIONS ===== */
+@keyframes barFill{from{width:0!important}to{}}
+@keyframes glowPulse{0%,100%{opacity:.6;transform:scale(1)}50%{opacity:1;transform:scale(1.15)}}
+@keyframes cardIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.anim-card{animation:cardIn .35s ease both;}
+
+/* Hover glow sur les cartes */
+.sig-card:hover,.sig:hover{
+  transform:translateY(-3px);
+  box-shadow:0 12px 40px rgba(0,0,0,.5),0 0 0 1px rgba(93,191,138,.25),0 0 20px rgba(93,191,138,.08);
+  border-color:rgba(93,191,138,.35);
+}
+.mc:hover{
+  transform:translateY(-2px);
+  box-shadow:0 8px 32px rgba(0,0,0,.45),0 0 0 1px rgba(93,191,138,.2),0 0 14px rgba(93,191,138,.06);
+  border-color:rgba(93,191,138,.3);
+}
+.sc-item:hover{
+  transform:translateY(-2px);
+  box-shadow:0 8px 28px rgba(0,0,0,.4),0 0 0 1px rgba(93,191,138,.2);
+  border-color:rgba(93,191,138,.25);
+}
+
+/* Barre de confiance animee */
+.sc-bar-f{
+  transition:width .6s cubic-bezier(.16,1,.3,1);
+}
+
+/* Glow sur bouton primary au hover */
+.hbtn-p:hover{
+  transform:translateY(-2px);
+  box-shadow:0 8px 28px rgba(93,191,138,.4),0 0 40px rgba(93,191,138,.15);
+}
+.cbtn:hover:not(:disabled){
+  box-shadow:0 6px 20px rgba(93,191,138,.3),0 0 30px rgba(93,191,138,.08);
+}
+
+/* Pulse sur les badges VALUE/LIVE */
+.tg{animation:tgPulse 3s ease-in-out infinite;}
+@keyframes tgPulse{0%,100%{box-shadow:0 0 0 0 rgba(93,191,138,.3)}50%{box-shadow:0 0 0 4px rgba(93,191,138,.0)}}
+
+/* IA CTA block */
+.ia-cta{
+  background:var(--s1);border:1px solid var(--ln);border-radius:var(--r3);
+  padding:16px;display:flex;align-items:center;gap:13px;
+  position:relative;overflow:hidden;margin-bottom:14px;
+}
+.ia-cta::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--g),transparent);}
+.ia-cta-icon{width:42px;height:42px;background:var(--g);border-radius:var(--r2);display:flex;align-items:center;justify-content:center;font-family:var(--f-titre);font-size:18px;color:var(--bg);flex-shrink:0;letter-spacing:.05em;box-shadow:0 0 16px rgba(93,191,138,.3);}
+.ia-cta-title{font-family:var(--f-titre);font-size:16px;color:var(--beige);margin-bottom:3px;letter-spacing:.05em;}
+.ia-cta-sub{font-family:var(--f-mono);font-size:9px;color:var(--beige4);}
+.ia-cta-btn{padding:9px 16px;background:var(--g);border:none;border-radius:var(--r2);font-family:var(--f-titre);font-size:14px;color:var(--bg);cursor:pointer;flex-shrink:0;letter-spacing:.05em;transition:all .2s;}
+.ia-cta-btn:hover{transform:scale(1.04);box-shadow:0 4px 16px rgba(93,191,138,.35);}
+
+/* h-dot dans status */
+.h-dot{width:5px;height:5px;border-radius:50%;background:var(--g);animation:pulse 2s infinite;display:inline-block;box-shadow:0 0 6px var(--g);}
+
+/* Scroll personnalise */
+.sb-nav::-webkit-scrollbar{width:2px}
+.sb-nav::-webkit-scrollbar-thumb{background:rgba(93,191,138,.3);border-radius:2px}
+
+/* mc-analyse-btn glow */
+.mc-analyse-btn:hover{background:var(--g);color:var(--bg);box-shadow:0 2px 10px rgba(93,191,138,.3);}
+
+/* Inputs focus glow */
+input:focus,select:focus{border-color:var(--g);box-shadow:0 0 0 3px rgba(93,191,138,.08),0 0 12px rgba(93,191,138,.06);}
+
+/* fib.on glow */
+.fib.on{background:var(--g);border-color:var(--g);color:var(--bg);font-weight:700;box-shadow:0 2px 10px rgba(93,191,138,.25);}
+
+/* sc-num value highlight glow */
+.sc-num.hl{background:rgba(93,191,138,.1);border-color:rgba(93,191,138,.25);box-shadow:inset 0 0 10px rgba(93,191,138,.05);}
+
+/* cbtn scale effect */
+.cbtn:active{transform:scale(.98);}
+.hbtn-p:active{transform:scale(.98);}
+
 </style>
 
 
@@ -1232,15 +1323,33 @@ function pHome(){
   }).sort(function(a,b){return((b.e&&b.e.edg)||0)-((a.e&&a.e.edg)||0);}).slice(0,3);
   var h="";
 
+  /* ===== HERO ===== */
   h+='<div class="hero">'
-   +'<div class="hero-top"><div class="hero-grid"></div><div class="hero-content">'
-   +'<div class="hero-eyebrow"><span class="hero-dot"></span><span class="hero-eyebrow-txt">Moteur actif ? V7</span></div>'
+   +'<div class="hero-top">'
+   +'<div class="hero-grid"></div>'
+   +'<div class="hero-glow1"></div>'
+   +'<div class="hero-glow2"></div>'
+   +'<div class="hero-content">'
+
+   /* Badge live */
+   +'<div class="hero-eyebrow">'
+   +'<span class="hero-dot"></span>'
+   +'<span class="hero-eyebrow-txt">Moteur Dixon-Coles V8 actif</span>'
+   +'</div>'
+
+   /* Titre massif */
    +'<div class="hero-title">Analyse.<span>Parie juste.</span></div>'
-   +'<div class="hero-sub">Dixon-Coles + Bayesien + Kelly adaptatif.<br>Les signaux que les bookmakers cachent.</div>'
+   +'<div class="hero-sub">Le seul outil qui combine Dixon-Coles, Bayesien et Kelly adaptatif pour detecter les vraies opportunites que les bookmakers ne veulent pas que tu voies.</div>'
+
+   /* CTA */
    +'<div class="hero-btns">'
-   +'<button class="hbtn-p" onclick="GT(1)">Scanner maintenant</button>'
+   +'<button class="hbtn-p" onclick="GT(1)">Scanner les value bets</button>'
    +'<button class="hbtn-s" onclick="GT(2)">Matchs du jour</button>'
+   +'</div>'
+
    +'</div></div>'
+
+   /* Stats barre */
    +'<div class="hero-stats">'
    +'<div class="hstat" onclick="GT(2)"><div class="hstat-v">'+up.length+'</div><div class="hstat-l">Matchs</div></div>'
    +'<div class="hstat" onclick="GT(15)"><div class="hstat-v" style="color:var(--red)">'+(lN||"0")+'</div><div class="hstat-l">Live</div></div>'
@@ -1248,41 +1357,44 @@ function pHome(){
    +'<div class="hstat"><div class="hstat-v" style="color:var(--beige3)">'+aN+'</div><div class="hstat-l">Arb</div></div>'
    +'</div></div>';
 
+  /* Status */
   if(S.mErr){
-    h+='<div class="status-demo"><span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--amber);margin-right:7px;vertical-align:middle;"></span>Mode demo ? Configure /api/odds sur Vercel</div>';
+    h+='<div class="status-demo"><span class="h-dot" style="margin-right:7px"></span>Mode demo - Configure /api/odds sur Vercel</div>';
   }else if(S.mUpd&&ms.length>0){
-    h+='<div class="status-live"><span class="livedot" style="display:inline-block;margin-right:7px;"></span>'+ms.length+' matchs ? mis a jour '+new Date(S.mUpd).toLocaleTimeString("fr-FR").substring(0,5)+'</div>';
+    h+='<div class="status-live"><span class="livedot" style="display:inline-block;margin-right:7px"></span>'+ms.length+' matchs charges - '+new Date(S.mUpd).toLocaleTimeString("fr-FR").substring(0,5)+'</div>';
   }
 
+  /* Top signaux */
   if(top.length){
-    h+='<div class="row-hd"><div class="row-title">Signaux detectes</div><button class="row-more" onclick="GT(1)">Voir tout</button></div>';
+    h+='<div class="row-hd"><div class="row-title">Meilleurs signaux</div><button class="row-more" onclick="GT(1)">Tout voir</button></div>';
     for(var ti=0;ti<top.length;ti++){
       var m=top[ti];if(!m||!m.e)continue;
       var e=m.e;var mIdx=ms.indexOf(m);
       var tH=esc(m.h||m.home||"");var tA=esc(m.a||m.away||"");
-      var conf=e?e.conf:0;var isV=(e&&e.edg||0)>0.05;
-      h+='<div class="sig-card'+(isV?" top":"")+'" onclick="PM('+mIdx+')" style="animation:fu .18s '+(ti*0.08)+'s ease both">';
-      h+='<div class="sc-stripe '+(isV?"val":isLive(m.time||m.t)?"live":"norm")+'"></div>';
-      h+='<div class="sc-body">';
-      h+='<div class="sc-meta">'+flagBadge(m.f||"INT")
+      var conf=e.conf||0;var isV=(e.edg||0)>0.05;
+      h+='<div class="sig-card'+(isV?" top":"")+' anim-card" onclick="PM('+mIdx+')" style="animation-delay:'+(ti*0.1)+'s">'
+       +'<div class="sc-stripe '+(isV?"val":isLive(m.time||m.t)?"live":"norm")+'"></div>'
+       +'<div class="sc-body">'
+       +'<div class="sc-meta">'+flagBadge(m.f||"INT")
        +'<span class="sc-league">'+esc(m.leagueName||m.c||"")+'</span>'
-       +'<span class="sc-time">'+fmtDate(m.time||m.t)+' ? '+fmtTime(m.time||m.t)+'</span>';
+       +'<span class="sc-time">'+fmtDate(m.time||m.t)+' '+fmtTime(m.time||m.t)+'</span>';
       if(isV)h+='<span class="tg">VALUE</span>';
       if(isLive(m.time||m.t))h+='<span class="tr">LIVE</span>';
-      h+='</div>';
-      h+='<div class="sc-teams">'+tH+' <span style="color:var(--beige4);font-size:16px;">vs</span> '+tA+'</div>';
-      if(e&&e.label)h+='<div class="sc-prono">'+esc(e.label)+'</div>';
-      h+='<div class="sc-nums">';
-      h+='<div class="sc-num"><div class="sc-num-l">Confiance</div><div class="sc-num-v" style="color:'+(conf>=75?"var(--g)":conf>=60?"var(--beige)":"var(--beige3)")+'">'+conf+'%</div></div>';
-      h+='<div class="sc-num'+(isV?" hl":"")+'"><div class="sc-num-l">Cote</div><div class="sc-num-v">'+(e&&e.bO>=1.25?e.bO.toFixed(2):"--")+'x</div></div>';
-      h+='<div class="sc-num"><div class="sc-num-l">Edge</div><div class="sc-num-v" style="color:var(--g)">+'+(e?((e.edg||0)*100).toFixed(1):"0")+'%</div></div>';
-      h+='<div class="sc-num"><div class="sc-num-l">Kelly</div><div class="sc-num-v">'+(e?((e.kel||0)*100).toFixed(1):"0")+'%</div></div>';
-      h+='</div>';
-      h+='<div class="sc-bar"><div class="sc-bar-f" style="width:'+conf+'%"></div></div>';
-      h+='</div></div>';
+      h+='</div>'
+       +'<div class="sc-teams">'+tH+' <span style="color:var(--beige4);font-size:16px">vs</span> '+tA+'</div>'
+       +'<div class="sc-prono">'+esc(e.label||"")+'</div>'
+       +'<div class="sc-nums">'
+       +'<div class="sc-num"><div class="sc-num-l">Confiance</div><div class="sc-num-v" style="color:'+(conf>=70?"var(--g)":"var(--beige)")+'">'+conf+'%</div></div>'
+       +'<div class="sc-num'+(isV?" hl":"")+'"><div class="sc-num-l">Cote</div><div class="sc-num-v">'+(e.bO>=1.25?e.bO.toFixed(2):"--")+'x</div></div>'
+       +'<div class="sc-num"><div class="sc-num-l">Edge</div><div class="sc-num-v" style="color:var(--g)">+'+(((e.edg||0)*100).toFixed(1))+'%</div></div>'
+       +'<div class="sc-num"><div class="sc-num-l">xG dom</div><div class="sc-num-v">'+(e.xGH||"--")+'</div></div>'
+       +'</div>'
+       +'<div class="sc-bar"><div class="sc-bar-f" style="width:'+conf+'%;animation:barFill .8s '+(ti*0.15)+'s ease both"></div></div>'
+       +'</div></div>';
     }
   }
 
+  /* Acces rapide */
   h+='<div class="row-hd" style="margin-top:8px"><div class="row-title">Acces rapide</div></div>';
   var SC=[
     {ic:"S",nm:"Scanner",sb:"Value bets en temps reel",tab:1,bg:"var(--g)"},
@@ -1295,22 +1407,26 @@ function pHome(){
   h+='<div class="sc-grid">';
   for(var si=0;si<SC.length;si++){
     var sc=SC[si];
-    h+='<div class="sc-item" onclick="GT('+sc.tab+')">'
+    h+='<div class="sc-item anim-card" onclick="GT('+sc.tab+')" style="animation-delay:'+(si*0.06)+'s">'
      +'<div class="sc-ic" style="background:'+sc.bg+'">'+sc.ic+'</div>'
      +'<div><div class="sc-nm">'+sc.nm+'</div><div class="sc-sb">'+sc.sb+'</div></div>'
      +'</div>';
   }
   h+='</div>';
 
+  /* Moteur IA CTA */
   if(!S.aiKey){
-    h+='<div style="background:var(--s1);border:1px solid var(--ln);border-radius:var(--r3);padding:16px;display:flex;align-items:center;gap:13px;position:relative;overflow:hidden;">'
-     +'<div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,var(--g),transparent);"></div>'
-     +'<div style="width:40px;height:40px;background:var(--g);border-radius:var(--r2);display:flex;align-items:center;justify-content:center;font-family:var(--f-titre);font-size:18px;color:var(--bg);flex-shrink:0;letter-spacing:.05em;">IA</div>'
-     +'<div style="flex:1"><div style="font-family:var(--f-titre);font-size:16px;color:var(--beige);margin-bottom:3px;letter-spacing:.06em;">Active le moteur IA</div>'
-     +'<div style="font-family:var(--f-mono);font-size:9px;color:var(--beige4);">Tips + Chat + Combines avec tes matchs</div></div>'
-     +'<button onclick="goC()" style="padding:9px 16px;background:var(--g);border:none;border-radius:var(--r2);font-family:var(--f-titre);font-size:14px;color:var(--bg);cursor:pointer;flex-shrink:0;letter-spacing:.06em;transition:all .15s;">Activer</button>'
+    h+='<div class="ia-cta anim-card">'
+     +'<div class="ia-cta-icon">IA</div>'
+     +'<div style="flex:1"><div class="ia-cta-title">Active le moteur IA</div>'
+     +'<div class="ia-cta-sub">Tips + Chat + Combines generes avec tes vrais matchs</div></div>'
+     +'<button onclick="goC()" class="ia-cta-btn">Activer</button>'
      +'</div>';
   }
+
+  /* Disclaimer */
+  h+='<div style="text-align:center;font-family:var(--f-mono);font-size:8px;color:var(--beige4);padding:16px 0 4px;letter-spacing:.06em">EDGE ne garantit aucun gain - Jouez responsablement - 18+</div>';
+
   return h;
 }
 
@@ -2821,7 +2937,7 @@ setInterval(function(){if(S.tab==="live"){fetchMatches();}},60000);
   var x=c.getContext("2d");
   var W=c.width=window.innerWidth,H=c.height=window.innerHeight;
   window.addEventListener("resize",function(){W=c.width=window.innerWidth;H=c.height=window.innerHeight;});
-  var CL=["rgba(93,191,138,","rgba(240,230,211,","rgba(93,191,138,","rgba(109,208,154,"];
+  var CL=["rgba(93,191,138,","rgba(93,191,138,","rgba(150,230,180,","rgba(50,160,100,"];
   var pts=[];
   for(var i=0;i<55;i++){pts.push({px:Math.random()*W,py:Math.random()*H,vx:(Math.random()-.5)*.35,vy:(Math.random()-.5)*.35,r:Math.random()*1.4+.4,c:CL[i%4],o:Math.random()*.4+.08});}
   function draw(){
