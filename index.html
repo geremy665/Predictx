@@ -667,7 +667,7 @@ input:focus,select:focus{border-color:#00E5A0;box-shadow:0 0 0 2px rgba(0,229,16
 
 
 
-.ovl{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:199;display:none;}
+
 
 
 
@@ -726,14 +726,8 @@ input:focus,select:focus{border-color:#00E5A0;box-shadow:0 0 0 2px rgba(0,229,16
 .ham.active span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
 
 /* Overlay */
-.ovl {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,.5);
-  z-index: 199;
-}
-.ovl.show { display: block; }
+
+
 
 /* Sections nav sidebar */
 .sb-section {
@@ -761,6 +755,9 @@ input:focus,select:focus{border-color:#00E5A0;box-shadow:0 0 0 2px rgba(0,229,16
     display: flex;
   }
 }
+
+.ovl{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:199;display:none!important;}
+.ovl.show{display:block!important;}
 </style>
 #sidebar{width:240px;position:fixed;top:0;left:0;height:100vh;z-index:300;display:flex;flex-direction:column;background:#181C28;border-right:1px solid rgba(0,229,160,.15);transform:translateX(-240px);transition:transform .25s cubic-bezier(.4,0,.2,1);}
 #sidebar.open{transform:translateX(0);}
@@ -1279,7 +1276,11 @@ var S={
 function saveBk(v){S.bk=v;localStorage.setItem("edge_bk",JSON.stringify(v));updSide();}
 function saveHist(h){S.hist=h;localStorage.setItem("edge_hist",JSON.stringify(h));updSide();}
 function saveKey(k){S.aiKey=k;localStorage.setItem("edge_ai",k);updTop();}
-function goTab(t){S.tab=t;closeSide();render();}
+function goTab(t){
+  S.tab=t;
+  closeSide();
+  renderPage();
+}
 function PM(idx){pickM(idx);}
 var TABS=["home","scanner","matchs","tips","comp","analyse","result","money","risk","bankroll","stats","methode","chat","combi","demo","live","cotes","journal"];
 function GT(i){goTab(TABS[i]);}
@@ -1357,22 +1358,28 @@ function updTop(){
   document.getElementById("ptitle").textContent=nav?nav.l:"EDGE";
 }
 function toggleSide(){
-  var sb=document.getElementById('sidebar');
-  var ov=document.getElementById('ovl');
-  var hm=document.getElementById('hambtn');
+  var sb=document.getElementById("sidebar");
+  var ov=document.getElementById("ovl");
+  var hm=document.getElementById("hambtn");
   if(!sb)return;
-  var opening=!sb.classList.contains('open');
-  sb.classList.toggle('open',opening);
-  if(ov)ov.classList.toggle('show',opening);
-  if(hm)hm.classList.toggle('active',opening);
+  var isOpen=sb.classList.contains("open");
+  if(isOpen){
+    sb.classList.remove("open");
+    if(ov){ov.classList.remove("show");ov.style.display="none";}
+    if(hm)hm.classList.remove("active");
+  }else{
+    sb.classList.add("open");
+    if(ov){ov.classList.add("show");ov.style.display="block";}
+    if(hm)hm.classList.add("active");
+  }
 }
 function closeSide(){
-  var sb=document.getElementById('sidebar');
-  var ov=document.getElementById('ovl');
-  var hm=document.getElementById('hambtn');
-  if(sb)sb.classList.remove('open');
-  if(ov)ov.classList.remove('show');
-  if(hm)hm.classList.remove('active');
+  var sb=document.getElementById("sidebar");
+  var ov=document.getElementById("ovl");
+  var hm=document.getElementById("hambtn");
+  if(sb)sb.classList.remove("open");
+  if(ov){ov.classList.remove("show");ov.style.display="none";}
+  if(hm)hm.classList.remove("active");
 }
 function showMod(id){
   if(id==="bk")document.getElementById("bk-inp").value=S.bk;
