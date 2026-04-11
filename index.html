@@ -1,53 +1,8 @@
 <!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <title>EDGE - Pronostics</title>
-    <style>
-        body { font-family: system-ui; background: #0a0c15; color: white; padding: 20px; }
-        .match { background: #111827; border-radius: 16px; padding: 16px; margin-bottom: 12px; }
-        .odds { display: flex; gap: 12px; margin: 10px 0; }
-        .odd { background: #1a1f2e; padding: 8px; border-radius: 12px; flex:1; text-align: center; }
-    </style>
-</head>
+<html>
+<head><title>Test</title></head>
 <body>
-    <h1>⚽ EDGE - Mode démo</h1>
-    <div id="matches"></div>
-    <script>
-        const matches = [
-            { home: "PSG", away: "Marseille", o1:1.55, oN:4.20, o2:6.50, hxg:2.4, axg:1.1, hf:14, af:6, derby:true },
-            { home: "Real Madrid", away: "Barcelona", o1:2.10, oN:3.40, o2:3.30, hxg:2.2, axg:1.9, hf:12, af:11, derby:true },
-            { home: "Arsenal", away: "Man City", o1:2.60, oN:3.20, o2:2.70, hxg:2.0, axg:2.1, hf:10, af:12 }
-        ];
-        function predict(m) {
-            let lH = (m.hxg * 0.88 + m.hf/15*0.2);
-            let lA = (m.axg * 0.88 + m.af/15*0.2);
-            if(m.derby) { lH *= 0.95; lA *= 0.95; }
-            let pH = Math.exp(-lH) * (1 + lH);
-            let pA = Math.exp(-lA) * (1 + lA);
-            let pN = Math.max(0, 1 - pH - pA);
-            let best = pH > pN && pH > pA ? "1" : (pA > pN ? "2" : "N");
-            let prob = best === "1" ? pH : (best === "2" ? pA : pN);
-            let odds = best === "1" ? m.o1 : (best === "2" ? m.o2 : m.oN);
-            let edge = (prob * odds - 1) * 100;
-            return { best, prob: (prob*100).toFixed(0), edge: edge.toFixed(1) };
-        }
-        const container = document.getElementById('matches');
-        matches.forEach(m => {
-            const p = predict(m);
-            container.innerHTML += `
-                <div class="match">
-                    <div><strong>${m.home} vs ${m.away}</strong></div>
-                    <div class="odds">
-                        <div class="odd">1: ${m.o1}</div>
-                        <div class="odd">N: ${m.oN}</div>
-                        <div class="odd">2: ${m.o2}</div>
-                    </div>
-                    <div>🎯 Pronostic : ${p.best === '1' ? m.home : (p.best === '2' ? m.away : 'Match nul')} (${p.prob}%)</div>
-                    <div>📈 Edge : +${p.edge}%</div>
-                </div>
-            `;
-        });
-    </script>
+    <h1>✅ EDGE fonctionne</h1>
+    <p>Si tu vois ce message, le déploiement est OK.</p>
 </body>
 </html>
