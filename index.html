@@ -1838,7 +1838,7 @@ function pMatchs(){
       var OLS=["1","N","2"];
       for(var oi=0;oi<3;oi++){
         var isBest=e&&e.bR===ODS[oi].k&&(e.edg||0)>0.02&&(ODS[oi].v||0)>=1.25;
-        h+='<div class="mc-odd'+(isBest?" best":"")+'" onclick="event.stopPropagation();PM('+mIdx+')">'
+        h+='<div class="mc-odd'+(isBest?" best":"")+'" onclick="PM('+mIdx+');return false;">'
          +'<div class="mc-odd-l">'+OLS[oi]+'</div>'
          +'<div class="mc-odd-v">'+(ODS[oi].v?ODS[oi].v.toFixed(2):"--")+'</div>'
          +'</div>';
@@ -1846,7 +1846,7 @@ function pMatchs(){
       h+='</div>';
       // Footer
       h+='<div class="mc-footer">';
-      h+='<button class="mc-analyse-btn" onclick="event.stopPropagation();PM('+mIdx+')">Analyser</button>';
+      h+='<button class="mc-analyse-btn" onclick="PM('+mIdx+');return false;">Analyser</button>';
       if(isV&&e){h+='<span class="mc-val-badge">VALUE +'+((e.edg||0)*100).toFixed(1)+'%</span>';}
       else if(conf>0){
         h+='<div class="mc-conf"><div class="mc-conf-bar"><div class="mc-conf-fill" style="width:'+conf+'%"></div></div>'+conf+'%</div>';
@@ -3441,7 +3441,7 @@ function renderMatchCard(m,mIdx,opts){
   var ODS=[{v:o1,k:"1",l:"1"},{v:oN,k:"N",l:"N"},{v:o2,k:"2",l:"2"}];
   for(var oi=0;oi<3;oi++){
     var isBest=r&&r.bR===ODS[oi].k&&(r.edg||0)>0.02&&ODS[oi].v>=1.25;
-    h+='<div class="mc-odd'+(isBest?" best":"")+'" onclick="event.stopPropagation();PM('+mIdx+')">';
+    h+='<div class="mc-odd'+(isBest?" best":"")+'" onclick="PM('+mIdx+');return false;">';
     h+='<div class="mc-odd-l">'+ODS[oi].l+'</div>';
     h+='<div class="mc-odd-v">'+(ODS[oi].v>=1.01?ODS[oi].v.toFixed(2):"--")+'</div>';
     h+='</div>';
@@ -3462,7 +3462,7 @@ function renderMatchCard(m,mIdx,opts){
     }
   }
   h+='<div class="mc-footer">';
-  h+='<button class="mc-analyse-btn" onclick="event.stopPropagation();PM('+mIdx+')">Analyser</button>';
+  h+='<button class="mc-analyse-btn" onclick="PM('+mIdx+');return false;">Analyser</button>';
   if(isV&&r){h+='<span class="mc-val-badge">+'+((r.edg||0)*100).toFixed(1)+'% EDGE</span>';}
   else if(r){h+='<div class="mc-conf"><div class="mc-conf-bar"><div class="mc-conf-fill" style="width:'+conf+'%"></div></div><span style="color:#AAAAAA;font-size:9px">'+conf+'%</span></div>';}
   h+='</div>';
