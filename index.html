@@ -1053,22 +1053,19 @@ var NAV=[
   {id:"tips",l:"Tips IA",ic:"T",sec:"ANALYSE"},
   {id:"chat",l:"Chat IA",ic:"@",sec:"ANALYSE"},
   {id:"combi",l:"Combine du jour",ic:"*",sec:"ANALYSE"},
+  {id:"backtest",l:"Backtest IA",ic:"BT",sec:"ANALYSE"},
   {id:"comp",l:"Comparateur",ic:"C",sec:"OUTILS"},
   {id:"analyse",l:"Analyser",ic:"A",sec:"OUTILS"},
   {id:"result",l:"Resultat",ic:"R",sec:"OUTILS"},
-  {id:"money",l:"Money Management",ic:"$",sec:"GESTION"},
-  {id:"risk",l:"Gestion du risque",ic:"!",sec:"GESTION"},
+  {id:"money",l:"Money Mgmt",ic:"$",sec:"GESTION"},
+  {id:"risk",l:"Risque",ic:"!",sec:"GESTION"},
   {id:"bankroll",l:"Bankroll",ic:"B",sec:"GESTION"},
   {id:"stats",l:"Mes Stats",ic:"%",sec:"GESTION"},
-  {id:"methode",l:"Methode & Risques",ic:"?",sec:"GESTION"},
-  {id:"backtest",l:"Backtest IA",ic:"BT",sec:"ANALYSE"},
-  {id:"journal",l:"Journal de paris",ic:"J",sec:"SUIVI"},{id:"demo",l:"Paris Demo",ic:"D",sec:"SIMULATEUR"},
-  {id:"live",l:"Scores Live",ic:"L",sec:"SIMULATEUR"},
-  {id:"cotes",l:"Cotes Bookmakers",ic:"B",sec:"SIMULATEUR"},
-  {id:"backtest",l:"Backtest IA",ic:"BT",sec:"ANALYSE"},
-  {id:"journal",l:"Journal de paris",ic:"J",sec:"SUIVI"},{id:"demo",l:"Paris Demo",ic:"D",sec:"SIMULATEUR"},
-  {id:"live",l:"Scores Live",ic:"L",sec:"SIMULATEUR"},
-  {id:"cotes",l:"Cotes Bookmakers",ic:"B",sec:"SIMULATEUR"},
+  {id:"methode",l:"Methode",ic:"?",sec:"GESTION"},
+  {id:"journal",l:"Journal",ic:"J",sec:"SUIVI"},
+  {id:"demo",l:"Paris Demo",ic:"D",sec:"SIMULATEUR"},
+  {id:"live",l:"Live",ic:"L",sec:"SIMULATEUR"},
+  {id:"cotes",l:"Cotes",ic:"C",sec:"SIMULATEUR"}
 ];
 var SECS=["MENU","ANALYSE","OUTILS","GESTION","SUIVI","SIMULATEUR"];
 
@@ -2814,28 +2811,7 @@ function pMethode(){
 }
 
 // === EXTENDED LMAP ===
-var LMAP_EXT={
-  "soccer_france_ligue_one":{n:"Ligue 1",f:"FR"},
-  "soccer_france_ligue_two":{n:"Ligue 2",f:"FR"},
-  "soccer_spain_la_liga":{n:"La Liga",f:"ES"},
-  "soccer_epl":{n:"Premier League",f:"ENG"},
-  "soccer_england_championship":{n:"Championship",f:"ENG"},
-  "soccer_italy_serie_a":{n:"Serie A",f:"IT"},
-  "soccer_germany_bundesliga":{n:"Bundesliga",f:"DE"},
-  "soccer_germany_bundesliga2":{n:"Bundesliga 2",f:"DE"},
-  "soccer_portugal_primeira_liga":{n:"Liga Portugal",f:"PT"},
-  "soccer_netherlands_eredivisie":{n:"Eredivisie",f:"NL"},
-  "soccer_belgium_first_div":{n:"Pro League",f:"BE"},
-  "soccer_turkey_super_league":{n:"Super Lig",f:"TR"},
-  "soccer_scotland_premiership":{n:"Premiership",f:"SCO"},
-  "soccer_greece_super_league":{n:"Super League GR",f:"GR"},
-  "soccer_uefa_champs_league":{n:"Champions League",f:"UCL"},
-  "soccer_uefa_europa_league":{n:"Europa League",f:"UEL"},
-  "soccer_uefa_europa_conference_league":{n:"Conference League",f:"UEL"},
-  "soccer_usa_mls":{n:"MLS",f:"USA"},
-  "soccer_brazil_campeonato":{n:"Brasileirao",f:"BRA"},
-  "soccer_argentina_primera_division":{n:"Primera Division",f:"ARG"}
-};
+
 
 // === BAYESIAN UPDATE ===
 function bayesianUpdate(pH,pN,pA,o1,oN,o2){
@@ -3782,33 +3758,38 @@ function pBacktest(){
   return h;
 }
 
-async function runBacktest(){
+function runBacktest(){
   if(!S.aiKey){alert("Configure ta cle Anthropic.");return;}
   var leagueEl=document.getElementById("bt-league");
   var countEl=document.getElementById("bt-count");
   var leagueId=leagueEl?leagueEl.value:"39";
   var maxCount=countEl?parseInt(countEl.value):20;
   var season=new Date().getFullYear();
-
   S.btLoad=true;S.btResults=[];renderPage();
-
-  try{
-    // Fetch matchs termines de la saison
-    var resp=await fetch("/api/odds?past=1&league="+leagueId+"&season="+season);
-    var data=await resp.json();
+  
+  fetch("/api/odds?past=1&league="+leagueId+"&season="+season)
+  .then(function(resp){return resp.json();})
+  .then(function(data){
     var pastMatches=(data.matches||[]).filter(function(m){
       return m.status==="FT"||m.status==="AET"||m.status==="PEN";
     }).slice(0,maxCount);
-
+    
     if(!pastMatches.length){
-      alert("Pas de matchs termines trouves. Verifie la ligue et la saison.");
+      alert("Pas de matchs termines trouves.");
       S.btLoad=false;renderPage();return;
     }
-
+    
     var results=[];
-    for(var i=0;i<pastMatches.length;i++){
+    var i=0;
+    
+    function processNext(){
+      if(i>=pastMatches.length){
+        S.btResults=results;
+        S.btLoad=false;
+        renderPage();
+        return;
+      }
       var m=pastMatches[i];
-      // Calculer les probas avec le moteur EDGE (sans le score)
       var engineResult=calc({
         hxg:m.hxg||1.4,axg:m.axg||1.1,
         hg:m.hg||1.3,ag:m.ag||1.0,
@@ -3816,7 +3797,6 @@ async function runBacktest(){
         o1:m.o1||2.0,on:m.on||3.3,o2:m.o2||3.5,
         c:m.leagueName||"Football"
       });
-
       var prediction="1";
       var predOdds=m.o1||2.0;
       var conf=50;
@@ -3825,50 +3805,33 @@ async function runBacktest(){
         else if(engineResult.bR==="2"){prediction="2";predOdds=m.o2||3.5;}
         conf=engineResult.conf||50;
       }
-
-      // Vrai resultat
-      var hg=m.score?parseInt(m.score.split("-")[0]):null;
-      var ag=m.score?parseInt(m.score.split("-")[1]):null;
-      var trueResult=hg>ag?"1":hg<ag?"2":"N";
+      var hg2=m.score?parseInt(m.score.split("-")[0]):null;
+      var ag2=m.score?parseInt(m.score.split("-")[1]):null;
+      var trueResult=hg2>ag2?"1":hg2<ag2?"2":"N";
       var correct=prediction===trueResult;
-
-      // Raisonnement IA (optionnel - uniquement pour les 10 premiers pour economiser tokens)
-      var reasoning="";
-      if(i<10&&S.aiKey){
-        try{
-          var prompt="Match: "+m.home+" vs "+m.away+" ("+m.leagueName+") | Cotes: 1="+m.o1+" N="+m.on+" 2="+m.o2+" | EDGE dit: "+prediction+" @ "+predOdds.toFixed(2)+"x ("+conf+"%) | Justifie en 1 phrase sans mentionner le score reel.";
-          reasoning=await callAI(prompt,80);
-        }catch(e){}
-      }
-
       results.push({
-        home:m.home||m.h,away:m.away||m.a,
-        league:m.leagueName||m.c,
+        home:m.home||m.h||"",away:m.away||m.a||"",
+        league:m.leagueName||m.c||"",
         date:m.time?m.time.substring(0,10):"",
         prediction:prediction,
-        score:m.score||(hg+"-"+ag),
+        score:m.score||(hg2+"-"+ag2),
         trueResult:trueResult,
         correct:correct,
         odds:predOdds,
         conf:conf,
-        reasoning:reasoning
+        reasoning:""
       });
-
-      // Update UI tous les 5 matchs
-      if((i+1)%5===0){
-        S.btResults=results.slice();
-        renderPage();
-      }
+      i++;
+      if(i%5===0){S.btResults=results.slice();renderPage();}
+      setTimeout(processNext,10);
     }
-
-    S.btResults=results;
-    S.btLoad=false;
-    renderPage();
-  }catch(e){
+    processNext();
+  })
+  .catch(function(e){
     S.btLoad=false;
     alert("Erreur backtest: "+e.message);
     renderPage();
-  }
+  });
 }
 
 function loadJournal(){
