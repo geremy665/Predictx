@@ -982,7 +982,7 @@ var S={
   journal:[],simBets:[],jTab:"manuel",
   demoSlip:[],demoBk:1000,demoBets:[],demoBkH:[1000],scoreInputId:null,
   liveTab:"all",cotesTab:"betclic",lgKeys:[],
-  matchDetail:null,mdLoading:false,
+  matchDetail:null,mdLoading:false,btResults:[],btLoad:false,
   combiData:null,combiLoad:false,
   mTab:"upcoming",jTab:"manuel",
   bk:+(localStorage.getItem("edge_bk")||1000),
@@ -1010,8 +1010,26 @@ function saveBk(v){S.bk=v;localStorage.setItem("edge_bk",JSON.stringify(v));updS
 function saveHist(h){S.hist=h;localStorage.setItem("edge_hist",JSON.stringify(h));updSide();}
 function saveKey(k){S.aiKey=k;localStorage.setItem("edge_ai",k);updTop();}
 
-function PM(idx){pickM(idx);}
-var TABS=["home","scanner","matchs","tips","comp","analyse","result","money","risk","bankroll","stats","methode","chat","combi","demo","live","cotes","journal"];
+function PM(idx){
+  if(idx===undefined||idx===null||idx<0)return;
+  var m=S.matches[idx];
+  if(!m)return;
+  S.selM=m;S.compM=m;S.matchDetail=null;S.mdLoading=false;S.res=null;S.aiMsg=null;
+  S.d=Object.assign({},S.d,{
+    home:m.h||m.home||"",away:m.a||m.away||"",
+    league:m.leagueName||m.c||"",
+    aiH:m.h||m.home||"",aiA:m.a||m.away||"",aiC:m.leagueName||m.c||"",
+    hXG:m.hxg||S.d.hXG||1.4,hXGA:m.hxga||S.d.hXGA||1.1,
+    hG:m.hg||S.d.hG||1.3,hF:m.hf||S.d.hF||8,
+    aXG:m.axg||S.d.aXG||1.1,aXGA:m.axga||S.d.aXGA||1.3,
+    aG:m.ag||S.d.aG||1.0,aF:m.af||S.d.aF||6,
+    o1:m.o1||"",oN:m.on||"",o2:m.o2||""
+  });
+  S.tab="analyse";
+  if(typeof closeSide==="function")closeSide();
+  renderPage();
+}
+var TABS=["home","scanner","matchs","tips","comp","analyse","result","money","risk","bankroll","stats","methode","chat","combi","demo","live","cotes","journal","backtest"];
 
 function gWins(){return S.hist.filter(function(h){return h.result==="WIN";}).length;}
 function gRoi(){if(!S.hist.length)return null;var p=S.hist.reduce(function(a,h){return a+(h.profit||0);},0),s=Math.max(1,S.hist.reduce(function(a,h){return a+(h.stake||20);},0));return+(p/s*100).toFixed(1);}
@@ -1043,9 +1061,11 @@ var NAV=[
   {id:"bankroll",l:"Bankroll",ic:"B",sec:"GESTION"},
   {id:"stats",l:"Mes Stats",ic:"%",sec:"GESTION"},
   {id:"methode",l:"Methode & Risques",ic:"?",sec:"GESTION"},
+  {id:"backtest",l:"Backtest IA",ic:"BT",sec:"ANALYSE"},
   {id:"journal",l:"Journal de paris",ic:"J",sec:"SUIVI"},{id:"demo",l:"Paris Demo",ic:"D",sec:"SIMULATEUR"},
   {id:"live",l:"Scores Live",ic:"L",sec:"SIMULATEUR"},
   {id:"cotes",l:"Cotes Bookmakers",ic:"B",sec:"SIMULATEUR"},
+  {id:"backtest",l:"Backtest IA",ic:"BT",sec:"ANALYSE"},
   {id:"journal",l:"Journal de paris",ic:"J",sec:"SUIVI"},{id:"demo",l:"Paris Demo",ic:"D",sec:"SIMULATEUR"},
   {id:"live",l:"Scores Live",ic:"L",sec:"SIMULATEUR"},
   {id:"cotes",l:"Cotes Bookmakers",ic:"B",sec:"SIMULATEUR"},
@@ -1167,22 +1187,7 @@ function saveBkMod(){var v=+document.getElementById("bk-inp").value;if(v>0){save
 function saveCfg(){saveKey((document.getElementById("cfg-key").value||"").trim());hideMod("cfg");}
 function clearHist(){if(window.confirm("Effacer tout ?")){saveHist([]);renderPage();}}
 
-function pickM(idx){
-  var m=S.matches[idx];
-  if(!m)return;
-  S.selM=m;S.compM=m;S.matchDetail=null;S.mdLoading=false;S.res=null;S.aiMsg=null;
-  S.d=Object.assign({},S.d,{
-    home:m.h||m.home||"",away:m.a||m.away||"",
-    league:m.leagueName||m.c||"",
-    aiH:m.h||m.home||"",aiA:m.a||m.away||"",aiC:m.leagueName||m.c||"",
-    hXG:m.hxg||S.d.hXG,hXGA:m.hxga||S.d.hXGA,
-    hG:m.hg||S.d.hG,hF:m.hf||S.d.hF,
-    aXG:m.axg||S.d.aXG,aXGA:m.axga||S.d.aXGA,
-    aG:m.ag||S.d.aG,aF:m.af||S.d.aF,
-    o1:m.o1||"",oN:m.on||"",o2:m.o2||""
-  });
-  S.tab="analyse";closeSide();renderPage();
-}
+function pickM(idx){PM(idx);}
 
 var LMAP={
   "soccer_france_ligue_one":{n:"Ligue 1",f:"FR"},
@@ -1850,9 +1855,22 @@ function pMatchs(){
          +'</div>';
       }
       h+='</div>';
+      // Grille probabilites moteur
+      if(e&&e.pH){
+        h+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;margin:8px 0 6px">';
+        var PRS=[{l:"Dom",v:e.pH,k:"1"},{l:"Nul",v:e.pN,k:"N"},{l:"Ext",v:e.pA,k:"2"}];
+        for(var pri=0;pri<3;pri++){
+          var isBR=e.bR===PRS[pri].k;
+          h+='<div style="background:'+(isBR?"var(--gl)":"rgba(255,255,255,.04)")+';border:1px solid '+(isBR?"var(--g)":"var(--ln)")+';border-radius:6px;padding:6px 4px;text-align:center">';
+          h+='<div style="font-family:var(--fm);font-size:7px;color:var(--w3);margin-bottom:2px">'+PRS[pri].l+'</div>';
+          h+='<div style="font-family:var(--ft);font-size:15px;color:'+(isBR?"var(--g)":"var(--w)")+';letter-spacing:.02em">'+(PRS[pri].v?(PRS[pri].v*100).toFixed(0)+"%":"--")+'</div>';
+          h+='</div>';
+        }
+        h+='</div>';
+      }
       // Footer
       h+='<div class="mc-footer">';
-      h+='<button class="mc-analyse-btn" onclick="PM('+mIdx+');return false;">Analyser</button>';
+      h+='<button class="mc-analyse-btn" onclick="event.stopPropagation();event.preventDefault();PM('+mIdx+');">Analyser</button>';
       if(isV&&e){h+='<span class="mc-val-badge">VALUE +'+((e.edg||0)*100).toFixed(1)+'%</span>';}
       else if(conf>0){
         h+='<div class="mc-conf"><div class="mc-conf-bar"><div class="mc-conf-fill" style="width:'+conf+'%"></div></div>'+conf+'%</div>';
@@ -3342,6 +3360,7 @@ function renderPage(){
   else if(t==="live")h=pLive();
   else if(t==="cotes")h=pCotes();
   else if(t==="journal")h=pJournal();
+  else if(t==="backtest")h=pBacktest();
   else h=pHome();
   pg.innerHTML=h;
   buildSide();updTop();updSide();
@@ -3469,7 +3488,7 @@ function renderMatchCard(m,mIdx,opts){
     }
   }
   h+='<div class="mc-footer">';
-  h+='<button class="mc-analyse-btn" onclick="PM('+mIdx+');return false;">Analyser</button>';
+  h+='<button class="mc-analyse-btn" onclick="event.stopPropagation();event.preventDefault();PM('+mIdx+');">Analyser</button>';
   if(isV&&r){h+='<span class="mc-val-badge">+'+((r.edg||0)*100).toFixed(1)+'% EDGE</span>';}
   else if(r){h+='<div class="mc-conf"><div class="mc-conf-bar"><div class="mc-conf-fill" style="width:'+conf+'%"></div></div><span style="color:#AAAAAA;font-size:9px">'+conf+'%</span></div>';}
   h+='</div>';
@@ -3664,6 +3683,192 @@ function genEdgeBets(){
   });
   localStorage.setItem("edge_simbets",JSON.stringify(S.simBets));
   renderPage();
+}
+
+function pBacktest(){
+  var h="";
+  h+='<div style="background:var(--s1);border:1px solid var(--ln);border-radius:var(--r3);padding:18px;margin-bottom:14px">';
+  h+='<div style="font-family:var(--ft);font-size:22px;color:var(--w);letter-spacing:.06em;margin-bottom:6px">Backtest IA</div>';
+  h+='<div style="font-family:var(--fm);font-size:10px;color:var(--w3);line-height:1.7">Selectionne une ligue et une periode. L IA analyse chaque match <b style=\"color:var(--g)\">sans connaitre le score</b> et fait son pronostic. Compare ensuite avec le vrai resultat.</div>';
+  h+='</div>';
+
+  // Config backtest
+  h+='<div style="background:var(--s1);border:1px solid var(--ln);border-radius:var(--r3);padding:16px;margin-bottom:12px">';
+  h+='<div class="clbl">Configuration</div>';
+  h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">';
+  h+='<div><div class="fl">Ligue</div>';
+  h+='<select id="bt-league" style="font-family:var(--fm);font-size:12px">';
+  var BTLEAGUES=[
+    {v:"39",l:"Premier League"},
+    {v:"140",l:"La Liga"},
+    {v:"135",l:"Serie A"},
+    {v:"78",l:"Bundesliga"},
+    {v:"61",l:"Ligue 1"},
+    {v:"2",l:"Champions League"},
+    {v:"3",l:"Europa League"}
+  ];
+  for(var bi=0;bi<BTLEAGUES.length;bi++){
+    h+='<option value="'+BTLEAGUES[bi].v+'">'+BTLEAGUES[bi].l+'</option>';
+  }
+  h+='</select></div>';
+  h+='<div><div class="fl">Matchs max</div>';
+  h+='<select id="bt-count" style="font-family:var(--fm);font-size:12px">';
+  h+='<option value="20">20 matchs</option><option value="50">50 matchs</option><option value="100">100 matchs</option>';
+  h+='</select></div>';
+  h+='</div>';
+
+  if(!S.aiKey){
+    h+='<div style="background:rgba(255,59,92,.08);border:1px solid rgba(255,59,92,.2);border-radius:var(--r2);padding:10px;font-family:var(--fm);font-size:10px;color:var(--red);margin-bottom:10px">Cle Anthropic requise pour le backtest IA</div>';
+    h+='<button onclick="goC()" class="cbtn" style="margin-bottom:0">Configurer la cle IA</button>';
+  } else {
+    h+='<button onclick="runBacktest()" class="cbtn" style="margin-bottom:0;background:var(--g);color:#000" id="bt-btn">';
+    h+=(S.btLoad?ldr()+" Backtest en cours...":"Lancer le backtest")+'</button>';
+  }
+  h+='</div>';
+
+  // Resultats
+  if(S.btResults&&S.btResults.length){
+    var btr=S.btResults;
+    var wins=btr.filter(function(r){return r.correct;}).length;
+    var pct_ok=Math.round((wins/btr.length)*100);
+    var roi=btr.reduce(function(acc,r){return acc+(r.correct?(r.odds-1):-1);},0);
+
+    h+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px">';
+    h+='<div style="background:var(--gl);border:1px solid var(--g);border-radius:var(--r2);padding:14px;text-align:center">';
+    h+='<div style="font-family:var(--ft);font-size:32px;color:var(--g)">'+pct_ok+'%</div>';
+    h+='<div style="font-family:var(--fm);font-size:8px;color:var(--w3);margin-top:3px">PRECISION</div></div>';
+    h+='<div style="background:var(--s2);border:1px solid var(--ln);border-radius:var(--r2);padding:14px;text-align:center">';
+    h+='<div style="font-family:var(--ft);font-size:32px;color:var(--w)">'+wins+'/'+btr.length+'</div>';
+    h+='<div style="font-family:var(--fm);font-size:8px;color:var(--w3);margin-top:3px">PRONOSTICS</div></div>';
+    h+='<div style="background:var(--s2);border:1px solid var(--ln);border-radius:var(--r2);padding:14px;text-align:center">';
+    h+='<div style="font-family:var(--ft);font-size:32px;color:'+(roi>=0?"var(--g)":"var(--red)")+'">'+(roi>=0?"+":"")+roi.toFixed(1)+'u</div>';
+    h+='<div style="font-family:var(--fm);font-size:8px;color:var(--w3);margin-top:3px">ROI SIMULE</div></div>';
+    h+='</div>';
+
+    // Liste des matchs
+    h+='<div class="clbl" style="margin-bottom:8px">Detail des pronostics</div>';
+    for(var ri=0;ri<btr.length;ri++){
+      var r=btr[ri];
+      var correct=r.correct;
+      h+='<div style="background:var(--s1);border:1px solid '+(correct?"rgba(0,229,160,.25)":"rgba(255,59,92,.2)")+';border-radius:var(--r2);padding:12px;margin-bottom:7px">';
+      h+='<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:7px">';
+      h+='<div>';
+      h+='<div style="font-family:var(--ft);font-size:14px;color:var(--w);letter-spacing:.03em">'+esc(r.home)+' vs '+esc(r.away)+'</div>';
+      h+='<div style="font-family:var(--fm);font-size:9px;color:var(--w3);margin-top:2px">'+esc(r.league)+' - '+esc(r.date)+'</div>';
+      h+='</div>';
+      h+='<span style="font-family:var(--fm);font-size:9px;font-weight:700;padding:3px 9px;border-radius:4px;background:'+(correct?"var(--gl)":"rgba(255,59,92,.1)")+';color:'+(correct?"var(--g)":"var(--red)")+';border:1px solid '+(correct?"rgba(0,229,160,.3)":"rgba(255,59,92,.3)")+'">'+(correct?" CORRECT":" FAUX")+'</span>';
+      h+='</div>';
+      h+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">';
+      h+='<div style="background:var(--s2);border-radius:6px;padding:8px;text-align:center">';
+      h+='<div style="font-family:var(--fm);font-size:7px;color:var(--w3)">PRONO IA</div>';
+      h+='<div style="font-family:var(--ft);font-size:14px;color:var(--g);margin-top:2px">'+esc(r.prediction)+'</div></div>';
+      h+='<div style="background:var(--s2);border-radius:6px;padding:8px;text-align:center">';
+      h+='<div style="font-family:var(--fm);font-size:7px;color:var(--w3)">VRAI SCORE</div>';
+      h+='<div style="font-family:var(--ft);font-size:14px;color:var(--w);margin-top:2px">'+esc(r.score)+'</div></div>';
+      h+='<div style="background:var(--s2);border-radius:6px;padding:8px;text-align:center">';
+      h+='<div style="font-family:var(--fm);font-size:7px;color:var(--w3)">CONFIANCE</div>';
+      h+='<div style="font-family:var(--ft);font-size:14px;color:var(--w);margin-top:2px">'+r.conf+'%</div></div>';
+      h+='</div>';
+      if(r.reasoning)h+='<div style="font-family:var(--fm);font-size:10px;color:var(--w3);margin-top:8px;font-style:italic;border-top:1px solid var(--ln);padding-top:7px">'+esc(r.reasoning)+'</div>';
+      h+='</div>';
+    }
+  } else if(S.btLoad){
+    h+='<div style="text-align:center;padding:40px">';
+    h+=ldr();
+    h+='<div style="font-family:var(--fm);font-size:11px;color:var(--w3);margin-top:12px">Analyse des matchs passes en cours...<br>Cela peut prendre 1-2 minutes</div>';
+    h+='</div>';
+  }
+
+  return h;
+}
+
+async function runBacktest(){
+  if(!S.aiKey){alert("Configure ta cle Anthropic.");return;}
+  var leagueEl=document.getElementById("bt-league");
+  var countEl=document.getElementById("bt-count");
+  var leagueId=leagueEl?leagueEl.value:"39";
+  var maxCount=countEl?parseInt(countEl.value):20;
+  var season=new Date().getFullYear();
+
+  S.btLoad=true;S.btResults=[];renderPage();
+
+  try{
+    // Fetch matchs termines de la saison
+    var resp=await fetch("/api/odds?past=1&league="+leagueId+"&season="+season);
+    var data=await resp.json();
+    var pastMatches=(data.matches||[]).filter(function(m){
+      return m.status==="FT"||m.status==="AET"||m.status==="PEN";
+    }).slice(0,maxCount);
+
+    if(!pastMatches.length){
+      alert("Pas de matchs termines trouves. Verifie la ligue et la saison.");
+      S.btLoad=false;renderPage();return;
+    }
+
+    var results=[];
+    for(var i=0;i<pastMatches.length;i++){
+      var m=pastMatches[i];
+      // Calculer les probas avec le moteur EDGE (sans le score)
+      var engineResult=calc({
+        hxg:m.hxg||1.4,axg:m.axg||1.1,
+        hg:m.hg||1.3,ag:m.ag||1.0,
+        hf:m.hf||8,af:m.af||6,
+        o1:m.o1||2.0,on:m.on||3.3,o2:m.o2||3.5,
+        c:m.leagueName||"Football"
+      });
+
+      var prediction="1";
+      var predOdds=m.o1||2.0;
+      var conf=50;
+      if(engineResult){
+        if(engineResult.bR==="N"){prediction="N";predOdds=m.on||3.3;}
+        else if(engineResult.bR==="2"){prediction="2";predOdds=m.o2||3.5;}
+        conf=engineResult.conf||50;
+      }
+
+      // Vrai resultat
+      var hg=m.score?parseInt(m.score.split("-")[0]):null;
+      var ag=m.score?parseInt(m.score.split("-")[1]):null;
+      var trueResult=hg>ag?"1":hg<ag?"2":"N";
+      var correct=prediction===trueResult;
+
+      // Raisonnement IA (optionnel - uniquement pour les 10 premiers pour economiser tokens)
+      var reasoning="";
+      if(i<10&&S.aiKey){
+        try{
+          var prompt="Match: "+m.home+" vs "+m.away+" ("+m.leagueName+") | Cotes: 1="+m.o1+" N="+m.on+" 2="+m.o2+" | EDGE dit: "+prediction+" @ "+predOdds.toFixed(2)+"x ("+conf+"%) | Justifie en 1 phrase sans mentionner le score reel.";
+          reasoning=await callAI(prompt,80);
+        }catch(e){}
+      }
+
+      results.push({
+        home:m.home||m.h,away:m.away||m.a,
+        league:m.leagueName||m.c,
+        date:m.time?m.time.substring(0,10):"",
+        prediction:prediction,
+        score:m.score||(hg+"-"+ag),
+        trueResult:trueResult,
+        correct:correct,
+        odds:predOdds,
+        conf:conf,
+        reasoning:reasoning
+      });
+
+      // Update UI tous les 5 matchs
+      if((i+1)%5===0){
+        S.btResults=results.slice();
+        renderPage();
+      }
+    }
+
+    S.btResults=results;
+    S.btLoad=false;
+    renderPage();
+  }catch(e){
+    S.btLoad=false;
+    alert("Erreur backtest: "+e.message);
+    renderPage();
+  }
 }
 
 function loadJournal(){
