@@ -2988,15 +2988,14 @@ function pComp(){
 
 function pBacktest(){
   var h="";
-  h+='<div style="background:var(--s1);border:1px solid var(--ln);border-radius:var(--r3);padding:18px;margin-bottom:14px">';
-  h+='<div style="font-family:var(--ft);font-size:22px;color:var(--w);letter-spacing:.06em;margin-bottom:6px">Backtest IA</div>';
-  h+='<div style="font-family:var(--fm);font-size:10px;color:var(--w3);line-height:1.7">Selectionne une ligue et une periode. L IA analyse chaque match <b style=\"color:var(--g)\">sans connaitre le score</b> et fait son pronostic. Compare ensuite avec le vrai resultat.</div>';
+  h+='<div class="card" style="margin-bottom:12px">';
+  h+='<div style="font-family:var(--ft);font-size:20px;color:var(--ivoire);letter-spacing:.06em;margin-bottom:6px">Backtest IA</div>';
+  h+='<div style="font-family:var(--fm);font-size:10px;color:var(--iv3);line-height:1.7">Selectionne une ligue. Le moteur EDGE analyse chaque match sans connaitre le score et compare avec le vrai resultat.</div>';
   h+='</div>';
 
-  // Config backtest
-  h+='<div style="background:var(--s1);border:1px solid var(--ln);border-radius:var(--r3);padding:16px;margin-bottom:12px">';
+  h+='<div class="card" style="margin-bottom:12px">';
   h+='<div class="clbl">Configuration</div>';
-  h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">';
+  h+='<div class="g2" style="margin-bottom:12px">';
   h+='<div><div class="fl">Ligue</div>';
   h+='<select id="bt-league" style="font-family:var(--fm);font-size:12px">';
   h+='<option value="all">Toutes les ligues</option>';
@@ -3006,77 +3005,90 @@ function pBacktest(){
   h+='<option value="Serie A">Serie A</option>';
   h+='<option value="Bundesliga">Bundesliga</option>';
   h+='<option value="Champions League">Champions League</option>';
-  h+='<option value="Europa League">Europa League</option>';
   h+='</select></div>';
-  h+='<div><div class="fl">Matchs max</div>';
+  h+='<div><div class="fl">Nombre de matchs</div>';
   h+='<select id="bt-count" style="font-family:var(--fm);font-size:12px">';
-  h+='<option value="30">30 matchs</option><option value="50" selected>50 matchs</option><option value="100">100 matchs</option><option value="153">Ligue complete (~153)</option><option value="500">Toutes ligues</option>';
+  h+='<option value="30">30 matchs</option>';
+  h+='<option value="50" selected>50 matchs</option>';
+  h+='<option value="100">100 matchs</option>';
+  h+='<option value="153">Saison complete</option>';
   h+='</select></div>';
   h+='</div>';
-
   h+='<button onclick="runBacktest()" class="cbtn" style="margin-bottom:0" id="bt-btn">';
   h+=(S.btLoad?ldr()+" Analyse en cours...":"Lancer le backtest")+"</button>";
+  h+='<div id="bt-progress" style="font-family:var(--fm);font-size:9px;color:var(--iv3);text-align:center;margin-top:6px;"></div>';
   h+='</div>';
 
-  // Resultats
   if(S.btResults&&S.btResults.length){
     var btr=S.btResults;
     var wins=btr.filter(function(r){return r.correct;}).length;
-    var pct_ok=Math.round((wins/btr.length)*100);
+    var pct=Math.round(wins/btr.length*100);
     var roi=btr.reduce(function(acc,r){return acc+(r.correct?(r.odds-1):-1);},0);
 
-    // Stats par categorie
+    // Stats globales
+    h+='<div class="g3" style="margin-bottom:12px">';
+    h+='<div class="card" style="margin-bottom:0;text-align:center;padding:12px">';
+    h+='<div style="font-family:var(--ft);font-size:30px;color:var(--sauge)">'+pct+'%</div>';
+    h+='<div style="font-family:var(--fm);font-size:8px;color:var(--iv4);margin-top:3px">PRECISION</div>';
+    h+='</div>';
+    h+='<div class="card" style="margin-bottom:0;text-align:center;padding:12px">';
+    h+='<div style="font-family:var(--ft);font-size:30px;color:var(--ivoire)">'+wins+'/'+btr.length+'</div>';
+    h+='<div style="font-family:var(--fm);font-size:8px;color:var(--iv4);margin-top:3px">PRONOSTICS</div>';
+    h+='</div>';
+    h+='<div class="card" style="margin-bottom:0;text-align:center;padding:12px">';
+    h+='<div style="font-family:var(--ft);font-size:30px;color:'+(roi>=0?"var(--sauge)":"var(--rouge)")+'">'+(roi>=0?"+":"")+roi.toFixed(1)+'u</div>';
+    h+='<div style="font-family:var(--fm);font-size:8px;color:var(--iv4);margin-top:3px">ROI SIMULE</div>';
+    h+='</div>';
+    h+='</div>';
+
+    // Stats par type de pari
     var cats={};
     btr.forEach(function(r){
       var c=r.betCat||"1X2";
-      if(!cats[c])cats[c]={wins:0,total:0,roi:0};
+      if(!cats[c])cats[c]={wins:0,total:0};
       cats[c].total++;
-      if(r.correct){cats[c].wins++;cats[c].roi+=(r.odds-1);}
-      else{cats[c].roi-=1;}
+      if(r.correct)cats[c].wins++;
     });
-
-    h+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px">';
-    h+='<div style="background:var(--gl);border:1px solid var(--g);border-radius:var(--r2);padding:14px;text-align:center">';
-    h+='<div style="font-family:var(--ft);font-size:32px;color:var(--g)">'+pct_ok+'%</div>';
-    h+='<div style="font-family:var(--fm);font-size:8px;color:var(--w3);margin-top:3px">PRECISION</div></div>';
-    h+='<div style="background:var(--s2);border:1px solid var(--ln);border-radius:var(--r2);padding:14px;text-align:center">';
-    h+='<div style="font-family:var(--ft);font-size:32px;color:var(--w)">'+wins+'/'+btr.length+'</div>';
-    h+='<div style="font-family:var(--fm);font-size:8px;color:var(--w3);margin-top:3px">PRONOSTICS</div></div>';
-    h+='<div style="background:var(--s2);border:1px solid var(--ln);border-radius:var(--r2);padding:14px;text-align:center">';
-    h+='<div style="font-family:var(--ft);font-size:32px;color:'+(roi>=0?"var(--g)":"var(--red)")+'">'+(roi>=0?"+":"")+roi.toFixed(1)+'u</div>';
-    h+='<div style="font-family:var(--fm);font-size:8px;color:var(--w3);margin-top:3px">ROI SIMULE</div></div>';
+    h+='<div class="card" style="margin-bottom:12px">';
+    h+='<div class="clbl">Par type de pari</div>';
+    Object.keys(cats).forEach(function(cat){
+      var d=cats[cat];
+      var p=Math.round(d.wins/d.total*100);
+      h+='<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--bord)">';
+      h+='<span style="font-family:var(--fm);font-size:11px;color:var(--iv2)">'+cat+'</span>';
+      h+='<div style="display:flex;align-items:center;gap:10px">';
+      h+='<span style="font-family:var(--fm);font-size:10px;color:var(--iv3)">'+d.wins+'/'+d.total+'</span>';
+      h+='<span style="font-family:var(--ft);font-size:14px;color:'+(p>=55?"var(--sauge)":p>=45?"var(--ivoire)":"var(--rouge)")+'">'+p+'%</span>';
+      h+='</div></div>';
+    });
     h+='</div>';
 
-    // Liste des matchs
-    h+='<div class="clbl" style="margin-bottom:8px">Detail des pronostics</div>';
+    // Liste matchs
+    h+='<div class="clbl">Detail ('+btr.length+' matchs)</div>';
     for(var ri=0;ri<btr.length;ri++){
       var r=btr[ri];
-      var correct=r.correct;
-      h+='<div style="background:var(--s1);border:1px solid '+(correct?"rgba(0,229,160,.25)":"rgba(255,59,92,.2)")+';border-radius:var(--r2);padding:12px;margin-bottom:7px">';
-      h+='<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:7px">';
+      h+='<div class="card '+(r.correct?"card-olive":"card-red")+'" style="margin-bottom:7px;padding:10px">';
+      // Header
+      h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">';
       h+='<div>';
-      h+='<div style="font-family:var(--ft);font-size:14px;color:var(--w);letter-spacing:.03em">'+esc(r.home)+' vs '+esc(r.away)+'</div>';
-      h+='<div style="font-family:var(--fm);font-size:9px;color:var(--w3);margin-top:2px">'+esc(r.league)+' - '+esc(r.date)+'</div>';
+      h+='<div style="font-family:var(--ft);font-size:14px;color:var(--ivoire);letter-spacing:.03em">'+esc(r.home)+' vs '+esc(r.away)+'</div>';
+      h+='<div style="font-family:var(--fm);font-size:9px;color:var(--iv3);margin-top:1px">'+esc(r.league)+' - '+esc(r.date)+'</div>';
       h+='</div>';
-      h+='<span style="font-family:var(--fm);font-size:9px;font-weight:700;padding:3px 9px;border-radius:4px;background:'+(correct?"var(--gl)":"rgba(255,59,92,.1)")+';color:'+(correct?"var(--g)":"var(--red)")+';border:1px solid '+(correct?"rgba(0,229,160,.3)":"rgba(255,59,92,.3)")+'">'+(correct?" CORRECT":" FAUX")+'</span>';
+      h+='<span style="font-family:var(--fm);font-size:9px;font-weight:700;padding:3px 8px;border-radius:4px;background:'+(r.correct?"var(--saugel)":"var(--rougel)")+';color:'+(r.correct?"var(--sauge)":"var(--rouge)")+'">'+( r.correct?"OK":"FAUX")+'</span>';
       h+='</div>';
-      h+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:5px">';
-      h+='<div style="background:var(--s2);border-radius:6px;padding:7px 4px;text-align:center">';
-      h+='<div style="font-family:var(--fm);font-size:7px;color:var(--w3)">PARI</div>';
-      h+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:5px">';
-      h+='<div style="background:var(--s2);border-radius:6px;padding:7px 4px;text-align:center"><div style="font-family:var(--fm);font-size:7px;color:var(--w3)">PARI</div><div style="font-family:var(--ft);font-size:11px;color:var(--g);margin-top:2px">'+esc(r.betName||r.prediction)+'</div></div>';
-      h+='<div style="background:var(--s2);border-radius:6px;padding:7px 4px;text-align:center"><div style="font-family:var(--fm);font-size:7px;color:var(--w3)">SCORE</div><div style="font-family:var(--ft);font-size:14px;color:var(--w);margin-top:2px">'+esc(r.score)+'</div></div>';
-      h+='<div style="background:var(--s2);border-radius:6px;padding:7px 4px;text-align:center"><div style="font-family:var(--fm);font-size:7px;color:var(--w3)">COTE</div><div style="font-family:var(--ft);font-size:14px;color:var(--w);margin-top:2px">'+(r.odds?r.odds.toFixed(2):"--")+'x</div></div>';
-      h+='<div style="background:var(--s2);border-radius:6px;padding:7px 4px;text-align:center"><div style="font-family:var(--fm);font-size:7px;color:var(--w3)">CONF</div><div style="font-family:var(--ft);font-size:14px;color:var(--w);margin-top:2px">'+r.conf+'%</div></div>';
+      // Stats en ligne simple
+      h+='<div style="display:flex;gap:8px;flex-wrap:wrap">';
+      h+='<span style="font-family:var(--fm);font-size:10px;background:var(--card2);padding:3px 8px;border-radius:4px;color:var(--sauge2)">'+esc(r.betName||r.prediction)+'</span>';
+      h+='<span style="font-family:var(--fm);font-size:10px;background:var(--card2);padding:3px 8px;border-radius:4px;color:var(--iv2)">Score: '+esc(r.score)+'</span>';
+      h+='<span style="font-family:var(--fm);font-size:10px;background:var(--card2);padding:3px 8px;border-radius:4px;color:var(--iv2)">Cote: '+(r.odds?r.odds.toFixed(2):"--")+'x</span>';
+      h+='<span style="font-family:var(--fm);font-size:10px;background:var(--card2);padding:3px 8px;border-radius:4px;color:var(--iv2)">Conf: '+r.conf+'%</span>';
       h+='</div>';
-      h+='</div>';
-      if(r.reasoning)h+='<div style="font-family:var(--fm);font-size:10px;color:var(--w3);margin-top:8px;font-style:italic;border-top:1px solid var(--ln);padding-top:7px">'+esc(r.reasoning)+'</div>';
       h+='</div>';
     }
   } else if(S.btLoad){
     h+='<div style="text-align:center;padding:40px">';
     h+=ldr();
-    h+='<div style="font-family:var(--fm);font-size:11px;color:var(--w3);margin-top:12px">Analyse des matchs passes en cours...<br>Cela peut prendre 1-2 minutes</div>';
+    h+='<div id="bt-progress" style="font-family:var(--fm);font-size:11px;color:var(--iv3);margin-top:12px">Analyse en cours...</div>';
     h+='</div>';
   }
 
@@ -4524,4 +4536,12 @@ function renderBetList(list,type){
     h+='<div style="flex:1"><div style="font-size:11px;color:"#909090";font-family:var(--f-mono);margin-bottom:3px">'+esc(b.match||"")+'</div>';
     h+='<div style="font-family:var(--f-titre);font-size:16px;color:'+bCol+';letter-spacing:.04em">'+esc(b.bet||"")+'</div></div>';
     h+='<div style="text-align:right;margin-left:10px">';
-    h+='<div s
+    h+='<div style="font-family:var(--f-titre);font-size:20px;color:'+bCol+';letter-spacing:.04em">'+b.odd.toFixed(2)+'x</div>';
+    h+='<div style="font-family:var(--f-mono);font-size:9px;color:"#5A5A5A";margin-top:1px">'+b.stake+'EUR</div>';
+    h+='</div></div>';
+    h+='<div style="display:flex;align-items:center;justify-content:space-between">';
+    h+='<div style="font-family:var(--f-mono);font-size:9px;color:"#5A5A5A"">'+esc(b.date||"")+'</div>';
+    if(isPend){
+      h+='<div style="display:flex;gap:5px">';
+      var _bi=b.id;
+      h+='<button onclick="resolveJBet('+JSON.stringify(_bi)+','+JSON.stringify("won")+')" style="padding:5px 12px;background:rgba(0,229,160,.15);border:1px solid rgba(0,229,160
