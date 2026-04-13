@@ -1211,6 +1211,7 @@ function enrichFromOdds(m){
 }
 
 function calc(m){
+  var esc=function(s){return s?String(s):"";};
   try{
     var sf=function(v,fb){var n=parseFloat(v);return(isNaN(n)||n<=0)?fb:n;};
     var sfz=function(v,fb){var n=parseFloat(v);return isNaN(n)?fb:n;};
@@ -1473,8 +1474,8 @@ function calc(m){
 
     // Label r sultat
     var tH=m.h||m.home||"Dom",tA=m.a||m.away||"Ext";
-    var label=edg?(bR==="1"?esc(tH)+" gagne":bR==="2"?esc(tA)+" gagne":"Match nul"):
-      (pH>pA&&pH>pN?esc(tH)+" favori":pA>pH&&pA>pN?esc(tA)+" favori":"Match ouvert");
+    var label=edg?(bR==="1"?String(tH)+" gagne":bR==="2"?String(tA)+" gagne":"Match nul"):
+      (pH>pA&&pH>pN?String(tH)+" favori":pA>pH&&pA>pN?String(tA)+" favori":"Match ouvert");
 
     // S curit  march 
     var safe="OK";
@@ -3283,174 +3284,135 @@ function runBacktest(){
   var countEl=document.getElementById("bt-count");
   var leagueVal=leagueEl?leagueEl.value:"all";
   var maxCount=countEl?parseInt(countEl.value):50;
-  S.btLoad=true;S.btResults=[];
 
-  var btnEl=document.getElementById("bt-btn");
-  if(btnEl)btnEl.innerHTML=ldr()+" Analyse en cours...";
-
-  function getLocalMatches(){
-    var all=getFallback();
-    var past=all.filter(function(m){
-      return m.status==="FT"||m.status==="AET"||m.status==="PEN";
-    });
-    if(leagueVal!=="all"){
-      past=past.filter(function(m){
-        var n=(m.c||m.leagueName||"").toLowerCase();
-        return n===leagueVal.toLowerCase()||n.indexOf(leagueVal.toLowerCase())>=0;
-      });
-    }
-    return past.slice(0,maxCount);
-  }
-
-  var LGIDS={"Ligue 1":61,"La Liga":140,"Premier League":39,"Serie A":135,"Bundesliga":78,"Champions League":2,"Europa League":3};
-  var lgId=LGIDS[leagueVal]||null;
-  var url="/api/history"+(lgId?"?league="+lgId:"");
-
-  fetch(url)
-  .then(function(resp){
-    if(!resp.ok)throw new Error("API indispo");
-    return resp.json();
-  })
-  .then(function(data){
-    var fetched=data.matches||[];
-    if(leagueVal!=="all"){
-      fetched=fetched.filter(function(m){
-        var n=(m.leagueName||m.c||"").toLowerCase();
-        return n===leagueVal.toLowerCase()||n.indexOf(leagueVal.toLowerCase())>=0;
-      });
-    }
-    var matches=fetched.length>=5?fetched.slice(0,maxCount):getLocalMatches();
-    processMatches(matches);
-  })
-  .catch(function(){
-    processMatches(getLocalMatches());
+  // Collecter les matchs d abord
+  var all=getFallback();
+  var matches=all.filter(function(m){
+    return m.status==="FT"||m.status==="AET"||m.status==="PEN";
   });
-
-  function processMatches(matches){
-    if(!matches.length){
-      S.btLoad=false;S.btResults=[];renderPage();return;
-    }
-    var total=matches.length;
-    var results=[];var i=0;
-
-    function updateProgress(){
-      var el=document.getElementById("bt-progress");
-      if(el)el.textContent="Analyse "+i+"/"+total+"...";
-    }
-
-    function next(){
-      if(i>=total){
-        S.btResults=results;S.btLoad=false;renderPage();return;
-      }
-      var m=matches[i];
-
-      var er=calc({
-        hxg:m.hxg||1.4,axg:m.axg||1.1,
-        hxga:m.hxga||1.2,axga:m.axga||1.3,
-        hg:m.hg||1.3,ag:m.ag||1.0,
-        hf:m.hf||8,af:m.af||6,
-        hf10:m.hf10||14,af10:m.af10||11,
-        hsh:m.hsh||4,ash:m.ash||3,
-        hcs:m.hcs||28,acs:m.acs||22,
-        o1:m.o1||2.0,on:m.on||3.3,o2:m.o2||3.5,
-        oO25:m.oO25||1.9,oO35:m.oO35||2.8,oBtts:m.oBtts||1.85,
-        c:m.leagueName||m.c||"Football",
-        stakeLevel:m.stakeLevel||1
-      });
-
-      if(!er){i++;setTimeout(next,0);return;}
-
-      var betsData=buildBets(er,{
-        home:m.home||m.h||"",away:m.away||m.a||"",
-        o1:m.o1||2.0,oN:m.on||3.3,o2:m.o2||3.5,
-        oO25:m.oO25||1.90,oO35:m.oO35||2.80,oBtts:m.oBtts||1.85
-      });
-
-      var sc=m.score||"";
-      if(!sc&&m.goalsHome!==undefined){sc=m.goalsHome+"-"+m.goalsAway;}
-      var parts=sc.split("-");
-      var gh=parts.length>=2?parseInt(parts[0]):null;
-      var ga=parts.length>=2?parseInt(parts[1]):null;
-      if(gh===null||ga===null||isNaN(gh)||isNaN(ga)){
-        i++;setTimeout(next,0);return;
-      }
-
-      // Evaluer CHAQUE type de pari contre le vrai score
-      var allBets=betsData.allBets||[];
-      var totalGoals=gh+ga;
-
-      // Map: id du pari -> est-ce que le pari est gagnant?
-      function isWin(betId){
-        var real1X2=gh>ga?"1":gh<ga?"2":"N";
-        if(betId==="1") return real1X2==="1";
-        if(betId==="N") return real1X2==="N";
-        if(betId==="2") return real1X2==="2";
-        if(betId==="1X") return real1X2==="1"||real1X2==="N";
-        if(betId==="X2") return real1X2==="2"||real1X2==="N";
-        if(betId==="12") return real1X2==="1"||real1X2==="2";
-        if(betId==="O15") return totalGoals>1;
-        if(betId==="O25") return totalGoals>2;
-        if(betId==="O35") return totalGoals>3;
-        if(betId==="U25") return totalGoals<3;
-        if(betId==="BTTS") return gh>0&&ga>0;
-        if(betId==="NBTTS") return gh===0||ga===0;
-        if(betId==="CSH") return ga===0;
-        if(betId==="CSA") return gh===0;
-        return false;
-      }
-
-      // Selectionner le meilleur pari (value > conf > proba)
-      var bestBet=betsData.valueBet||betsData.bestBet;
-      var pred=bestBet?bestBet.id:"1";
-      var predO=bestBet?bestBet.o:m.o1||2.0;
-      var predP=bestBet?bestBet.p:er.pH;
-      var predEdg=bestBet?bestBet.edg:er.edg;
-      var conf=er.conf||50;
-
-      // Si la cote est 0 (DC, Over sans cote), utiliser la proba
-      if(!predO||predO<1.25){
-        // Cote approximee depuis la proba
-        predO=predP>0?+(1/predP*1.05).toFixed(2):2.0;
-      }
-
-      var correct=isWin(pred);
-
-      // Categorie du pari
-      var betCat=bestBet?bestBet.cat:"1X2";
-      var betName=bestBet?bestBet.name:pred;
-
-      // Nom lisible du pari
-      var betLabel=betName;
-      if(pred==="1X2"||pred==="1"||pred==="N"||pred==="2"){
-        betLabel=pred==="1"?"Dom gagne":pred==="2"?"Ext gagne":"Match nul";
-      }
-
-      results.push({
-        home:m.home||m.h||"",
-        away:m.away||m.a||"",
-        league:m.leagueName||m.c||"",
-        date:m.time?m.time.substring(0,10):"",
-        score:sc,
-        // Pari choisi
-        prediction:pred,
-        betName:betLabel,
-        betCat:betCat,
-        // Resultats
-        trueResult:gh>ga?"1":gh<ga?"2":"N",
-        totalGoals:totalGoals,
-        correct:correct,
-        odds:predO,
-        prob:Math.round((predP||0)*100),
-        conf:conf,
-        edg:predEdg?+((predEdg||0)*100).toFixed(1):null
-      });
-
-      i++;
-      updateProgress();
-      setTimeout(next,0);
-    }
-    next();
+  if(leagueVal!=="all"){
+    matches=matches.filter(function(m){
+      var n=(m.c||m.leagueName||"").toLowerCase();
+      return n===leagueVal.toLowerCase()||n.indexOf(leagueVal.toLowerCase())>=0;
+    });
   }
+  matches=matches.slice(0,maxCount);
+
+  if(!matches.length){
+    alert("Aucun match trouve pour cette ligue.");
+    return;
+  }
+
+  S.btLoad=true;
+  S.btResults=[];
+  renderPage();
+
+  // Traiter avec setInterval   le plus compatible mobile
+  var idx=0;
+  var results=[];
+  var total=matches.length;
+
+  var timer=setInterval(function(){
+    // Traiter 5 matchs par tick
+    var batch=0;
+    while(idx<total && batch<5){
+      var m=matches[idx];
+      idx++;
+      batch++;
+
+      try{
+        var er=calc({
+          hxg:m.hxg||1.4,axg:m.axg||1.1,
+          hxga:m.hxga||1.2,axga:m.axga||1.3,
+          hg:m.hg||1.3,ag:m.ag||1.0,
+          hf:m.hf||8,af:m.af||6,
+          hf10:m.hf10||14,af10:m.af10||11,
+          hsh:m.hsh||4,ash:m.ash||3,
+          hcs:m.hcs||28,acs:m.acs||22,
+          o1:m.o1||2.0,on:m.on||3.3,o2:m.o2||3.5,
+          oO25:m.oO25||1.9,oO35:m.oO35||2.8,oBtts:m.oBtts||1.85,
+          c:m.leagueName||m.c||"Football",
+          stakeLevel:m.stakeLevel||1
+        });
+        if(!er)continue;
+
+        // Pari choisi
+        var pred="1";var predO=m.o1||2.0;var predP=er.pH;var conf=er.conf||50;
+        var betCat="1X2";var betName="Dom gagne";
+
+        // Chercher le meilleur pari avec cote reelle
+        var bets=[
+          {id:"1",cat:"1X2",name:"Dom gagne",p:er.pH,o:m.o1||0},
+          {id:"N",cat:"1X2",name:"Match nul",p:er.pN,o:m.on||0},
+          {id:"2",cat:"1X2",name:"Ext gagne",p:er.pA,o:m.o2||0},
+          {id:"1X",cat:"Double chance",name:"Dom ou Nul",p:er.p1X||er.pH+er.pN,o:0},
+          {id:"X2",cat:"Double chance",name:"Ext ou Nul",p:er.pX2||er.pN+er.pA,o:0},
+          {id:"O25",cat:"Buts",name:"Plus 2.5 buts",p:er.o25||0,o:m.oO25||1.9},
+          {id:"U25",cat:"Buts",name:"Moins 2.5 buts",p:1-(er.o25||0),o:0},
+          {id:"O15",cat:"Buts",name:"Plus 1.5 buts",p:er.p15||0,o:0},
+          {id:"BTTS",cat:"BTTS",name:"Les deux marquent",p:er.btts||0,o:m.oBtts||1.85}
+        ];
+        // Cotes approximees pour paris sans cote reelle
+        bets.forEach(function(b){
+          if(!b.o&&b.p>0.05)b.o=+(1/b.p*1.06).toFixed(2);
+          b.edg=(b.o>=1.25&&b.p>0)?b.p-(1/b.o):null;
+        });
+        // Meilleur: edge max avec cote >=1.25
+        var best=null;
+        bets.forEach(function(b){
+          if(b.o>=1.25&&b.p>0.05){
+            if(!best||(b.edg||0)>(best.edg||0))best=b;
+          }
+        });
+        if(best){pred=best.id;predO=best.o;predP=best.p;betCat=best.cat;betName=best.name;}
+
+        // Score reel
+        var sc=m.score||"";
+        var parts=sc.split("-");
+        var gh=parseInt(parts[0]);var ga=parseInt(parts[1]);
+        if(isNaN(gh)||isNaN(ga))continue;
+        var total2=gh+ga;
+        var real1X2=gh>ga?"1":gh<ga?"2":"N";
+
+        // Le pari est-il gagnant?
+        var won=false;
+        if(pred==="1")won=real1X2==="1";
+        else if(pred==="N")won=real1X2==="N";
+        else if(pred==="2")won=real1X2==="2";
+        else if(pred==="1X")won=real1X2==="1"||real1X2==="N";
+        else if(pred==="X2")won=real1X2==="2"||real1X2==="N";
+        else if(pred==="12")won=real1X2==="1"||real1X2==="2";
+        else if(pred==="O25")won=total2>2;
+        else if(pred==="U25")won=total2<3;
+        else if(pred==="O15")won=total2>1;
+        else if(pred==="BTTS")won=gh>0&&ga>0;
+
+        results.push({
+          home:m.home||m.h||"",away:m.away||m.a||"",
+          league:m.leagueName||m.c||"",
+          date:m.time?m.time.substring(0,10):"",
+          score:sc,prediction:pred,
+          betName:betName,betCat:betCat,
+          trueResult:real1X2,totalGoals:total2,
+          correct:won,odds:predO,
+          prob:Math.round(predP*100),conf:conf,
+          edg:best?+((best.edg||0)*100).toFixed(1):null
+        });
+      }catch(e){}
+
+      // Mise a jour progress
+      var el=document.getElementById("bt-progress");
+      if(el)el.textContent="Analyse "+idx+"/"+total+"...";
+    }
+
+    // Fin
+    if(idx>=total){
+      clearInterval(timer);
+      S.btResults=results;
+      S.btLoad=false;
+      renderPage();
+    }
+  },30);
 }
 
 function callAI(prompt,max){
@@ -4550,4 +4512,13 @@ function renderBetList(list,type){
     var b=list[bi];
     var isW=b.res==="won";var isL=b.res==="lost";var isPend=!b.res;
     var bCol=isW?"#00E5A0":isL?"#E05555":"#D0D0D0";
-    var gain=isW?b.stak
+    var gain=isW?b.stake*(b.odd-1):isL?-b.stake:0;
+    h+='<div style="background:"#1E2848";border:1px solid '+(isW?"rgba(0,229,160,.25)":isL?"rgba(224,85,85,.2)":rgba(255,255,255,.12))+';border-radius:14px;overflow:hidden;margin-bottom:8px">';
+    var _stripeC=isW?"#00E5A0":isL?"#E05555":null;
+    h+='<div style="height:2px;background:'+(isW||isL?'linear-gradient(90deg,'+(_stripeC||'#888')+',transparent)':'rgba(255,255,255,.08)')+'"></div>';
+    h+='<div style="padding:12px 14px">';
+    h+='<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">';
+    h+='<div style="flex:1"><div style="font-size:11px;color:"#909090";font-family:var(--f-mono);margin-bottom:3px">'+esc(b.match||"")+'</div>';
+    h+='<div style="font-family:var(--f-titre);font-size:16px;color:'+bCol+';letter-spacing:.04em">'+esc(b.bet||"")+'</div></div>';
+    h+='<div style="text-align:right;margin-left:10px">';
+    h+='<div style="
