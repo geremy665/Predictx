@@ -3226,63 +3226,49 @@ function runBacktest(){
   var maxCount=countEl?parseInt(countEl.value):50;
   S.btLoad=true;S.btResults=[];renderPage();
 
-  // Map nom ligue -> ID API
+  // Source principale: getFallback() contient toute la saison 2025-2026
+  function getLocalMatches(){
+    var all=getFallback();
+    // Garder uniquement les matchs termines (status FT ou date passee)
+    var past=all.filter(function(m){
+      return m.status==="FT"||m.status==="AET"||m.status==="PEN";
+    });
+    // Filtrer par ligue
+    if(leagueVal!=="all"){
+      past=past.filter(function(m){
+        var n=(m.c||m.leagueName||"").toLowerCase();
+        return n===leagueVal.toLowerCase()||n.indexOf(leagueVal.toLowerCase())>=0;
+      });
+    }
+    return past.slice(0,maxCount);
+  }
+
+  // Tenter d'abord l'API pour les vrais matchs
   var LGIDS={"Ligue 1":61,"La Liga":140,"Premier League":39,"Serie A":135,"Bundesliga":78,"Champions League":2,"Europa League":3};
   var lgId=LGIDS[leagueVal]||null;
-
-  // Appeler /api/history pour les vrais matchs termines
   var url="/api/history"+(lgId?"?league="+lgId:"");
+
   fetch(url)
-  .then(function(resp){return resp.json();})
+  .then(function(resp){
+    if(!resp.ok)throw new Error("API indispo");
+    return resp.json();
+  })
   .then(function(data){
     var fetched=data.matches||[];
-    // Filtrer par ligue si nom selectionne et pas d ID
-    if(leagueVal!=="all"&&fetched.length){
+    if(leagueVal!=="all"){
       fetched=fetched.filter(function(m){
         var n=(m.leagueName||m.c||"").toLowerCase();
         return n===leagueVal.toLowerCase()||n.indexOf(leagueVal.toLowerCase())>=0;
       });
     }
-    fetched=fetched.slice(0,maxCount);
-    if(!fetched.length){
-      // Fallback: matchs charges localement
-      var local=S.matches.filter(function(m){
-        if(!isDone(m.time||m.t))return false;
-        if(leagueVal==="all")return true;
-        var n=(m.leagueName||m.c||"").toLowerCase();
-        return n.indexOf(leagueVal.toLowerCase())>=0;
-      }).slice(0,maxCount);
-      if(!local.length){
-        // Dernier recours: demo avec scores
-        local=getFallback().filter(function(m){
-          if(m.status!=="FT")return false;
-          if(leagueVal==="all")return true;
-          var n=(m.c||"").toLowerCase();
-          return n.indexOf(leagueVal.toLowerCase())>=0;
-        }).slice(0,maxCount);
-      }
-      processMatches(local);
-    } else {
-      processMatches(fetched);
-    }
+    // Si l'API renvoie des vrais matchs, les utiliser
+    // Sinon tomber sur les donnees locales
+    var matches=fetched.length>=5?fetched.slice(0,maxCount):getLocalMatches();
+    processMatches(matches);
   })
   .catch(function(){
-    // Fallback complet si API indispo
-    var local=S.matches.filter(function(m){
-      if(!isDone(m.time||m.t))return false;
-      if(leagueVal==="all")return true;
-      var n=(m.leagueName||m.c||"").toLowerCase();
-      return n.indexOf(leagueVal.toLowerCase())>=0;
-    }).slice(0,maxCount);
-    if(!local.length){
-      local=getFallback().filter(function(m){
-        if(m.status!=="FT")return false;
-        if(leagueVal==="all")return true;
-        var n=(m.c||"").toLowerCase();
-        return n.indexOf(leagueVal.toLowerCase())>=0;
-      }).slice(0,maxCount);
-    }
-    processMatches(local);
+    // API indispo -> donnees locales de la saison
+    processMatches(getLocalMatches());
   });
 
   function processMatches(matches){
@@ -3291,7 +3277,9 @@ function runBacktest(){
     }
     var results=[];var i=0;
     function next(){
-      if(i>=matches.length){S.btResults=results;S.btLoad=false;renderPage();return;}
+      if(i>=matches.length){
+        S.btResults=results;S.btLoad=false;renderPage();return;
+      }
       var m=matches[i];
       var er=calc({
         hxg:m.hxg||1.4,axg:m.axg||1.1,
@@ -3306,11 +3294,8 @@ function runBacktest(){
         else if(er.bR==="2"){pred="2";predO=m.o2||3.5;}
         conf=er.conf||50;
       }
-      // Score
       var sc=m.score||"";
-      if(!sc&&m.goalsHome!==undefined&&m.goalsAway!==undefined){
-        sc=m.goalsHome+"-"+m.goalsAway;
-      }
+      if(!sc&&m.goalsHome!==undefined){sc=m.goalsHome+"-"+m.goalsAway;}
       var parts=sc.split("-");
       var gh=parts.length>=2?parseInt(parts[0]):null;
       var ga=parts.length>=2?parseInt(parts[1]):null;
@@ -3331,8 +3316,8 @@ function runBacktest(){
         conf:conf
       });
       i++;
-      if(i%5===0){S.btResults=results.slice();renderPage();}
-      setTimeout(next,5);
+      if(i%10===0){S.btResults=results.slice();renderPage();}
+      setTimeout(next,2);
     }
     next();
   }
@@ -4530,4 +4515,17 @@ function renderMatchCard(m,mIdx,opts){
   }
   h+='<div class="mc-footer">';
   h+='<button class="mc-analyse-btn" onclick="event.stopPropagation();event.preventDefault();PM('+mIdx+');">Analyser</button>';
-  if(isV&&r){h+='<span class="mc-val-badge
+  if(isV&&r){h+='<span class="mc-val-badge">+'+((r.edg||0)*100).toFixed(1)+'% EDGE</span>';}
+  else if(r){h+='<div class="mc-conf"><div class="mc-conf-bar"><div class="mc-conf-fill" style="width:'+conf+'%"></div></div><span style="color:#AAAAAA;font-size:9px">'+conf+'%</span></div>';}
+  h+='</div>';
+  if(r&&r.label&&isV){
+    h+='<div style="padding:5px 13px 8px;font-family:var(--f-mono);font-size:9px;color:#00E5A0">';
+    h+=esc(r.label);h+='</div>';
+  }
+  h+='</div></div>';
+  return h;
+}
+
+
+var _deferredPrompt=null;
+window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();_deferredPrompt=e;window._deferredPrompt=e;}
