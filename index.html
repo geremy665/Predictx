@@ -3344,7 +3344,6 @@ function runBacktest(){
       }
       var m=matches[i];
 
-      // Calculer avec le moteur complet
       var er=calc({
         hxg:m.hxg||1.4,axg:m.axg||1.1,
         hxga:m.hxga||1.2,axga:m.axga||1.3,
@@ -3359,24 +3358,21 @@ function runBacktest(){
         stakeLevel:m.stakeLevel||1
       });
 
-      if(!er){i++;if(i%10===0){setTimeout(next,0);}else{next();}return;}
+      if(!er){i++;setTimeout(next,0);return;}
 
-      // Choisir le meilleur pari parmi TOUS les types
-      // via buildBets qui calcule edge sur chaque marche
       var betsData=buildBets(er,{
         home:m.home||m.h||"",away:m.away||m.a||"",
         o1:m.o1||2.0,oN:m.on||3.3,o2:m.o2||3.5,
         oO25:m.oO25||1.90,oO35:m.oO35||2.80,oBtts:m.oBtts||1.85
       });
 
-      // Trouver le vrai resultat
       var sc=m.score||"";
       if(!sc&&m.goalsHome!==undefined){sc=m.goalsHome+"-"+m.goalsAway;}
       var parts=sc.split("-");
       var gh=parts.length>=2?parseInt(parts[0]):null;
       var ga=parts.length>=2?parseInt(parts[1]):null;
       if(gh===null||ga===null||isNaN(gh)||isNaN(ga)){
-        i++;if(i%10===0){setTimeout(next,0);}else{next();}return;
+        i++;setTimeout(next,0);return;
       }
 
       // Evaluer CHAQUE type de pari contre le vrai score
@@ -3451,7 +3447,7 @@ function runBacktest(){
 
       i++;
       updateProgress();
-      if(i%10===0){setTimeout(next,0);}else{next();}
+      setTimeout(next,0);
     }
     next();
   }
@@ -4548,4 +4544,10 @@ function renderBetList(list,type){
   var h="";
   h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">';
   h+='<div style="font-family:var(--f-mono);font-size:9px;color:"#5A5A5A"">'+list.length+' pari'+(list.length>1?"s":"")+'</div>';
-  h+='<button onclick="clearJournal('+JSON.stringify(type)+')" style="font-family:var(--f-mono);font-size:9px;color:"#5A5A5A";background:none;border:none;cursor:pointer;padding:3px 8px;border-radius:4px;border:1p
+  h+='<button onclick="clearJournal('+JSON.stringify(type)+')" style="font-family:var(--f-mono);font-size:9px;color:"#5A5A5A";background:none;border:none;cursor:pointer;padding:3px 8px;border-radius:4px;border:1px solid rgba(255,255,255,.1)">Effacer tout</button>';
+  h+='</div>';
+  for(var bi=0;bi<list.length;bi++){
+    var b=list[bi];
+    var isW=b.res==="won";var isL=b.res==="lost";var isPend=!b.res;
+    var bCol=isW?"#00E5A0":isL?"#E05555":"#D0D0D0";
+    var gain=isW?b.stak
