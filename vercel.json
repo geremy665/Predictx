@@ -1,11 +1,13 @@
 {
+  "version": 2,
   "functions": {
-    "api/*.js": {
-      "runtime": "nodejs18.x"
-    }
+    "api/odds.js": { "runtime": "nodejs18.x" },
+    "api/match.js": { "runtime": "nodejs18.x" },
+    "api/history.js": { "runtime": "nodejs18.x" }
   },
   "routes": [
-    { "src": "/api/(.*)", "dest": "/api/$1" },
+    { "src": "/api/odds", "dest": "/api/odds.js" },
+    { "src": "/api/match", "dest": "/api/match.js" },
+    { "src": "/api/history", "dest": "/api/history.js" },
     { "src": "/(.*)", "dest": "/index.html" }
   ]
-}
