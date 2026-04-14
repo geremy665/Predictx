@@ -1,7 +1,0 @@
-{
-  "name": "edge-betting",
-  "version": "2.0.0",
-  "engines": {
-    "node": ">=18"
-  }
-}
