@@ -8,7 +8,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 
 // ── Poisson ──
 // PMF Poisson en log-espace (précis jusqu'à k=50, évite underflow)
-const pmf=(l,k)=>{
+const  pmf=(l,k)=>{
   if(l<=0)return k===0?1:0;
   if(k<0)return 0;
   // Stirling approximation pour grands k
