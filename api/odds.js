@@ -79,7 +79,7 @@ module.exports = async (req, res) => {
   res.setHeader("Cache-Control","s-maxage=300,stale-while-revalidate=600");
   if (req.method==="OPTIONS") return res.status(200).end();
 
-  const KEY = process.env.FOOTBALL_API_KEY || "1b0e438b9c43c15718edc46efc601c28";
+  const KEY = process.env.FOOTBALL_API_KEY;
   if (!KEY) return res.status(500).json({error:"FOOTBALL_API_KEY manquante",matches:[]});
 
   const now = new Date();
