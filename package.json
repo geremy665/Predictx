@@ -1,10 +1,5 @@
 {
   "name": "edge-betting",
   "version": "2.0.0",
-  "scripts": {
-    "build": "echo 'No build needed'"
-  },
-  "engines": {
-    "node": ">=18"
-  }
+  "private": true
 }
