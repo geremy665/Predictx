@@ -1385,6 +1385,287 @@ function renderPage(){
 }
 function render(){renderPage();}
 fetchMatches();
+
+
+function pChat(){
+  var h='';
+  h+='<div style="font-family:var(--ft);font-size:22px;color:var(--ivoire);margin-bottom:4px">Chat IA</div>';
+  h+='<div style="font-family:var(--fm);font-size:10px;color:var(--iv3);margin-bottom:14px">Pose une question sur un match ou une strategie</div>';
+  if(!S.aiKey){
+    h+='<div class="card" style="text-align:center;padding:24px">';
+    h+='<div class="empty-ic">@</div>';
+    h+='<div class="empty-t">IA non configuree</div>';
+    h+='<div class="empty-s">Configure ta cle Anthropic dans Config IA</div>';
+    h+='<button onclick="GT_CFG()" class="cbtn" style="margin:16px auto 0;width:auto;padding:0 24px">Configurer</button>';
+    h+='</div>';
+    return h;
+  }
+  h+='<div id="chat-scroll" class="chat-wrap">';
+  if(!S.chatMsgs||!S.chatMsgs.length){
+    h+='<div style="text-align:center;padding:28px;color:var(--iv3);font-family:var(--fm);font-size:11px">Pose-moi une question sur un match, une strategie ou une cote.</div>';
+  } else {
+    (S.chatMsgs||[]).forEach(function(m){
+      var bot=m.r==="bot";
+      h+='<div class="chat-msg-'+(bot?"bot":"user")+'">';
+      h+='<div class="chat-av '+(bot?"bot":"user")+'">'+(bot?"E":"T")+'</div>';
+      h+='<div class="chat-bubble '+(bot?"bot":"user")+'">'+esc(m.t)+'</div>';
+      h+='</div>';
+    });
+    if(S.chatLoad){h+='<div class="chat-msg-bot"><div class="chat-av bot">E</div><div class="chat-bubble bot">'+ldr()+'</div></div>';}
+  }
+  h+='</div>';
+  h+='<div style="display:flex;gap:8px;align-items:flex-end;margin-top:10px">';
+  h+='<textarea id="chat-inp" rows="2" placeholder="Ex: Analyse PSG vs Monaco ce soir..." onkeydown="sendChatKey(event)" style="flex:1;resize:none;font-family:var(--fm);font-size:13px;background:var(--card2);border:1px solid var(--bord);border-radius:var(--r2);color:var(--ivoire);padding:10px;outline:none;line-height:1.5"></textarea>';
+  h+='<button onclick="sendChat()" style="width:44px;height:44px;background:var(--sauge);border:none;border-radius:var(--r2);color:var(--noir);font-size:18px;cursor:pointer;flex-shrink:0">&#10148;</button>';
+  h+='</div>';
+  return h;
+}
+
+function sendChatKey(e){if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendChat();}}
+
+function sendChat(){
+  var inp=document.getElementById("chat-inp");
+  var msg=inp?inp.value.trim():"";
+  if(!msg||S.chatLoad)return;
+  if(!S.chatMsgs)S.chatMsgs=[];
+  S.chatMsgs.push({r:"user",t:msg});
+  if(inp)inp.value="";
+  S.chatLoad=true;
+  renderPage();
+  var ctx=S.matches?S.matches.slice(0,5).map(function(m){return (m.h||"")+" vs "+(m.a||"")+" | "+(m.leagueName||"")+" | 1:"+(m.o1||"?")+" N:"+(m.on||"?")+" 2:"+(m.o2||"?");}).join("\n"):"Aucun match charge";
+  var prompt="Tu es EDGE, expert paris sportifs. Reponds en francais. Matchs disponibles: "+ctx+" Question: "+msg;
+  callAI(prompt,800).then(function(r){
+    S.chatMsgs.push({r:"bot",t:r});
+  }).catch(function(e){
+    S.chatMsgs.push({r:"bot",t:"Erreur: "+e.message});
+  }).then(function(){S.chatLoad=false;renderPage();});
+}
+
+function clearChat(){S.chatMsgs=[];renderPage();}
+
+function pCombi(){
+  var h='';
+  h+='<div style="font-family:var(--ft);font-size:22px;color:var(--ivoire);margin-bottom:4px">Combine du jour</div>';
+  h+='<div style="font-family:var(--fm);font-size:10px;color:var(--iv3);margin-bottom:14px">Ticket combine optimise par le moteur EDGE</div>';
+  if(S.combiLoad){return h+'<div style="text-align:center;padding:50px">'+ldr()+'</div>';}
+  if(!S.combiData){
+    h+='<div class="empty"><div class="empty-ic">*</div><div class="empty-t">Aucun combine</div><div class="empty-s">Genere le meilleur combine du jour avec l IA</div>';
+    h+='<button onclick="loadCombi()" class="cbtn" style="margin:16px auto 0;width:auto;padding:0 24px">Generer le combine</button></div>';
+    return h;
+  }
+  if(S.combiData.err){
+    h+='<div class="card card-red"><div style="color:var(--rouge)">Erreur: '+esc(S.combiData.err)+'</div></div>';
+    return h;
+  }
+  var cd=S.combiData;
+  h+='<div class="card card-or" style="margin-bottom:12px">';
+  h+='<div class="clbl">'+esc(cd.titre||"Combine EDGE")+'</div>';
+  h+='<div class="g3" style="margin-bottom:12px">';
+  h+='<div style="text-align:center"><div style="font-family:var(--ft);font-size:24px;color:var(--sauge)">'+(cd.cote_totale||"?")+'x</div><div style="font-family:var(--fm);font-size:8px;color:var(--iv3)">Cote totale</div></div>';
+  h+='<div style="text-align:center"><div style="font-family:var(--ft);font-size:24px;color:var(--ivoire)">'+(cd.confiance||"?")+'%</div><div style="font-family:var(--fm);font-size:8px;color:var(--iv3)">Confiance</div></div>';
+  h+='<div style="text-align:center"><div style="font-family:var(--ft);font-size:14px;color:var(--iv2)">'+(cd.mise||"2%")+'</div><div style="font-family:var(--fm);font-size:8px;color:var(--iv3)">Mise</div></div>';
+  h+='</div>';
+  (cd.picks||[]).forEach(function(p){
+    h+='<div class="card" style="margin-bottom:8px">';
+    h+='<div style="font-family:var(--fm);font-size:9px;color:var(--iv3);margin-bottom:4px">'+esc(p.match||"")+'</div>';
+    h+='<div style="display:flex;justify-content:space-between;align-items:center">';
+    h+='<div style="font-family:var(--ft);font-size:15px;color:var(--ivoire)">'+esc(p.bet||p.sel||"")+'</div>';
+    h+='<div style="font-family:var(--ft);font-size:18px;color:var(--sauge)">'+(p.odds||p.cote||"?")+'x</div>';
+    h+='</div>';
+    if(p.raison)h+='<div style="font-family:var(--fm);font-size:10px;color:var(--iv3);margin-top:4px">'+esc(p.raison)+'</div>';
+    h+='</div>';
+  });
+  h+='</div>';
+  h+='<button onclick="loadCombi()" class="cbtn ghost">Regenerer</button>';
+  return h;
+}
+
+function loadCombi(){
+  if(!S.aiKey){alert("Configure ta cle Anthropic.");return;}
+  S.combiLoad=true;S.combiData=null;renderPage();
+  var ctx=(S.matches||[]).slice(0,10).map(function(m,i){
+    return (i+1)+". "+(m.h||m.home||"")+" vs "+(m.a||m.away||"")+" | "+(m.leagueName||m.c||"")+" | 1:"+(m.o1||"?")+" N:"+(m.on||"?")+" 2:"+(m.o2||"?");
+  }).join("\n");
+  var prompt="Cree le meilleur combine value. Matchs: "+ctx+". JSON uniquement: {titre,cote_totale,confiance,mise,picks:[{match,bet,odds,raison}]}";
+  callAI(prompt,1000).then(function(raw){
+    try{
+      var c=raw.replace(/```json|```/g,"").trim();
+      var s=c.indexOf("{"),e=c.lastIndexOf("}")+1;
+      if(s>=0&&e>s)c=c.substring(s,e);
+      S.combiData=JSON.parse(c);
+    }catch(err){S.combiData={err:err.message};}
+  }).catch(function(e){S.combiData={err:e.message};
+  }).then(function(){S.combiLoad=false;renderPage();});
+}
+
+function pLive(){
+  var ms=S.matches||[];
+  var h='';
+  h+='<div style="font-family:var(--ft);font-size:22px;color:var(--ivoire);margin-bottom:4px">Live</div>';
+  h+='<div style="font-family:var(--fm);font-size:10px;color:var(--iv3);margin-bottom:14px">Matchs en cours et a venir</div>';
+  var live=ms.filter(function(m){return isLive(m.time||m.t);});
+  var upcoming=ms.filter(function(m){return isUp(m.time||m.t);});
+  h+='<div class="g3" style="margin-bottom:12px">';
+  h+='<div class="card" style="margin-bottom:0;text-align:center"><div style="font-family:var(--ft);font-size:24px;color:var(--rouge)">'+live.length+'</div><div style="font-family:var(--fm);font-size:8px;color:var(--iv3)">En direct</div></div>';
+  h+='<div class="card" style="margin-bottom:0;text-align:center"><div style="font-family:var(--ft);font-size:24px;color:var(--sauge)">'+upcoming.length+'</div><div style="font-family:var(--fm);font-size:8px;color:var(--iv3)">A venir</div></div>';
+  h+='<div class="card" style="margin-bottom:0;text-align:center"><div style="font-family:var(--ft);font-size:24px;color:var(--ivoire)">'+ms.length+'</div><div style="font-family:var(--fm);font-size:8px;color:var(--iv3)">Total</div></div>';
+  h+='</div>';
+  if(!ms.length){return h+'<div class="empty"><div class="empty-ic">L</div><div class="empty-t">Aucun match</div></div>';}
+  ms.slice(0,20).forEach(function(m){
+    var lv=isLive(m.time||m.t);
+    h+='<div class="mc'+(lv?" live-m":"")+'" onclick="GT_PM('+( S.matches?S.matches.indexOf(m):0)+')">';
+    h+='<div class="mc-top '+(lv?"live-m":"norm")+'"></div>';
+    h+='<div class="mc-body">';
+    h+='<div class="mc-head"><div class="mc-league">'+flagBadge(m.f||"INT")+esc(m.leagueName||m.c||"")+'</div>';
+    if(lv)h+='<span class="tag-red">LIVE</span>';
+    else h+='<div class="mc-time">'+fmtTime(m.time||m.t)+'</div>';
+    h+='</div>';
+    h+='<div class="mc-teams"><div class="mc-home">'+esc(m.h||m.home||"")+'</div><div class="mc-vs">vs</div><div class="mc-away">'+esc(m.a||m.away||"")+'</div></div>';
+    h+='<div class="mc-odds">';
+    [{v:m.o1,k:"1"},{v:m.on,k:"N"},{v:m.o2,k:"2"}].forEach(function(o){
+      h+='<div class="mc-odd"><div class="mc-odd-l">'+o.k+'</div><div class="mc-odd-v">'+(o.v?o.v.toFixed(2):"--")+'</div></div>';
+    });
+    h+='</div></div></div>';
+  });
+  return h;
+}
+
+function pCotes(){
+  var ms=(S.matches||[]).filter(function(m){return !isDone(m.time||m.t);});
+  var h='';
+  h+='<div style="font-family:var(--ft);font-size:22px;color:var(--ivoire);margin-bottom:14px">Cotes</div>';
+  if(!ms.length){return h+'<div class="empty"><div class="empty-ic">C</div><div class="empty-t">Aucun match</div></div>';}
+  ms.slice(0,20).forEach(function(m){
+    h+='<div class="card" style="margin-bottom:8px">';
+    h+='<div style="font-family:var(--fm);font-size:9px;color:var(--iv3);margin-bottom:6px">'+flagBadge(m.f||"INT")+esc(m.leagueName||m.c||"")+" - "+fmtTime(m.time||m.t)+'</div>';
+    h+='<div style="font-family:var(--ft);font-size:15px;color:var(--ivoire);margin-bottom:8px">'+esc(m.h||m.home||"")+" vs "+esc(m.a||m.away||"")+'</div>';
+    h+='<div class="mc-odds">';
+    [{v:m.o1,k:"1"},{v:m.on,k:"N"},{v:m.o2,k:"2"}].forEach(function(o){
+      h+='<div class="mc-odd"><div class="mc-odd-l">'+o.k+'</div><div class="mc-odd-v">'+(o.v?o.v.toFixed(2):"--")+'</div></div>';
+    });
+    h+='</div></div>';
+  });
+  return h;
+}
+
+function pJournal(){
+  return '<div class="empty"><div class="empty-ic">J</div><div class="empty-t">Journal</div><div class="empty-s">Bientot disponible</div></div>';
+}
+
+function pBacktest(){
+  var h='';
+  h+='<div style="font-family:var(--ft);font-size:22px;color:var(--ivoire);margin-bottom:4px">Backtest</div>';
+  h+='<div style="font-family:var(--fm);font-size:10px;color:var(--iv3);margin-bottom:14px">Teste le moteur sur les matchs passes</div>';
+  if(S.btLoad){return h+'<div style="text-align:center;padding:50px">'+ldr()+'<div style="font-family:var(--fm);font-size:11px;color:var(--iv3);margin-top:12px">Analyse en cours...</div></div>';}
+  h+='<div class="card" style="margin-bottom:12px">';
+  h+='<div class="clbl">Configuration</div>';
+  h+='<div class="g2" style="margin-bottom:12px">';
+  h+='<div><div class="fl">Ligue</div><select id="bt-league" style="font-family:var(--fm);font-size:12px"><option value="all">Toutes</option><option value="Ligue 1">Ligue 1</option><option value="Premier League">Premier League</option><option value="La Liga">La Liga</option></select></div>';
+  h+='<div><div class="fl">Matchs</div><select id="bt-count" style="font-family:var(--fm);font-size:12px"><option value="30">30</option><option value="50" selected>50</option><option value="100">100</option></select></div>';
+  h+='</div>';
+  h+='<button onclick="runBacktest()" class="cbtn" style="margin-bottom:0">Lancer le backtest</button>';
+  h+='</div>';
+  if(S.btResults&&S.btResults.length){
+    var wins=S.btResults.filter(function(r){return r.correct;}).length;
+    var total=S.btResults.length;
+    var pct=Math.round(wins/total*100);
+    var roi=S.btResults.reduce(function(acc,r){return acc+(r.correct?(r.odds-1):-1);},0);
+    h+='<div class="g3" style="margin-bottom:12px">';
+    h+='<div class="card" style="margin-bottom:0;text-align:center"><div style="font-family:var(--ft);font-size:28px;color:var(--sauge)">'+pct+'%</div><div style="font-family:var(--fm);font-size:8px;color:var(--iv3)">Precision</div></div>';
+    h+='<div class="card" style="margin-bottom:0;text-align:center"><div style="font-family:var(--ft);font-size:28px;color:var(--ivoire)">'+wins+"/"+total+'</div><div style="font-family:var(--fm);font-size:8px;color:var(--iv3)">Pronostics</div></div>';
+    h+='<div class="card" style="margin-bottom:0;text-align:center"><div style="font-family:var(--ft);font-size:28px;color:'+(roi>=0?"var(--sauge)":"var(--rouge)")+'">'+(roi>=0?"+":"")+roi.toFixed(1)+'u</div><div style="font-family:var(--fm);font-size:8px;color:var(--iv3)">ROI</div></div>';
+    h+='</div>';
+    S.btResults.slice(0,10).forEach(function(r){
+      h+='<div class="card '+(r.correct?"card-or":"card-red")+'" style="margin-bottom:7px;padding:10px">';
+      h+='<div style="display:flex;justify-content:space-between;align-items:center">';
+      h+='<div><div style="font-family:var(--ft);font-size:13px;color:var(--ivoire)">'+esc(r.home)+" vs "+esc(r.away)+'</div>';
+      h+='<div style="font-family:var(--fm);font-size:9px;color:var(--iv3)">'+esc(r.betName||r.prediction)+" | Score: "+esc(r.score)+'</div></div>';
+      h+='<span style="font-family:var(--fm);font-size:9px;padding:3px 8px;border-radius:4px;background:'+(r.correct?"var(--saugel)":"var(--rougel)")+';color:'+(r.correct?"var(--sauge)":"var(--rouge)")+'">'+( r.correct?"OK":"FAUX")+'</span>';
+      h+='</div></div>';
+    });
+  }
+  return h;
+}
+
+function pRecherche(){
+  var h='';
+  h+='<div style="font-family:var(--ft);font-size:22px;color:var(--ivoire);margin-bottom:4px">Encyclopedie IA</div>';
+  h+='<div style="font-family:var(--fm);font-size:10px;color:var(--iv3);margin-bottom:14px">Pose une question sur le football ou les paris</div>';
+  h+='<div style="display:flex;gap:8px;margin-bottom:12px">';
+  h+='<input id="rech-inp" type="text" placeholder="Ex: Quest-ce que le xG ?" value="'+esc(S.rechercheQ||"")+'" style="flex:1"/>';
+  h+='<button onclick="lancerRecherche()" class="cbtn" style="width:auto;padding:0 16px;margin-bottom:0">'+(S.rechercheLoad?ldr():"Chercher")+'</button>';
+  h+='</div>';
+  if(S.rechercheRes){
+    h+='<div class="card"><div style="font-family:var(--fm);font-size:13px;color:var(--iv2);line-height:1.8">'+esc(S.rechercheRes)+'</div></div>';
+  } else {
+    h+='<div class="card" style="text-align:center;padding:24px">';
+    h+='<div class="empty-ic">E</div>';
+    h+='<div class="empty-t">Encyclopedie</div>';
+    h+='<div class="empty-s">Tape une question sur le football, les paris sportifs, les strategies...</div>';
+    h+='</div>';
+  }
+  return h;
+}
+
+function lancerRecherche(){
+  var inp=document.getElementById("rech-inp");
+  var q=inp?inp.value.trim():"";
+  if(!q)return;
+  S.rechercheQ=q;
+  if(!S.aiKey){S.rechercheRes="Configure ta cle Anthropic pour utiliser l'encyclopedie.";renderPage();return;}
+  S.rechercheLoad=true;S.rechercheRes=null;renderPage();
+  callAI("Tu es un expert football et paris sportifs. Reponds en francais de facon claire et complete. Question: "+q,600).then(function(r){
+    S.rechercheRes=r;
+  }).catch(function(e){
+    S.rechercheRes="Erreur: "+e.message;
+  }).then(function(){S.rechercheLoad=false;renderPage();});
+}
+
+function pDemo(){
+  var h='';
+  h+='<div style="font-family:var(--ft);font-size:22px;color:var(--ivoire);margin-bottom:4px">Demo</div>';
+  h+='<div style="font-family:var(--fm);font-size:10px;color:var(--iv3);margin-bottom:14px">Simule des paris sans risque</div>';
+  h+='<div class="card" style="text-align:center;padding:24px">';
+  h+='<div class="empty-ic">D</div>';
+  h+='<div class="empty-t">Mode Demo</div>';
+  h+='<div class="empty-s">Utilise la page Matchs pour analyser et simuler tes paris</div>';
+  h+='<button onclick="GT(2)" class="cbtn" style="margin:16px auto 0;width:auto;padding:0 24px">Voir les matchs</button>';
+  h+='</div>';
+  return h;
+}
+
+function runBacktest(){
+  var lgEl=document.getElementById("bt-league");
+  var ctEl=document.getElementById("bt-count");
+  var lgVal=lgEl?lgEl.value:"all";
+  var maxCount=ctEl?parseInt(ctEl.value):50;
+  S.btLoad=true;S.btResults=[];renderPage();
+  var fb=getFallback();
+  var past=fb.filter(function(m){return m.status==="FT";});
+  if(lgVal!=="all"){var lv=lgVal.toLowerCase();past=past.filter(function(m){return (m.c||"").toLowerCase().indexOf(lv)>=0;});}
+  past=past.slice(0,maxCount);
+  var results=[];
+  past.forEach(function(m){
+    try{
+      var r=calc({hxg:m.hxg||1.3,axg:m.axg||1.1,hg:m.hg||1.2,ag:m.ag||1.0,hf:m.hf||8,af:m.af||6,o1:m.o1||2.0,on:m.on||3.3,o2:m.o2||3.5,c:m.c||""});
+      if(!r)return;
+      var sc=m.score||"";var parts=sc.split("-");
+      var gh=parseInt(parts[0]);var ga=parseInt(parts[1]);
+      if(isNaN(gh)||isNaN(ga))return;
+      var real=gh>ga?"1":gh<ga?"2":"N";
+      var pred=r.bR;
+      results.push({
+        home:m.h||m.home||"",away:m.a||m.away||"",
+        league:m.c||"",date:m.time?m.time.substring(0,10):"",
+        score:sc,prediction:pred,betName:"Resultat "+pred,
+        trueResult:real,correct:pred===real,
+        odds:pred==="1"?m.o1:pred==="2"?m.o2:m.on,
+        conf:r.conf||50
+      });
+    }catch(e){}
+  });
+  S.btResults=results;S.btLoad=false;S.btSource="Donnees demo";renderPage();
+}
 </script>
 </body>
 </html>
