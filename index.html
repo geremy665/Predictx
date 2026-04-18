@@ -2,6 +2,9 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8"/>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+<meta http-equiv="Pragma" content="no-cache"/>
+<meta http-equiv="Expires" content="0"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0"/>
 <meta name="theme-color" content="#0D0F0A"/>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -11,7 +14,7 @@
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="EDGE"/>
-<title>EDGE - Betting Intelligence</title>
+<title>EDGE V10 - Betting Intelligence</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;-webkit-font-smoothing:antialiased;}
@@ -506,7 +509,7 @@ var NAV=[
   {id:"bankroll",l:"Bankroll",ic:"B",sec:"GESTION"},
   {id:"stats",l:"Stats",ic:"%",sec:"GESTION"},
   {id:"methode",l:"Methode",ic:"?",sec:"GESTION"},
-  {id:"journal",l:"Journal",ic:"J",sec:"SUIVI"},
+  
   {id:"demo",l:"Demo",ic:"D",sec:"SIMULATEUR"},
   {id:"live",l:"Live",ic:"L",sec:"SIMULATEUR"},
   {id:"cotes",l:"Cotes",ic:"C",sec:"SIMULATEUR"}
@@ -935,18 +938,18 @@ function initHeroCanvas(){
           if(pi2===0)ctx.moveTo(px2,py2);else ctx.lineTo(px2,py2);
         }
         ctx.closePath();
-        ctx.strokeStyle=rgba(124,154,107,.05);ctx.lineWidth=.5;ctx.stroke();
+        ctx.strokeStyle="rgba(124,154,107,.05)";ctx.lineWidth=.5;ctx.stroke();
       }
     }
     /* void */
     var g=ctx.createRadialGradient(cx,cy,6,cx,cy,50);
-    g.addColorStop(0,rgba(0,0,0,1));
-    g.addColorStop(.75,rgba(0,0,0,.97));
-    g.addColorStop(1,rgba(0,0,0,0));
+    g.addColorStop(0,"rgba(0,0,0,1)");
+    g.addColorStop(.75,"rgba(0,0,0,.97)");
+    g.addColorStop(1,"rgba(0,0,0,0)");
     ctx.beginPath();ctx.ellipse(cx,cy,50,36,0,0,Math.PI*2);
     ctx.fillStyle=g;ctx.fill();
     /* figure */
-    ctx.fillStyle=rgba(0,0,0,.95);
+    ctx.fillStyle="rgba(0,0,0,.95)";
     ctx.beginPath();ctx.ellipse(cx,cy+37,6,9,0,0,Math.PI*2);ctx.fill();
     ctx.beginPath();ctx.arc(cx,cy+25,3.5,0,Math.PI*2);ctx.fill();
     requestAnimationFrame(frame);
@@ -3052,92 +3055,10 @@ function pCotes(){
 }
 
 function pJournal(){
-  var bets=S.journal||[];
-  var sim=S.simBets||[];
-  var tab=S.jTab||"manuel";
-  var h="";
-
-  // Header
-  h+='<div style="background:"#1E2848";border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:18px;margin-bottom:14px;position:relative;overflow:hidden">';
-  h+='<div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,"#00E5A0",transparent)"></div>';
-  h+='<div style="font-family:var(--f-titre);font-size:24px;color:"#FFFFFF";letter-spacing:.06em;margin-bottom:4px">Journal de paris</div>';
-  h+='<div style="font-family:var(--f-mono);font-size:10px;color:"#909090";margin-bottom:14px">Toi vs le moteur EDGE ? qui gagne a la fin ?</div>';
-
-  // KPIs
-  var myBets=bets;var edgeBets=sim;
-  var myW=myBets.filter(function(b){return b.res==="won";}).length;
-  var myL=myBets.filter(function(b){return b.res==="lost";}).length;
-  var myROI=myBets.length?((myBets.reduce(function(s,b){return s+(b.res==="won"?b.stake*(b.odd-1):-b.stake);},0))/Math.max(1,myBets.reduce(function(s,b){return s+b.stake;},0))*100):0;
-  var edW=edgeBets.filter(function(b){return b.res==="won";}).length;
-  var edL=edgeBets.filter(function(b){return b.res==="lost";}).length;
-  var edROI=edgeBets.length?((edgeBets.reduce(function(s,b){return s+(b.res==="won"?b.stake*(b.odd-1):-b.stake);},0))/Math.max(1,edgeBets.reduce(function(s,b){return s+b.stake;},0))*100):0;
-
-  h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">';
-  // Colonne MOI
-  h+='<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:12px">';
-  h+='<div style="font-family:var(--f-mono);font-size:8px;color:"#909090";text-transform:uppercase;letter-spacing:.12em;margin-bottom:8px">Toi</div>';
-  h+='<div style="font-family:var(--f-titre);font-size:28px;color:'+(myROI>=0?"#00E5A0":"#E05555")+';letter-spacing:.04em">'+(myROI>=0?"+":"")+myROI.toFixed(1)+'%</div>';
-  h+='<div style="font-family:var(--f-mono);font-size:9px;color:"#909090";margin-top:4px">'+myW+'V / '+myL+'D / '+(myBets.filter(function(b){return!b.res;}).length)+' en cours</div>';
-  h+='</div>';
-  // Colonne EDGE
-  h+='<div style="background:rgba(0,229,160,.12);border:1px solid rgba(0,229,160,.2);border-radius:12px;padding:12px">';
-  h+='<div style="font-family:var(--f-mono);font-size:8px;color:"#00E5A0";text-transform:uppercase;letter-spacing:.12em;margin-bottom:8px">EDGE IA</div>';
-  h+='<div style="font-family:var(--f-titre);font-size:28px;color:'+(edROI>=0?"#00E5A0":"#E05555")+';letter-spacing:.04em">'+(edROI>=0?"+":"")+edROI.toFixed(1)+'%</div>';
-  h+='<div style="font-family:var(--f-mono);font-size:9px;color:"#00E5A0";margin-top:4px">'+edW+'V / '+edL+'D / '+(edgeBets.filter(function(b){return!b.res;}).length)+' en cours</div>';
-  h+='</div>';
-  h+='</div></div>';
-
-  // Tabs
-  h+='<div style="display:flex;gap:6px;margin-bottom:12px">';
-  var JTABS=[["manuel","Mes paris"],["edge","Paris EDGE IA"],["add","+ Ajouter"]];
-  for(var jti=0;jti<JTABS.length;jti++){
-    var isOn=tab===JTABS[jti][0];
-    h+='<button onclick="S.jTab=JTABS['+jti+'][0];renderPage()" style="flex:1;padding:9px;border-radius:10px;border:1px solid '+(isOn?rgba(0,229,160,.4):rgba(255,255,255,.07))+';background:'+(isOn?rgba(0,229,160,.12):"transparent")+';color:'+(isOn?"#00E5A0":"#909090")+';font-family:var(--f-titre);font-size:13px;letter-spacing:.04em;cursor:pointer;text-align:center">'+JTABS[jti][1]+'</button>';
-  }
-  h+='</div>';
-
-  if(tab==="add"){
-    // Formulaire ajout pari
-    h+='<div style="background:"#1E2848";border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:18px">';
-    h+='<div style="font-family:var(--f-titre);font-size:18px;color:"#FFFFFF";letter-spacing:.06em;margin-bottom:14px">Enregistrer un pari</div>';
-    h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">';
-    h+='<div><div style="font-family:var(--f-mono);font-size:9px;color:"#5A5A5A";margin-bottom:4px">EQUIPE / MATCH</div><input id="j-match" type="text" placeholder="Real Madrid vs Barca" style="background:"#1E2848";border:1px solid rgba(255,255,255,.12);color:"#FFFFFF";border-radius:8px;padding:10px;width:100%;font-size:13px"/></div>';
-    h+='<div><div style="font-family:var(--f-mono);font-size:9px;color:"#5A5A5A";margin-bottom:4px">PARI</div><input id="j-bet" type="text" placeholder="Victoire Real Madrid" style="background:"#1E2848";border:1px solid rgba(255,255,255,.12);color:"#FFFFFF";border-radius:8px;padding:10px;width:100%;font-size:13px"/></div>';
-    h+='</div>';
-    h+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px">';
-    h+='<div><div style="font-family:var(--f-mono);font-size:9px;color:"#5A5A5A";margin-bottom:4px">COTE</div><input id="j-odd" type="number" step="0.01" placeholder="1.85" style="background:"#1E2848";border:1px solid rgba(255,255,255,.12);color:"#FFFFFF";border-radius:8px;padding:10px;width:100%;font-size:13px;text-align:center"/></div>';
-    h+='<div><div style="font-family:var(--f-mono);font-size:9px;color:"#5A5A5A";margin-bottom:4px">MISE (EUR)</div><input id="j-stake" type="number" step="1" placeholder="50" style="background:"#1E2848";border:1px solid rgba(255,255,255,.12);color:"#FFFFFF";border-radius:8px;padding:10px;width:100%;font-size:13px;text-align:center"/></div>';
-    h+='<div><div style="font-family:var(--f-mono);font-size:9px;color:"#5A5A5A";margin-bottom:4px">DATE</div><input id="j-date" type="date" style="background:"#1E2848";border:1px solid rgba(255,255,255,.12);color:"#FFFFFF";border-radius:8px;padding:10px;width:100%;font-size:12px"/></div>';
-    h+='</div>';
-    h+='<button onclick="addJournalBet()" style="width:100%;height:46px;background:"#00E5A0";border:none;border-radius:12px;font-family:var(--f-titre);font-size:16px;color:#0F1117;cursor:pointer;letter-spacing:.06em">Enregistrer le pari</button>';
-    h+='</div>';
-  }
-
-  if(tab==="manuel"){
-    var list=bets.slice().reverse();
-    if(!list.length){
-      h+='<div class="empty"><div style="font-size:40px;opacity:.08">J</div><div style="font-family:var(--f-titre);font-size:18px;color:"#D0D0D0";margin-bottom:6px">Aucun pari enregistre</div><div style="font-size:12px;color:"#5A5A5A"">Clique sur + Ajouter pour saisir tes paris</div></div>';
-    }else{
-      h+=renderBetList(list,"manuel");
-    }
-  }
-
-  if(tab==="edge"){
-    // Paris auto-selectes par EDGE
-    var edgeList=sim.slice().reverse();
-    if(!edgeList.length){
-      // Auto-generer des paris EDGE depuis les matchs
-      h+='<div style="background:"#1E2848";border:1px solid rgba(0,229,160,.2);border-radius:16px;padding:18px;margin-bottom:12px">';
-      h+='<div style="font-family:var(--f-titre);font-size:18px;color:"#00E5A0";letter-spacing:.06em;margin-bottom:6px">Le moteur EDGE parie pour toi</div>';
-      h+='<div style="font-family:var(--f-mono);font-size:10px;color:"#909090";margin-bottom:14px">EDGE selectionne automatiquement les meilleurs value bets et garde un historique.</div>';
-      h+='<button onclick="genEdgeBets()" style="width:100%;height:44px;background:"#00E5A0";border:none;border-radius:10px;font-family:var(--f-titre);font-size:15px;color:#0F1117;cursor:pointer;letter-spacing:.06em">Lancer la selection EDGE</button>';
-      h+='</div>';
-    }else{
-      h+=renderBetList(edgeList,"edge");
-    }
-  }
-  return h;
+  return '<div class="empty"><div class="empty-ic">J</div><div class="empty-t">Journal</div><div class="empty-s">Bientot disponible</div></div>';
 }
+function setJTab(i){S.jTab=["manuel","edge","add"][i]||"manuel";renderPage();}
+
 
 function pComp(){
   var m=S.compM;
@@ -4669,4 +4590,40 @@ function getFallback(){
     {id:1007,c:"Champions League",f:"UCL",h:"PSG",a:"Inter",time:"2025-09-14T20:00:00+00:00",status:"FT",score:"1-4",o1:1.54,on:6.0,o2:5.0,hxg:3.18,axg:1.61,hg:2.86,ag:1.45,hf:11,af:10},
     {id:1008,c:"Champions League",f:"UCL",h:"Real Madrid",a:"Inter",time:"2025-09-14T17:00:00+00:00",status:"FT",score:"1-2",o1:2.04,on:6.0,o2:3.23,hxg:3.16,axg:2.67,hg:2.84,ag:2.4,hf:9,af:12},
     {id:1009,c:"Champions League",f:"UCL",h:"Bayern",a:"Juventus",time:"2025-09-14T21:00:00+00:00",status:"FT",score:"5-3",o1:1.79,on:6.0,o2:4.29,hxg:2.92,axg:2.09,hg:2.63,ag:1.88,hf:13,af:7},
-    {id:1010,c:"C
+    {id:1010,c:"Champions League",f:"UCL",h:"Arsenal",a:"Napoli",time:"2025-09-14T17:00:00+00:00",status:"FT",score:"5-1",o1:2.12,on:6.0,o2:3.09,hxg:2.67,axg:2.16,hg:2.4,ag:1.94,hf:15,af:13},
+    {id:1011,c:"Champions League",f:"UCL",h:"Man City",a:"Porto",time:"2025-09-14T20:00:00+00:00",status:"FT",score:"2-2",o1:1.62,on:4.77,o2:8.08,hxg:2.67,axg:1.59,hg:2.4,ag:1.43,hf:13,af:8},
+    {id:1012,c:"Champions League",f:"UCL",h:"Real Madrid",a:"Liverpool",time:"2025-09-14T14:00:00+00:00",status:"FT",score:"3-2",o1:1.69,on:6.0,o2:4.67,hxg:3.61,axg:2.85,hg:3.25,ag:2.56,hf:11,af:12},
+    {id:1013,c:"Champions League",f:"UCL",h:"PSG",a:"Liverpool",time:"2025-09-21T16:00:00+00:00",status:"FT",score:"3-5",o1:2.47,on:5.83,o2:2.66,hxg:2.83,axg:2.16,hg:2.55,ag:1.94,hf:14,af:11},
+    {id:1014,c:"Champions League",f:"UCL",h:"Liverpool",a:"AC Milan",time:"2025-09-21T17:00:00+00:00",status:"FT",score:"2-1",o1:1.98,on:6.0,o2:3.39,hxg:2.3,axg:1.54,hg:2.07,ag:1.39,hf:13,af:8},
+    {id:1015,c:"Champions League",f:"UCL",h:"Barcelona",a:"Inter",time:"2025-09-21T20:00:00+00:00",status:"FT",score:"1-0",o1:2.04,on:5.25,o2:3.68,hxg:2.58,axg:2.0,hg:2.32,ag:1.8,hf:12,af:12},
+    {id:1016,c:"Champions League",f:"UCL",h:"Liverpool",a:"Napoli",time:"2025-09-21T15:00:00+00:00",status:"FT",score:"5-3",o1:1.93,on:6.0,o2:3.68,hxg:2.7,axg:1.96,hg:2.43,ag:1.76,hf:8,af:6},
+    {id:1017,c:"Champions League",f:"UCL",h:"Arsenal",a:"AC Milan",time:"2025-09-21T21:00:00+00:00",status:"FT",score:"3-3",o1:2.23,on:5.0,o2:3.28,hxg:2.34,axg:1.92,hg:2.11,ag:1.73,hf:14,af:10},
+    {id:1018,c:"Champions League",f:"UCL",h:"Chelsea",a:"Napoli",time:"2025-09-21T17:00:00+00:00",status:"FT",score:"1-0",o1:2.02,on:4.04,o2:4.77,hxg:2.35,axg:1.58,hg:2.12,ag:1.42,hf:15,af:7},
+    {id:1019,c:"Champions League",f:"UCL",h:"Barcelona",a:"Napoli",time:"2025-09-21T16:00:00+00:00",status:"FT",score:"4-1",o1:1.89,on:6.0,o2:3.68,hxg:2.65,axg:1.93,hg:2.38,ag:1.74,hf:12,af:9},
+    {id:1020,c:"Champions League",f:"UCL",h:"AC Milan",a:"Benfica",time:"2025-09-21T21:00:00+00:00",status:"FT",score:"1-0",o1:2.62,on:4.2,o2:3.0,hxg:1.7,axg:1.41,hg:1.53,ag:1.27,hf:9,af:12},
+    {id:1021,c:"Champions League",f:"UCL",h:"Juventus",a:"Porto",time:"2025-09-28T17:00:00+00:00",status:"FT",score:"3-1",o1:2.47,on:5.0,o2:2.88,hxg:1.85,axg:1.65,hg:1.67,ag:1.48,hf:14,af:9},
+    {id:1022,c:"Champions League",f:"UCL",h:"Bayern",a:"Dortmund",time:"2025-09-28T16:00:00+00:00",status:"FT",score:"4-5",o1:2.02,on:6.0,o2:3.33,hxg:2.87,axg:2.09,hg:2.58,ag:1.88,hf:14,af:11},
+    {id:1023,c:"Champions League",f:"UCL",h:"Juventus",a:"Benfica",time:"2025-09-28T15:00:00+00:00",status:"FT",score:"0-2",o1:2.12,on:4.77,o2:3.68,hxg:1.83,axg:1.35,hg:1.65,ag:1.22,hf:7,af:12},
+    {id:1024,c:"Champions League",f:"UCL",h:"Bayern",a:"Inter",time:"2025-09-28T17:00:00+00:00",status:"FT",score:"5-2",o1:1.74,on:6.0,o2:3.82,hxg:3.11,axg:2.1,hg:2.8,ag:1.89,hf:15,af:12},
+    {id:1025,c:"Champions League",f:"UCL",h:"Dortmund",a:"Benfica",time:"2025-09-28T21:00:00+00:00",status:"FT",score:"3-2",o1:2.33,on:4.47,o2:3.33,hxg:1.87,axg:1.27,hg:1.68,ag:1.14,hf:10,af:9},
+    {id:1026,c:"Champions League",f:"UCL",h:"Real Madrid",a:"Atletico",time:"2025-09-28T17:00:00+00:00",status:"FT",score:"3-3",o1:2.08,on:6.0,o2:2.96,hxg:3.47,axg:2.58,hg:3.12,ag:2.32,hf:12,af:12},
+    {id:1027,c:"Champions League",f:"UCL",h:"Atletico",a:"Benfica",time:"2025-09-28T17:00:00+00:00",status:"FT",score:"3-2",o1:2.31,on:4.88,o2:3.18,hxg:1.95,axg:1.65,hg:1.75,ag:1.48,hf:14,af:7},
+    {id:1028,c:"Champions League",f:"UCL",h:"PSG",a:"Arsenal",time:"2025-09-28T14:00:00+00:00",status:"FT",score:"4-1",o1:1.71,on:6.0,o2:4.88,hxg:3.32,axg:2.07,hg:2.99,ag:1.86,hf:13,af:7},
+    {id:1029,c:"Champions League",f:"UCL",h:"Real Madrid",a:"Bayern",time:"2025-10-04T14:00:00+00:00",status:"FT",score:"3-3",o1:2.08,on:4.38,o2:4.12,hxg:3.79,axg:3.0,hg:3.41,ag:2.7,hf:7,af:5},
+    {id:1030,c:"Champions League",f:"UCL",h:"PSG",a:"Chelsea",time:"2025-10-04T20:00:00+00:00",status:"FT",score:"2-1",o1:2.1,on:6.0,o2:3.13,hxg:2.6,axg:1.81,hg:2.34,ag:1.63,hf:11,af:13},
+    {id:1031,c:"Champions League",f:"UCL",h:"Real Madrid",a:"Barcelona",time:"2025-10-04T14:00:00+00:00",status:"FT",score:"2-1",o1:2.02,on:6.0,o2:3.44,hxg:3.59,axg:2.73,hg:3.23,ag:2.46,hf:7,af:6},
+    {id:1032,c:"Champions League",f:"UCL",h:"Liverpool",a:"Porto",time:"2025-10-04T15:00:00+00:00",status:"FT",score:"1-1",o1:1.88,on:4.57,o2:5.0,hxg:2.01,axg:1.39,hg:1.81,ag:1.25,hf:6,af:10},
+    {id:1033,c:"Champions League",f:"UCL",h:"Man City",a:"Inter",time:"2025-10-04T15:00:00+00:00",status:"FT",score:"2-3",o1:2.04,on:6.0,o2:3.23,hxg:3.14,axg:2.49,hg:2.83,ag:2.24,hf:13,af:12},
+    {id:1034,c:"Champions League",f:"UCL",h:"PSG",a:"Dortmund",time:"2025-10-04T17:00:00+00:00",status:"FT",score:"4-0",o1:1.68,on:6.0,o2:4.67,hxg:2.7,axg:1.57,hg:2.43,ag:1.41,hf:7,af:7},
+    {id:1035,c:"Champions League",f:"UCL",h:"Inter",a:"Benfica",time:"2025-10-04T14:00:00+00:00",status:"FT",score:"2-4",o1:1.88,on:5.0,o2:4.57,hxg:2.12,axg:1.56,hg:1.91,ag:1.4,hf:11,af:8},
+    {id:1036,c:"Champions League",f:"UCL",h:"Liverpool",a:"Chelsea",time:"2025-10-04T20:00:00+00:00",status:"FT",score:"3-2",o1:1.91,on:5.68,o2:3.96,hxg:2.27,axg:1.8,hg:2.04,ag:1.62,hf:6,af:7},
+    {id:1037,c:"Champions League",f:"UCL",h:"Inter",a:"AC Milan",time:"2025-10-11T14:00:00+00:00",status:"FT",score:"3-0",o1:2.23,on:3.96,o2:3.96,hxg:2.05,axg:1.5,hg:1.84,ag:1.35,hf:13,af:7},
+    {id:1038,c:"Champions League",f:"UCL",h:"Inter",a:"Chelsea",time:"2025-10-11T20:00:00+00:00",status:"FT",score:"1-2",o1:2.1,on:5.83,o2:3.28,hxg:2.12,axg:1.37,hg:1.91,ag:1.23,hf:10,af:12},
+    {id:1039,c:"Champions League",f:"UCL",h:"Man City",a:"Arsenal",time:"2025-10-11T17:00:00+00:00",status:"FT",score:"4-2",o1:1.83,on:5.25,o2:4.67,hxg:3.55,axg:2.56,hg:3.19,ag:2.3,hf:9,af:13},
+    {id:1040,c:"Champions League",f:"UCL",h:"AC Milan",a:"Porto",time:"2025-10-11T21:00:00+00:00",status:"FT",score:"0-2",o1:2.16,on:5.12,o2:3.39,hxg:1.82,axg:1.45,hg:1.64,ag:1.3,hf:9,af:10},
+    {id:1041,c:"Champions League",f:"UCL",h:"PSG",a:"Juventus",time:"2025-10-11T16:00:00+00:00",status:"FT",score:"5-2",o1:1.84,on:6.0,o2:3.89,hxg:2.59,axg:1.73,hg:2.33,ag:1.56,hf:8,af:13},
+    {id:1042,c:"Champions League",f:"UCL",h:"Inter",a:"Porto",time:"2025-10-11T14:00:00+00:00",status:"FT",score:"1-0",o1:2.28,on:4.29,o2:3.56,hxg:1.87,axg:1.47,hg:1.68,ag:1.32,hf:10,af:6},
+    {id:1043,c:"Champions League",f:"UCL",h:"Dortmund",a:"Napoli",time:"2025-10-11T14:00:00+00:00",status:"FT",score:"1-1",o1:2.36,on:4.67,o2:3.18,hxg:2.12,axg:1.89,hg:1.91,ag:1.7,hf:7,af:10},
+    {id:1044,c:"Champions League",f:"UCL",h:"Barcelona",a:"Porto",time:"2025-10-11T21:00:00+00:00",status:"FT",score:"2-0",o1:2.1,on:5.68,o2:3.33,hxg:2.27,axg:1.64,hg:2.04,ag:1.48,hf:6,af:6},
+    {id:1045,c:"Champions League",f:"UCL",h:"Juventus",a:"Napoli",time:"2025-10-20T21:00:00+00:00",status:"FT",score:"3-0",o1:2.1,on:5.38,o2:3.44,hxg:2.27,axg:1.64,hg:2.04,ag:1.48,hf:14,af:13},
+    {id:1046,c:"Champions League",f:"UCL",h:"Arsenal",a:"Barcel
