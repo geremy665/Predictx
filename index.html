@@ -463,7 +463,15 @@ img{max-width:100%;height:auto;}
   </div>
 </div>
 
-<script>function GT_CFG(){showMod('cfg');}
+<script>
+window.onerror = function(msg, src, line, col, err) {
+  var div = document.createElement('div');
+  div.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#ff0000;color:#fff;padding:12px;font-family:monospace;font-size:12px;word-break:break-all';
+  div.textContent = 'ERREUR L' + line + ': ' + msg;
+  document.body.appendChild(div);
+  return false;
+};
+function GT_CFG(){showMod('cfg');}
 
 
 
@@ -4597,5 +4605,4 @@ function getFallback(){
     {id:1077,c:"Champions League",f:"UCL",h:"Barcelona",a:"AC Milan",time:"2025-11-16T16:00:00+00:00",status:"FT",score:"4-1",o1:2.21,on:6.0,o2:2.96,hxg:2.43,axg:1.88,hg:2.19,ag:1.69,hf:9,af:9},
     {id:1078,c:"Champions League",f:"UCL",h:"Benfica",a:"Napoli",time:"2025-11-16T14:00:00+00:00",status:"FT",score:"0-0",o1:2.56,on:5.25,o2:2.69,hxg:1.84,axg:1.4,hg:1.66,ag:1.26,hf:6,af:5},
     {id:1079,c:"Champions League",f:"UCL",h:"Bayern",a:"Arsenal",time:"2025-11-16T17:00:00+00:00",status:"FT",score:"1-1",o1:2.04,on:6.0,o2:3.28,hxg:3.45,axg:2.48,hg:3.11,ag:2.23,hf:10,af:10},
-    {id:1080,c:"Champions League",f:"UCL",h:"Arsenal",a:"Chelsea",time:"2025-11-16T20:00:00+00:00",status:"FT",score:"1-1",o1:2.33,on:5.53,o2:2.92,hxg:2.42,axg:1.95,hg:2.18,ag:1.75,hf:14,af:7},
-    {id:1081,c:"Champions League",f:"UCL",h:"Man City",a:"PSG",time:"2025-11-16T20:00:00+00:00",status:"FT",score:"2-2",o1:1.83,on:5.25,o2:4.67,hxg:3.26,axg:2.62,hg:2.93,ag:2.36,hf:10,af:10},
+    {id
