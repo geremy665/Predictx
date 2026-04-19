@@ -2400,8 +2400,7 @@ function pResult(){
 }
 
 function pMoney(){
-  var bkC=S.bkC||{tot:S.bk||1000,prob:0,odd:0,frac:0.25};
-  var bkR=S.bkR||null;
+  var bkC=S.bkC,bkR=S.bkR;
   var bk=S.bk||1000;
   var sess=+(bk*0.20).toFixed(0);
   var miseMax=+(bk*0.03).toFixed(0);
@@ -2447,16 +2446,16 @@ function pMoney(){
   h+='</div>';
   if(bkR){
     h+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px">';
-    var RES=[{v:((bkR&&bkR.kA||0)*100).toFixed(1)+"%",l:"Fraction",c:"#FFFFFF"},{v:(bkR&&bkR.m||0).toFixed(0)+" EUR",l:"Mise",c:"#00E5A0"},{v:"+"+(bkR&&bkR.g||0).toFixed(0)+" EUR",l:"Gain pot.",c:"#00E5A0"},{v:(((bkR&&bkR.ev||0)||0)*100).toFixed(1)+"%",l:"Esperance",c:((bkR&&bkR.ev||0)||0)>0?"#00E5A0":"#E05555"}];
+    var RES=[{v:(bkR.kA*100).toFixed(1)+"%",l:"Fraction",c:"#FFFFFF"},{v:bkR.m.toFixed(0)+" EUR",l:"Mise",c:"#00E5A0"},{v:"+"+bkR.g.toFixed(0)+" EUR",l:"Gain pot.",c:"#00E5A0"},{v:((bkR.ev||0)*100).toFixed(1)+"%",l:"Esperance",c:(bkR.ev||0)>0?"#00E5A0":"#E05555"}];
     for(var ri2=0;ri2<4;ri2++){
-      h+='<div style="background:'+(ri2===3?((bkR&&bkR.ev||0)>0?rgba(0,229,160,.08):rgba(224,85,85,.08)):rgba(255,255,255,.04))+';border:1px solid '+(ri2===3?((bkR&&bkR.ev||0)>0?rgba(0,229,160,.2):rgba(224,85,85,.15)):rgba(255,255,255,.08))+';border-radius:10px;padding:10px;text-align:center">';
+      h+='<div style="background:'+(ri2===3?(bkR.ev>0?rgba(0,229,160,.08):rgba(224,85,85,.08)):rgba(255,255,255,.04))+';border:1px solid '+(ri2===3?(bkR.ev>0?rgba(0,229,160,.2):rgba(224,85,85,.15)):rgba(255,255,255,.08))+';border-radius:10px;padding:10px;text-align:center">';
       h+='<div style="font-family:var(--f-titre);font-size:20px;color:'+RES[ri2].c+';letter-spacing:.04em">'+RES[ri2].v+'</div>';
       h+='<div style="font-family:var(--f-mono);font-size:7px;color:#444;margin-top:2px;text-transform:uppercase">'+RES[ri2].l+'</div>';
       h+='</div>';
     }
     h+='</div>';
-    h+='<div style="padding:12px 14px;background:'+((bkR&&bkR.ev||0)>0?rgba(0,229,160,.08):rgba(224,85,85,.08))+';border:1px solid '+((bkR&&bkR.ev||0)>0?rgba(0,229,160,.2):rgba(224,85,85,.15))+';border-radius:10px;font-family:var(--f-mono);font-size:10px;color:'+((bkR&&bkR.ev||0)>0?"#00E5A0":"#E05555")+'">';
-    h+=(bkR&&bkR.ev||0)>0?"Esperance positive   Pari mathematiquement rentable sur le long terme":"Esperance negative   Ce pari n est pas rentable mathematiquement";
+    h+='<div style="padding:12px 14px;background:'+(bkR.ev>0?rgba(0,229,160,.08):rgba(224,85,85,.08))+';border:1px solid '+(bkR.ev>0?rgba(0,229,160,.2):rgba(224,85,85,.15))+';border-radius:10px;font-family:var(--f-mono);font-size:10px;color:'+(bkR.ev>0?"#00E5A0":"#E05555")+'">';
+    h+=bkR.ev>0?"Esperance positive   Pari mathematiquement rentable sur le long terme":"Esperance negative   Ce pari n est pas rentable mathematiquement";
     h+='</div>';
   }else{
     h+='<div style="text-align:center;padding:16px;font-family:var(--f-mono);font-size:10px;color:#444">Remplis les 4 champs pour calculer ta mise optimale</div>';
@@ -2494,7 +2493,7 @@ function pRisk(){
   var maxBk=S.bk;hist.slice().reverse().forEach(function(h){if(h.bk>maxBk)maxBk=h.bk;});
   var dd=maxBk>0?+((maxBk-S.bk)/maxBk*100).toFixed(1):0;
   var rl=dd>20?"high":dd>10?"mid":"low";
-  return'<div style="font-family:var(--f-titre);font-size:24px;font-weight:900;letter-spacing:-1px;margin-bottom:3px">Gestion du risque</div>'+'<div style="font-family:var(--f-mono);font-size:9px;color:#AAAAAA;margin-bottom:14px">Drawdown - Variance - CLV</div>'+'<div class="card-bleu" style="margin-bottom:12px"><div class="clbl">Niveau de risque actuel</div>'+'<div style="display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border-radius:var(--r2);font-family:var(--f-titre);font-size:14px;font-weight:800;letter-spacing:-.2px;margin-bottom:12px;background:'+(rl==="high"?"var(--rouge2)":rl==="mid"?"rgba(245,200,66,.1)":"rgba(0,208,132,.08)")+';border:1px solid '+(rl==="high"?"rgba(255,69,96,.2)":rl==="mid"?"rgba(245,200,66,.2)":"rgba(0,208,132,.2)")+';color:'+(rl==="high"?"var(--rouge)":rl==="mid"?"var(--jaune2)":"var(--vert)")+'">'+( rl==="high"?"RISQUE ELEVE":rl==="mid"?"RISQUE MODERE":"RISQUE FAIBLE")+' - Drawdown: '+dd+'%</div>'+(rl==="high"?'<div style="padding:10px 13px;background:var(--rouge2);border:1px solid "rgba(255,69,96,.2)";border-radius:var(--r2);font-size:12px;color:var(--rouge);font-weight:600;margin-bottom:10px">Drawdown superieur a 20% - Reduis tes mises de 50%.</div>':"")
+  return'<div style="font-family:var(--f-titre);font-size:24px;font-weight:900;letter-spacing:-1px;margin-bottom:3px">Gestion du risque</div>'+'<div style="font-family:var(--f-mono);font-size:9px;color:#AAAAAA;margin-bottom:14px">Drawdown - Variance - CLV</div>'+'<div class="card-bleu" style="margin-bottom:12px"><div class="clbl">Niveau de risque actuel</div>'+'<div style="display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border-radius:var(--r2);font-family:var(--f-titre);font-size:14px;font-weight:800;letter-spacing:-.2px;margin-bottom:12px;background:'+(rl==="high"?"var(--rouge2)":rl==="mid"?rgba(245,200,66,.1):rgba(0,208,132,.08))+';border:1px solid '+(rl==="high"?rgba(255,69,96,.2):rl==="mid"?rgba(245,200,66,.2):rgba(0,208,132,.2))+';color:'+(rl==="high"?"var(--rouge)":rl==="mid"?"var(--jaune2)":"var(--vert)")+'">'+( rl==="high"?"RISQUE ELEVE":rl==="mid"?"RISQUE MODERE":"RISQUE FAIBLE")+' - Drawdown: '+dd+'%</div>'+(rl==="high"?'<div style="padding:10px 13px;background:var(--rouge2);border:1px solid rgba(255,69,96,.2);border-radius:var(--r2);font-size:12px;color:var(--rouge);font-weight:600;margin-bottom:10px">Drawdown superieur a 20% - Reduis tes mises de 50%.</div>':"")
     +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">'+[{v:S.bk.toLocaleString("fr-FR")+" EUR",l:"Bankroll",c:"var(--jaune2)"},{v:dd+"%",l:"Drawdown",c:dd>20?"var(--rouge)":dd>10?"var(--jaune2)":"var(--vert)"},{v:rl==="high"?"x0.5":rl==="mid"?"x0.75":"x1.0",l:"Multiplicateur Kelly",c:rl==="high"?"var(--rouge)":rl==="mid"?"var(--jaune2)":"var(--vert)"}].map(function(s){return'<div class="risk-box"><div class="risk-val" style="color:'+s.c+'">'+s.v+'</div><div class="risk-lbl">'+s.l+'</div></div>';}).join("")+'</div></div>'+(hist.length?'<div class="card"><div class="clbl">Performance</div><div class="sg4">'+[{v:wr+"%",l:"Taux de reussite",c:wr>=55?"var(--vert)":wr>=45?"var(--jaune2)":"var(--rouge)"},{v:(roi>0?"+":"")+roi+"%",l:"ROI",c:roi>0?"var(--vert)":"var(--rouge)"},{v:(avgClv>0?"+":"")+avgClv+"%",l:"CLV moyen",c:avgClv>2?"var(--vert)":avgClv>0?"var(--jaune2)":"var(--rouge)"},{v:tot,l:"Total paris",c:"var(--blanc2)"}].map(function(s){return'<div class="sbox"><div class="sv" style="color:'+s.c+'">'+s.v+'</div><div class="sl">'+s.l+'</div></div>';}).join("")+'</div>'+'<div style="padding:12px 14px;background:var(--gris2);border:1px solid var(--ln);border-radius:var(--r2);font-family:var(--f-mono);font-size:10px;color:#AAAAAA;line-height:1.8">'+(avgClv>3?"CLV excellent +"+avgClv+"% - Tu bates regulierement la cote de fermeture. Signe de profitabilite.":avgClv>0?"CLV positif +"+avgClv+"% - Bonne direction.":"CLV negatif "+avgClv+"% - Revois la selection de tes paris.")+'</div></div>':"")
     +'<div class="card"><div class="clbl">Ce que tu dois savoir</div><div style="display:flex;flex-direction:column;gap:8px">'+[{t:"Variance",d:"Meme avec un bon systeme, tu peux perdre 20 paris de suite. C est normal. Ne juge pas ton approche sur moins de 500 paris.",c:"var(--bleu2)"},{t:"Esperance de gain (EV)",d:"Si EV > 0 a long terme tu gagnes. Exemple: 55% de chances sur une cote a 2.00 donne EV = +10%.",c:"var(--jaune2)"},{t:"CLV - Closing Line Value",d:"Si la cote baisse apres que tu as parie, tu avais raison avant le marche. C est le seul vrai indicateur.",c:"var(--vert)"},{t:"Ruin du parieur",d:"Meme avec 60% de reussite, des mises trop elevees peuvent te faire perdre tout. Respecte Kelly.",c:"var(--rouge)"}].map(function(c){return'<div style="padding:12px 14px;background:var(--gris2);border-left:3px solid '+c.c+';border-radius:var(--r2)"><div style="font-family:var(--f-titre);font-size:13px;font-weight:700;color:'+c.c+';margin-bottom:4px">'+c.t+'</div><div style="font-family:var(--f-mono);font-size:9px;color:#AAAAAA;line-height:1.7">'+c.d+'</div></div>';}).join("")+'</div></div>';
 }
@@ -2873,27 +2872,27 @@ function pLive(){
   var h='';
 
   
-  h+='<div style="background:var(--c2);border:1px solid "rgba(255,51,102,.15)";border-radius:18px;padding:16px;margin-bottom:14px;position:relative;overflow:hidden">';
+  h+='<div style="background:var(--c2);border:1px solid rgba(255,51,102,.15);border-radius:18px;padding:16px;margin-bottom:14px;position:relative;overflow:hidden">';
   h+='<div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--rouge),var(--cyan),transparent)"></div>';
   h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">';
   h+='<div style="font-family:var(--f-titre);font-size:20px;font-weight:900;letter-spacing:-.02em">Scores Live</div>';
   if(live.length>0){
-    h+='<div style="display:flex;align-items:center;gap:6px;padding:5px 12px;background:"rgba(255,51,102,.1)";border:1px solid "rgba(255,51,102,.2)";border-radius:100px">';
+    h+='<div style="display:flex;align-items:center;gap:6px;padding:5px 12px;background:rgba(255,51,102,.1);border:1px solid rgba(255,51,102,.2);border-radius:100px">';
     h+='<div style="width:6px;height:6px;border-radius:50%;background:var(--rouge);animation:pulse 1.2s infinite;box-shadow:0 0 6px var(--rouge)"></div>';
     h+='<div style="font-family:var(--f-mono);font-size:10px;color:var(--rouge);font-weight:700">'+live.length+' EN DIRECT</div></div>';
   }
   h+='</div>';
   
   h+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px">';
-  h+='<div style="background:"rgba(255,51,102,.08)";border:1px solid "rgba(255,51,102,.15)";border-radius:10px;padding:10px;text-align:center"><div style="font-family:var(--f-titre);font-size:22px;font-weight:800;color:var(--rouge)">'+live.length+'</div><div style="font-family:var(--f-mono);font-size:8px;color:#AAAAAA;margin-top:2px">EN DIRECT</div></div>';
-  h+='<div style="background:"rgba(0,245,255,.04)";border:1px solid "rgba(0,245,255,.08)";border-radius:10px;padding:10px;text-align:center"><div style="font-family:var(--f-titre);font-size:22px;font-weight:800;color:var(--cyan)">'+upcoming.length+'</div><div style="font-family:var(--f-mono);font-size:8px;color:#AAAAAA;margin-top:2px">A VENIR</div></div>';
+  h+='<div style="background:rgba(255,51,102,.08);border:1px solid rgba(255,51,102,.15);border-radius:10px;padding:10px;text-align:center"><div style="font-family:var(--f-titre);font-size:22px;font-weight:800;color:var(--rouge)">'+live.length+'</div><div style="font-family:var(--f-mono);font-size:8px;color:#AAAAAA;margin-top:2px">EN DIRECT</div></div>';
+  h+='<div style="background:rgba(0,245,255,.04);border:1px solid rgba(0,245,255,.08);border-radius:10px;padding:10px;text-align:center"><div style="font-family:var(--f-titre);font-size:22px;font-weight:800;color:var(--cyan)">'+upcoming.length+'</div><div style="font-family:var(--f-mono);font-size:8px;color:#AAAAAA;margin-top:2px">A VENIR</div></div>';
   h+='<div style="background:var(--c3);border:1px solid var(--ln);border-radius:10px;padding:10px;text-align:center"><div style="font-family:var(--f-titre);font-size:22px;font-weight:800;color:#999999">'+finished.length+'</div><div style="font-family:var(--f-mono);font-size:8px;color:#AAAAAA;margin-top:2px">TERMINES</div></div>';
   h+='</div></div>';
 
   
   h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">';
   h+='<div style="font-family:var(--f-mono);font-size:9px;color:#AAAAAA">Mis a jour: '+(S.mUpd?new Date(S.mUpd).toLocaleTimeString("fr-FR").substring(0,5):"--")+'</div>';
-  h+='<button onclick="fetchMatches()" style="padding:5px 12px;background:"rgba(0,245,255,.06)";border:1px solid "rgba(0,245,255,.12)";border-radius:7px;font-family:var(--f-mono);font-size:9px;color:var(--cyan);cursor:pointer;font-weight:700">Actualiser</button>';
+  h+='<button onclick="fetchMatches()" style="padding:5px 12px;background:rgba(0,245,255,.06);border:1px solid rgba(0,245,255,.12);border-radius:7px;font-family:var(--f-mono);font-size:9px;color:var(--cyan);cursor:pointer;font-weight:700">Actualiser</button>';
   h+='</div>';
 
   
@@ -2901,7 +2900,7 @@ function pLive(){
   h+='<div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">';
   for(var li=0;li<4;li++){
     var isOn=tab===LTABS[li][0];
-    h+='<button onclick="setLiveTabN('+li+')" style="padding:7px 13px;border-radius:100px;font-family:var(--f-body);font-size:12px;font-weight:600;cursor:pointer;border:1px solid '+(isOn?"rgba(0,245,255,.2)":"var(--ln)")+';background:'+(isOn?"rgba(0,245,255,.08)":"transparent")+';color:'+(isOn?"var(--cyan)":"var(--blanc4)")+';white-space:nowrap;transition:all .15s">'+LTABS[li][1]+'</button>';
+    h+='<button onclick="setLiveTabN('+li+')" style="padding:7px 13px;border-radius:100px;font-family:var(--f-body);font-size:12px;font-weight:600;cursor:pointer;border:1px solid '+(isOn?rgba(0,245,255,.2):"var(--ln)")+';background:'+(isOn?rgba(0,245,255,.08):"transparent")+';color:'+(isOn?"var(--cyan)":"var(--blanc4)")+';white-space:nowrap;transition:all .15s">'+LTABS[li][1]+'</button>';
   }
   h+='</div>';
 
@@ -2936,13 +2935,13 @@ function pLive(){
       var ls=m.liveScore;
 
       
-      h+='<div style="background:var(--c2);border:1px solid '+(isLv?"rgba(255,51,102,.2)":isDn?"rgba(255,255,255,.04)":"var(--ln)")+';border-radius:14px;padding:14px;margin-bottom:8px;cursor:pointer;transition:all .18s" onclick="PM('+mIdx+')">';
+      h+='<div style="background:var(--c2);border:1px solid '+(isLv?rgba(255,51,102,.2):isDn?rgba(255,255,255,.04):"var(--ln)")+';border-radius:14px;padding:14px;margin-bottom:8px;cursor:pointer;transition:all .18s" onclick="PM('+mIdx+')">';
 
       
       h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">';
       h+='<span style="font-family:var(--f-mono);font-size:9px;color:#AAAAAA">'+fmtDate(m.time||m.t)+'</span>';
       if(isLv){
-        h+='<div style="display:flex;align-items:center;gap:5px;padding:4px 10px;background:"rgba(255,51,102,.1)";border:1px solid "rgba(255,51,102,.2)";border-radius:100px">';
+        h+='<div style="display:flex;align-items:center;gap:5px;padding:4px 10px;background:rgba(255,51,102,.1);border:1px solid rgba(255,51,102,.2);border-radius:100px">';
         h+='<div style="width:5px;height:5px;border-radius:50%;background:var(--rouge);animation:pulse 1.2s infinite"></div>';
         h+='<span style="font-family:var(--f-mono);font-size:9px;color:var(--rouge);font-weight:700">EN DIRECT'+(ls&&ls.elapsed?" "+ls.elapsed+"min":"")+"</span></div>";
         h+='<span style="font-family:var(--f-mono);font-size:10px;font-weight:700;padding:4px 10px;background:var(--c3);border:1px solid var(--ln);border-radius:100px;color:#AAAAAA">FIN</span>';
@@ -2960,7 +2959,7 @@ function pLive(){
       h+='</div>';
       
       if(isLv&&ls){
-        h+='<div style="background:"rgba(255,51,102,.08)";border:2px solid "rgba(255,51,102,.25)";border-radius:12px;padding:10px 14px;text-align:center;min-width:70px">';
+        h+='<div style="background:rgba(255,51,102,.08);border:2px solid rgba(255,51,102,.25);border-radius:12px;padding:10px 14px;text-align:center;min-width:70px">';
         h+='<div style="font-family:var(--f-titre);font-size:26px;font-weight:900;color:var(--rouge);font-variant-numeric:tabular-nums;line-height:1">'+(ls.home!==null?ls.home:"?")+' - '+(ls.away!==null?ls.away:"?")+'</div>';
         h+='</div>';
       } else if(isDn&&ls&&ls.home!==null){
@@ -3016,7 +3015,7 @@ function pCotes(){
   h+='<div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:14px;-webkit-overflow-scrolling:touch">';
   for(var ci=0;ci<BKS.length;ci++){
     var bk=BKS[ci];var isOn=bkTab===bk.id;
-    h+='<button onclick="setCotesTabN('+ci+')" style="padding:8px 14px;border-radius:var(--r2);font-family:var(--f-titre);font-size:13px;font-weight:700;cursor:pointer;border:1px solid '+(isOn?bk.color:"var(--ln)")+';background:'+(isOn?"rgba(255,255,255,.05)":"transparent")+';color:'+(isOn?bk.color:"var(--blanc4)")+';white-space:nowrap;flex-shrink:0;transition:all .15s">'+bk.name+'</button>';
+    h+='<button onclick="setCotesTabN('+ci+')" style="padding:8px 14px;border-radius:var(--r2);font-family:var(--f-titre);font-size:13px;font-weight:700;cursor:pointer;border:1px solid '+(isOn?bk.color:"var(--ln)")+';background:'+(isOn?rgba(255,255,255,.05):"transparent")+';color:'+(isOn?bk.color:"var(--blanc4)")+';white-space:nowrap;flex-shrink:0;transition:all .15s">'+bk.name+'</button>';
   }
   h+='</div>';
   if(!ms.length){h+='<div class="empty"><div class="et">Aucun match</div></div>';return h;}
@@ -3042,9 +3041,9 @@ function pCotes(){
       h+='<div style="flex:1;min-width:0"><div style="font-family:var(--f-mono);font-size:8px;color:#AAAAAA;margin-bottom:4px">'+fmtDate(m.time||m.t)+' '+fmtTime(m.time||m.t)+'</div>';
       h+='<div style="font-family:var(--f-titre);font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+tH+' vs '+tA+'</div></div>';
       h+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;flex-shrink:0">';
-      h+='<div style="background:'+(o1===bestO1&&bestO1>0?"var(--vert2)":"var(--gris2)")+';border:1px solid '+(o1===bestO1&&bestO1>0?"rgba(0,208,132,.25)":"var(--ln)")+';border-radius:var(--r);padding:7px 4px;text-align:center"><div style="font-family:var(--f-mono);font-size:7px;color:#AAAAAA">1</div><div style="font-family:var(--f-titre);font-size:15px;font-weight:900;color:'+(o1===bestO1&&bestO1>0?"var(--vert)":"var(--blanc)")+';font-variant-numeric:tabular-nums">'+(o1?o1.toFixed(2):"--")+'</div></div>';
+      h+='<div style="background:'+(o1===bestO1&&bestO1>0?"var(--vert2)":"var(--gris2)")+';border:1px solid '+(o1===bestO1&&bestO1>0?rgba(0,208,132,.25):"var(--ln)")+';border-radius:var(--r);padding:7px 4px;text-align:center"><div style="font-family:var(--f-mono);font-size:7px;color:#AAAAAA">1</div><div style="font-family:var(--f-titre);font-size:15px;font-weight:900;color:'+(o1===bestO1&&bestO1>0?"var(--vert)":"var(--blanc)")+';font-variant-numeric:tabular-nums">'+(o1?o1.toFixed(2):"--")+'</div></div>';
       h+='<div style="background:var(--gris2);border:1px solid var(--ln);border-radius:var(--r);padding:7px 4px;text-align:center"><div style="font-family:var(--f-mono);font-size:7px;color:#AAAAAA">N</div><div style="font-family:var(--f-titre);font-size:15px;font-weight:900;font-variant-numeric:tabular-nums">'+(on?on.toFixed(2):"--")+'</div></div>';
-      h+='<div style="background:'+(o2===bestO2&&bestO2>0?"var(--vert2)":"var(--gris2)")+';border:1px solid '+(o2===bestO2&&bestO2>0?"rgba(0,208,132,.25)":"var(--ln)")+';border-radius:var(--r);padding:7px 4px;text-align:center"><div style="font-family:var(--f-mono);font-size:7px;color:#AAAAAA">2</div><div style="font-family:var(--f-titre);font-size:15px;font-weight:900;color:'+(o2===bestO2&&bestO2>0?"var(--vert)":"var(--blanc)")+';font-variant-numeric:tabular-nums">'+(o2?o2.toFixed(2):"--")+'</div></div>';
+      h+='<div style="background:'+(o2===bestO2&&bestO2>0?"var(--vert2)":"var(--gris2)")+';border:1px solid '+(o2===bestO2&&bestO2>0?rgba(0,208,132,.25):"var(--ln)")+';border-radius:var(--r);padding:7px 4px;text-align:center"><div style="font-family:var(--f-mono);font-size:7px;color:#AAAAAA">2</div><div style="font-family:var(--f-titre);font-size:15px;font-weight:900;color:'+(o2===bestO2&&bestO2>0?"var(--vert)":"var(--blanc)")+';font-variant-numeric:tabular-nums">'+(o2?o2.toFixed(2):"--")+'</div></div>';
       h+='</div></div>';
       h+='<div style="display:flex;gap:5px">';
       h+='<button onclick="addToSlip('+mIdx+',0,'+o1+')" style="flex:1;padding:5px;background:transparent;border:1px solid var(--ln);border-radius:5px;color:#AAAAAA;font-family:var(--f-mono);font-size:8px;cursor:pointer;font-weight:700">+ Demo</button>';
@@ -4655,4 +4654,5 @@ function getFallback(){
     {id:1071,c:"Champions League",f:"UCL",h:"Atletico",a:"Chelsea",time:"2025-11-08T17:00:00+00:00",status:"FT",score:"1-1",o1:2.08,on:4.47,o2:4.04,hxg:2.2,axg:1.74,hg:1.98,ag:1.57,hf:9,af:8},
     {id:1072,c:"Champions League",f:"UCL",h:"Real Madrid",a:"Dortmund",time:"2025-11-08T14:00:00+00:00",status:"FT",score:"1-7",o1:2.5,on:6.0,o2:2.59,hxg:2.69,axg:2.64,hg:2.42,ag:2.38,hf:8,af:9},
     {id:1073,c:"Champions League",f:"UCL",h:"Bayern",a:"Barcelona",time:"2025-11-08T17:00:00+00:00",status:"FT",score:"3-6",o1:2.02,on:6.0,o2:3.28,hxg:3.22,axg:2.49,hg:2.9,ag:2.24,hf:10,af:12},
-    {id:1074,c:"Champions League",f:"UCL",h:"PSG",a:"AC Milan",time:"2025-11-08T21:00:00+00:00",status:"FT",scor
+    {id:1074,c:"Champions League",f:"UCL",h:"PSG",a:"AC Milan",time:"2025-11-08T21:00:00+00:00",status:"FT",score:"5-0",o1:1.58,on:5.53,o2:7.24,hxg:2.86,axg:1.73,hg:2.57,ag:1.56,hf:15,af:6},
+    {id:1075,c:"Champions League",f:"UCL",h:"Atletico",a:"Napoli",time:"2025-11-08T15:00:00+00:00",status:"FT",score:"2-2",o1:2.36,on:4.0
