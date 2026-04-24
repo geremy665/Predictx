@@ -1,14 +1,14 @@
 {
   "version": 2,
-  "builds": [
-    { "src": "api/*.js", "use": "@vercel/node" },
-    { "src": "index.html", "use": "@vercel/static" },
-    { "src": "landing.html", "use": "@vercel/static" }
-  ],
-  "routes": [
-    { "src": "/api/(.*)", "dest": "/api/$1" },
-    { "src": "/landing", "dest": "/landing.html" },
-    { "src": "/(.*\\.(html|js|css|png|ico|svg|json))", "dest": "/$1" },
-    { "src": "/(.*)", "dest": "/index.html" }
+  "functions": {
+    "api/matches.js": { "runtime": "nodejs18.x" },
+    "api/chat.js": { "runtime": "nodejs18.x" },
+    "api/standings.js": { "runtime": "nodejs18.x" },
+    "api/history.js": { "runtime": "nodejs18.x" },
+    "api/odds.js": { "runtime": "nodejs18.x" }
+  },
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/$1" },
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
