@@ -9,7 +9,7 @@ module.exports = async (req, res) => {
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
   if (req.method === "OPTIONS") return res.status(200).end();
-  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+  if (req.method !== "POST") return res.status(405).json({ error: "Methode non autorisee" });
 
   const ip = req.headers["x-forwarded-for"]?.split(",")[0] || "unknown";
   const now = Date.now();
@@ -29,6 +29,14 @@ module.exports = async (req, res) => {
     const messages = body.messages || [];
     const system = body.system || "Tu es EDGE Scanner, un assistant expert en analyse de paris sportifs. Tu analyses avec precision mathematique et conseilles sur les value bets de facon responsable. Reponds en francais.";
 
+    // Si pas de messages mais un prompt direct
+    const finalMessages = messages.length > 0 ? messages : 
+      body.prompt ? [{role: "user", content: body.prompt}] : [];
+
+    if (!finalMessages.length) {
+      return res.status(400).json({ error: "Au moins un message est requis" });
+    }
+
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -37,10 +45,10 @@ module.exports = async (req, res) => {
         "anthropic-version": "2023-06-01"
       },
       body: JSON.stringify({
-        model: "claude-3-haiku-20240307",
+        model: "claude-3-5-haiku-20241022",
         max_tokens: 1024,
         system,
-        messages
+        messages: finalMessages
       })
     });
 
@@ -50,7 +58,9 @@ module.exports = async (req, res) => {
     }
 
     const data = await response.json();
-    return res.status(200).json(data);
+    // Retourner aussi data.text pour compatibilité
+    const text = data.content?.[0]?.text || "";
+    return res.status(200).json({ ...data, text });
 
   } catch (e) {
     return res.status(500).json({ error: e.message });
