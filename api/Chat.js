@@ -11,7 +11,6 @@ module.exports = async (req, res) => {
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-  // Rate limit 20 req/h par IP
   const ip = req.headers["x-forwarded-for"]?.split(",")[0] || "unknown";
   const now = Date.now();
   const windowMs = 60 * 60 * 1000;
@@ -38,7 +37,7 @@ module.exports = async (req, res) => {
         "anthropic-version": "2023-06-01"
       },
       body: JSON.stringify({
-        model: "claude-haiku-4-5-20251001",
+        model: "claude-3-haiku-20240307",
         max_tokens: 1024,
         system,
         messages
@@ -57,4 +56,3 @@ module.exports = async (req, res) => {
     return res.status(500).json({ error: e.message });
   }
 };
-
