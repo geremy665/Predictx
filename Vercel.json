@@ -1,11 +1,19 @@
 {
   "version": 2,
   "builds": [
-    { "src": "api/*.js", "use": "@vercel/node" },
-    { "src": "index.html", "use": "@vercel/static" }
+    { "src": "api/matches.js", "use": "@vercel/node" },
+    { "src": "api/chat.js", "use": "@vercel/node" },
+    { "src": "api/standings.js", "use": "@vercel/node" },
+    { "src": "api/odds.js", "use": "@vercel/node" },
+    { "src": "index.html", "use": "@vercel/static" },
+    { "src": "landing.html", "use": "@vercel/static" }
   ],
   "routes": [
-    { "src": "/api/(.*)", "dest": "/api/$1" },
+    { "src": "/api/matches", "dest": "/api/matches.js" },
+    { "src": "/api/chat", "dest": "/api/chat.js" },
+    { "src": "/api/standings", "dest": "/api/standings.js" },
+    { "src": "/api/odds", "dest": "/api/odds.js" },
+    { "src": "/landing", "dest": "/landing.html" },
     { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
