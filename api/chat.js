@@ -57,7 +57,7 @@ module.exports = async (req, res) => {
         "Authorization": `Bearer ${KEY}`
       },
       body: JSON.stringify({
-        model: "mistral-large-latest",
+        model: "mistral-small-latest",
         max_tokens: 1024,
         temperature: 0.3,
         messages: fullMessages
