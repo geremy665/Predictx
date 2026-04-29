@@ -35,7 +35,7 @@ const DEFAULT_ODDS = [
 async function apiFetch(url, key, ms = 8000) {
   try {
     const r = await fetch(`https://v3.football.api-sports.io${url}`, {
-   headers: {x=apiOpts.key: key, Accept: "application/json"}, : "application/json" },
+   headers: { Accept: "application/json"}, : "application/json" },
       signal: AbortSignal.timeout(ms)
     });
     if (!r.ok) return null;
