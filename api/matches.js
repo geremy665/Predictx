@@ -127,7 +127,7 @@ module.exports = async (req, res) => {
 
   if (req.method === "OPTIONS") return res.status(200).end();
 
-  const KEY = process.env.FOOTBALL_API_KEY;
+  const KEY = process.env.CLÉ_API_FOOTBALL;
   if (!KEY) return res.status(500).json({ error: "FOOTBALL_API_KEY manquante", matches: [] });
 
   const now      = new Date();
