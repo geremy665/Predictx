@@ -32,16 +32,20 @@ const DEFAULT_ODDS = [
   [2.90,3.20,2.50],[3.20,3.30,2.25],[3.80,3.40,1.90],[5.00,3.80,1.60]
 ];
 
-async function apiFetch(url, key, ms = 8000) {
+
+  async function apiFetch(url, key, ms = 8000) {
   try {
     const r = await fetch(`https://v3.football.api-sports.io${url}`, {
-   headers: { Accept: "application/json"}, : "application/json" },
+      headers: { "x-apisports-key": key, "Accept": "application/json" },
       signal: AbortSignal.timeout(ms)
     });
     if (!r.ok) return null;
     const d = await r.json();
     return d.response || null;
-  } catch(e) { return null; }
+  } catch (e) {
+    console.error(e);
+    return null;
+  }
 }
 
 function formatMatch(f, idx, liveData) {
