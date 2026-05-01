@@ -1,7 +1,6 @@
 // EDGE Scanner — api/chat.js
-// Analyse IA via Mistral AI
-
-const RATE_LIMIT = new Map();
+// Analyse IA via Anthropic Claude
+// Variable Vercel: ANTHROPIC_API_KEY
 
 module.exports = async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -10,81 +9,82 @@ module.exports = async (req, res) => {
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") return res.status(405).json({ error: "POST requis" });
 
-  const ip = req.headers["x-forwarded-for"]?.split(",")[0] || "unknown";
-  const now = Date.now();
-  const hits = (RATE_LIMIT.get(ip) || []).filter(t => now - t < 3600000);
-  if (hits.length >= 30) return res.status(429).json({ error: "Limite atteinte" });
-  hits.push(now);
-  RATE_LIMIT.set(ip, hits);
+  const KEY = process.env.ANTHROPIC_API_KEY;
+  if (!KEY) return res.status(500).json({ error: "ANTHROPIC_API_KEY manquante dans Vercel" });
 
-  // Clé depuis variable d'env OU fallback
-  const KEY = process.env.MISTRAL_API_KEY || process.env.MISTRAL || "";
-  if (!KEY) return res.status(500).json({ error: "MISTRAL_API_KEY manquante" });
+  let body = req.body;
+  if (typeof body === "string") {
+    try { body = JSON.parse(body); } catch { return res.status(400).json({ error: "JSON invalide" }); }
+  }
+
+  const { messages, match, analysis } = body || {};
+  if (!messages?.length) return res.status(400).json({ error: "messages requis" });
+
+  // Construire le système prompt
+  let systemPrompt = `Tu es EDGE, un expert en analyse de paris sportifs et en modélisation statistique du football.
+
+Tu utilises les modèles Dixon-Coles, l'inférence bayésienne et les simulations Monte Carlo pour analyser les matchs.
+Tu parles toujours en français. Tu es précis, factuel et tu donnes des conseils concrets.
+Tu mentions toujours la responsabilité (18+, limites de mise).
+
+Tes analyses incluent:
+- Évaluation de la valeur des cotes (edge mathématique)
+- Probabilités calculées vs cotes implicites
+- Facteurs contextuels (forme, domicile/extérieur, blessures si connues)
+- Recommandation de mise Kelly si applicable
+- Niveau de confiance sur 100`;
+
+  if (match) {
+    systemPrompt += `\n\nMATCH EN COURS D'ANALYSE:
+- ${match.home || match.h} vs ${match.away || match.a}
+- Ligue: ${match.leagueName || match.c || ""}
+- Cotes: 1=${match.o1 || "?"} / N=${match.on || "?"} / 2=${match.o2 || "?"}`;
+    if (match.isLive) systemPrompt += `\n- MATCH EN DIRECT - Score: ${match.goalsH ?? "?"}-${match.goalsA ?? "?"}`;
+  }
+
+  if (analysis) {
+    systemPrompt += `\n\nANALYSE ALGORITHMIQUE:
+- Probabilités: Dom=${Math.round((analysis.pH||0)*100)}% / Nul=${Math.round((analysis.pN||0)*100)}% / Ext=${Math.round((analysis.pA||0)*100)}%
+- Edge: ${analysis.edg ? ((analysis.edg||0)*100).toFixed(1)+"%" : "N/A"}
+- Confiance: ${analysis.conf || 0}%
+- Signal: ${analysis.label || ""}`;
+  }
 
   try {
-    let body = req.body || {};
-    if (typeof body === "string") {
-      try { body = JSON.parse(body); } catch(e) { body = {}; }
-    }
-
-    const messages = body.messages?.length > 0
-      ? body.messages
-      : body.prompt
-        ? [{ role: "user", content: body.prompt }]
-        : [];
-
-    if (!messages.length) return res.status(400).json({ error: "Messages requis" });
-
-    const system = body.system ||
-      "Tu es EDGE Scanner, expert en analyse de paris sportifs. " +
-      "Tu utilises Dixon-Coles, Bayesien, Monte Carlo. " +
-      "Reponds en francais, de facon precise. Rappelle de parier responsablement (18+).";
-
-    const fullMessages = [
-      { role: "user", content: system + "\n\nCompris ?" },
-      { role: "assistant", content: "Compris. EDGE Scanner pret." },
-      ...messages.slice(-8)
-    ];
-
-    const response = await fetch("https://api.mistral.ai/v1/chat/completions", {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${KEY}`
+        "x-api-key": KEY,
+        "anthropic-version": "2023-06-01"
       },
       body: JSON.stringify({
-        model: "mistral-small-latest",
+        model: "claude-haiku-4-5-20251001",
         max_tokens: 1024,
-        temperature: 0.3,
-        messages: fullMessages
+        system: systemPrompt,
+        messages: messages.slice(-10) // max 10 messages d'historique
       }),
-      signal: AbortSignal.timeout(30000)
+      signal: AbortSignal.timeout(25000)
     });
 
-    const rawText = await response.text();
-    if (!rawText?.trim()) return res.status(500).json({ error: "Reponse vide" });
-
-    let data;
-    try { data = JSON.parse(rawText); }
-    catch(e) { return res.status(500).json({ error: "JSON invalide: " + rawText.substring(0,100) }); }
-
     if (!response.ok) {
-      return res.status(response.status).json({
-        error: data.message || data.error || "Erreur Mistral " + response.status
-      });
+      const errText = await response.text();
+      console.error("Anthropic error:", response.status, errText);
+      return res.status(response.status).json({ error: `API Anthropic: ${response.status}`, detail: errText.substring(0, 200) });
     }
 
-    const text = data.choices?.[0]?.message?.content || "";
-    if (!text) return res.status(500).json({ error: "Reponse vide de Mistral" });
+    const data = await response.json();
+    const text = data.content?.[0]?.text || "";
 
     return res.status(200).json({
       success: true,
-      text,
-      content: [{ type: "text", text }],
-      model: data.model || "mistral-small-latest"
+      message: text,
+      model: data.model,
+      usage: data.usage
     });
 
-  } catch(e) {
-    return res.status(500).json({ error: e.message || "Erreur inconnue" });
+  } catch (err) {
+    console.error("chat.js error:", err.message);
+    return res.status(500).json({ error: err.message });
   }
 };
