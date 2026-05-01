@@ -1,0 +1,14 @@
+{
+  "functions": {
+    "api/matches.js": { "runtime": "@vercel/node@5.x" },
+    "api/chat.js": { "runtime": "@vercel/node@5.x" },
+    "api/standings.js": { "runtime": "@vercel/node@5.x" },
+    "api/match.js": { "runtime": "@vercel/node@5.x" },
+    "api/odds.js": { "runtime": "@vercel/node@5.x" },
+    "api/history.js": { "runtime": "@vercel/node@5.x" }
+  },
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/$1" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
