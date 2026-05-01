@@ -1,7 +1,4 @@
 // EDGE Scanner — api/matches.js
-// Plan Pro: 7500 req/jour
-// Stratégie: 3 req fixes + 1 req live = 4 requêtes max par appel
-// Variable Vercel : CLÉ_API_FOOTBALL
 
 const LEAGUES = [
   {id:61,  name:"Ligue 1",           f:"FR"},
@@ -32,45 +29,16 @@ const DEFAULT_ODDS = [
   [2.90,3.20,2.50],[3.20,3.30,2.25],[3.80,3.40,1.90],[5.00,3.80,1.60]
 ];
 
-// Récupération sécurisée des cotes 1-N-2 depuis l'API
-function getOdds(f) {
-  try {
-    const bookmakers = f.odds?.bookmakers;
-    if (bookmakers && bookmakers.length > 0) {
-      const bets = bookmakers[0]?.bets;
-      if (bets && bets.length > 0) {
-        const values = bets[0]?.values;
-        if (values && values.length >= 3) {
-          let o1 = null, on = null, o2 = null;
-          for (let v of values) {
-            if (v.value === "Home") o1 = parseFloat(v.odd);
-            if (v.value === "Draw") on = parseFloat(v.odd);
-            if (v.value === "Away") o2 = parseFloat(v.odd);
-          }
-          if (o1 && on && o2) return [o1, on, o2];
-        }
-      }
-    }
-  } catch(e) { /* ignorer */ }
-  return null;
-}
-
 async function apiFetch(url, key, ms = 8000) {
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), ms);
     const r = await fetch(`https://v3.football.api-sports.io${url}`, {
       headers: { "x-apisports-key": key, "Accept": "application/json" },
-      signal: controller.signal
+      signal: AbortSignal.timeout(ms)
     });
-    clearTimeout(timeout);
     if (!r.ok) return null;
     const d = await r.json();
     return d.response || null;
-  } catch (e) {
-    console.error("apiFetch error:", e.message);
-    return null;
-  }
+  } catch(e) { return null; }
 }
 
 function formatMatch(f, idx, liveData) {
@@ -87,24 +55,17 @@ function formatMatch(f, idx, liveData) {
   const awayId = f.teams?.away?.id;
   const time   = f.fixture?.date || "";
 
-  // Cotes réelles ou défaut
-  let o1, on, o2;
-  const realOdds = getOdds(f);
-  if (realOdds) {
-    [o1, on, o2] = realOdds;
-  } else {
-    const def = DEFAULT_ODDS[(fId || idx) % 10];
-    [o1, on, o2] = def;
-  }
+  const [o1def, ondef, o2def] = DEFAULT_ODDS[(fId || idx) % 10];
+  const o1 = f.odds?.o1 || o1def;
+  const on = f.odds?.on || ondef;
+  const o2 = f.odds?.o2 || o2def;
 
-  // xG estimés depuis les cotes
-  const prob1 = 1 / o1, prob2 = 1 / o2;
-  const total = prob1 + (1 / on) + prob2;
-  const p1 = prob1 / total, p2 = prob2 / total;
-  const hxg = +(1.4 + p1 * 0.9).toFixed(2);
-  const axg = +(1.4 + p2 * 0.9).toFixed(2);
+  const prob1 = 1/o1, prob2 = 1/o2;
+  const total = prob1 + (1/on) + prob2;
+  const p1 = prob1/total, p2 = prob2/total;
+  const hxg = +(1.4 + p1*0.9).toFixed(2);
+  const axg = +(1.4 + p2*0.9).toFixed(2);
 
-  // Score live
   const live = liveData?.[fId];
   const goals = [], cards = [];
   if (live?.events) {
@@ -117,33 +78,18 @@ function formatMatch(f, idx, liveData) {
   }
 
   return {
-    id: fId,
-    leagueId: lgId,
-    leagueName: lg.name,
-    c: lg.name,
-    f: lg.f,
-    home, away, h: home, a: away,
-    homeId, awayId,
-    t: time, time,
-    status, isLive,
-    o1: +o1.toFixed(2),
-    on: +on.toFixed(2),
-    o2: +o2.toFixed(2),
-    hasRealOdds: !!realOdds,
-    hxg, axg,
-    hxga: +(axg * 0.85).toFixed(2),
-    axga: +(hxg * 0.85).toFixed(2),
-    hg:   +(hxg * 0.92).toFixed(2),
-    ag:   +(axg * 0.92).toFixed(2),
-    hf:   Math.round(p1 * 15),
-    af:   Math.round(p2 * 15),
-    hf10: Math.round(p1 * 25),
-    af10: Math.round(p2 * 25),
-    hsh:  Math.round(hxg * 2.8),
-    ash:  Math.round(axg * 2.8),
-    hcs:  Math.round(p1 * 35),
-    acs:  Math.round(p2 * 35),
-    h2h:  [],
+    id: fId, leagueId: lgId, leagueName: lg.name,
+    c: lg.name, f: lg.f, home, away, h: home, a: away,
+    homeId, awayId, t: time, time, status, isLive,
+    o1: +o1.toFixed(2), on: +on.toFixed(2), o2: +o2.toFixed(2),
+    hasRealOdds: !!f.odds, hxg, axg,
+    hxga: +(axg*0.85).toFixed(2), axga: +(hxg*0.85).toFixed(2),
+    hg: +(hxg*0.92).toFixed(2), ag: +(axg*0.92).toFixed(2),
+    hf: Math.round(p1*15), af: Math.round(p2*15),
+    hf10: Math.round(p1*25), af10: Math.round(p2*25),
+    hsh: Math.round(hxg*2.8), ash: Math.round(axg*2.8),
+    hcs: Math.round(p1*35), acs: Math.round(p2*35),
+    h2h: [],
     liveScore: isLive ? {
       home:    live?.goals?.home ?? f.goals?.home ?? null,
       away:    live?.goals?.away ?? f.goals?.away ?? null,
@@ -160,11 +106,8 @@ module.exports = async (req, res) => {
 
   if (req.method === "OPTIONS") return res.status(200).end();
 
-  const KEY = process.env.CLÉ_API_FOOTBALL;
-  if (!KEY) {
-    console.error("CLÉ_API_FOOTBALL manquante dans Vercel");
-    return res.status(500).json({ error: "CLÉ_API_FOOTBALL manquante", matches: [] });
-  }
+  const KEY = process.env.FOOTBALL_API_KEY || "b0e8adc0dfcca1cc964daa5bfe9a56c1";
+  if (!KEY) return res.status(500).json({ error: "Cle API manquante", matches: [] });
 
   const now      = new Date();
   const today    = now.toISOString().split("T")[0];
@@ -183,9 +126,9 @@ module.exports = async (req, res) => {
     (liveAll || []).forEach(f => {
       if (lgIds.has(f.league?.id)) {
         liveMap[f.fixture?.id] = {
-          goals:   f.goals,
+          goals: f.goals,
           elapsed: f.fixture?.status?.elapsed,
-          events:  []
+          events: []
         };
       }
     });
@@ -199,16 +142,14 @@ module.exports = async (req, res) => {
 
     allFix.forEach(f => {
       const fId = f.fixture?.id;
-      if (liveMap[fId]) {
-        f.goals = liveMap[fId].goals || f.goals;
-      }
+      if (liveMap[fId]) f.goals = liveMap[fId].goals || f.goals;
     });
 
     if (!allFix.length) {
       return res.status(200).json({
         matches: [], count: 0, live: 0, upcoming: 0,
         updated: now.toISOString(),
-        note: "Aucun match en cours ou à venir"
+        note: "Aucun match en cours ou a venir"
       });
     }
 
@@ -223,16 +164,14 @@ module.exports = async (req, res) => {
 
     return res.status(200).json({
       matches,
-      count:        matches.length,
-      live:         matches.filter(m => m.isLive).length,
-      upcoming:     matches.filter(m => !m.isLive).length,
-      updated:      now.toISOString(),
-      source:       "API-Football V3",
-      requestsUsed: 4
+      count:    matches.length,
+      live:     matches.filter(m => m.isLive).length,
+      upcoming: matches.filter(m => !m.isLive).length,
+      updated:  now.toISOString(),
+      source:   "API-Football V3"
     });
 
   } catch(e) {
-    console.error("matches.js error:", e.message);
     return res.status(500).json({ error: e.message, matches: [] });
   }
 };
