@@ -1,5 +1,4 @@
 // EDGE Scanner — api/chat.js
-// Analyse IA via Mistral AI
 
 const RATE_LIMIT = new Map();
 
@@ -10,7 +9,6 @@ module.exports = async (req, res) => {
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") return res.status(405).json({ error: "POST requis" });
 
-  // Rate limit
   const ip = req.headers["x-forwarded-for"]?.split(",")[0] || "unknown";
   const now = Date.now();
   const hits = (RATE_LIMIT.get(ip) || []).filter(t => now - t < 3600000);
@@ -19,7 +17,6 @@ module.exports = async (req, res) => {
   RATE_LIMIT.set(ip, hits);
 
   try {
-    // Lire le body brut d'abord
     let rawBody = "";
     await new Promise((resolve, reject) => {
       req.on("data", chunk => { rawBody += chunk.toString(); });
@@ -27,7 +24,6 @@ module.exports = async (req, res) => {
       req.on("error", reject);
     });
 
-    // Si req.body déjà parsé par Vercel, l'utiliser directement
     let body = {};
     if (req.body && typeof req.body === "object") {
       body = req.body;
@@ -35,17 +31,10 @@ module.exports = async (req, res) => {
       try { body = JSON.parse(rawBody); } catch(e) { body = {}; }
     }
 
-    // Clé: Vercel env OU clé envoyée par le client
-    const KEY = process.env.MISTRAL_API_KEY 
-      || process.env.MISTRAL 
-      || body.clientKey 
-      || "";
-
-    if (!KEY) {
-      return res.status(500).json({ 
-        error: "Cle Mistral manquante — entre ta cle dans Config du site" 
-      });
-    }
+    const KEY = process.env.MISTRAL_API_KEY
+      || process.env.MISTRAL
+      || body.clientKey
+      || "lvoeRXlFieBv5hpfh3TlZ12FZiFvIF8w";
 
     const messages = body.messages?.length > 0
       ? body.messages
@@ -82,19 +71,11 @@ module.exports = async (req, res) => {
     });
 
     const responseText = await response.text();
-    
-    if (!responseText || !responseText.trim()) {
-      return res.status(500).json({ error: "Reponse vide de Mistral" });
-    }
+    if (!responseText?.trim()) return res.status(500).json({ error: "Reponse vide" });
 
     let data;
-    try {
-      data = JSON.parse(responseText);
-    } catch(e) {
-      return res.status(500).json({ 
-        error: "Reponse invalide de Mistral: " + responseText.substring(0, 100) 
-      });
-    }
+    try { data = JSON.parse(responseText); }
+    catch(e) { return res.status(500).json({ error: "JSON invalide: " + responseText.substring(0,100) }); }
 
     if (!response.ok) {
       return res.status(response.status).json({
@@ -103,11 +84,10 @@ module.exports = async (req, res) => {
     }
 
     const text = data.choices?.[0]?.message?.content || "";
-    if (!text) return res.status(500).json({ error: "Reponse Mistral vide" });
+    if (!text) return res.status(500).json({ error: "Reponse vide de Mistral" });
 
     return res.status(200).json({
-      success: true,
-      text,
+      success: true, text,
       content: [{ type: "text", text }],
       model: data.model || "mistral-small-latest"
     });
