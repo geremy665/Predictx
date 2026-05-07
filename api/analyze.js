@@ -113,7 +113,7 @@ module.exports = async (req, res) => {
           {role:"user",content:prompt}
         ]
       }),
-      signal:AbortSignal.timeout(28000)
+      signal:(() => { const c=new AbortController(); setTimeout(()=>c.abort(),28000); return c.signal; })()
     });
 
     if(!resp.ok){
