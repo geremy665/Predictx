@@ -190,16 +190,21 @@ module.exports = async (req, res) => {
   const mode = req.query?.mode || "fast";
   const withAI = req.query?.ai === "1";
 
-  try {
+  // Timeout global: si tout prend trop longtemps, on retourne vide
+  const timeoutP = new Promise(resolve =>
+    setTimeout(() => resolve({matches:[], count:0, timeout:true}), 9000)
+  );
+
+  async function runScan(){
     const now   = new Date();
     const today = now.toISOString().split("T")[0];
     const tom   = new Date(now.getTime()+86400000).toISOString().split("T")[0];
 
     // 1. Matchs du jour + demain + live
     const [fixtToday, fixtTom, fixtLive] = await Promise.all([
-      apiFetch(`/fixtures?date=${today}`, FKEY),
-      apiFetch(`/fixtures?date=${tom}`,   FKEY),
-      apiFetch(`/fixtures?live=all`,      FKEY)
+      apiFetch(`/fixtures?date=${today}`, FKEY, 4000),
+      apiFetch(`/fixtures?date=${tom}`,   FKEY, 4000),
+      apiFetch(`/fixtures?live=all`,      FKEY, 3000)
     ]);
 
     const liveMap = {};
@@ -328,7 +333,7 @@ module.exports = async (req, res) => {
         return new Date(a.time)-new Date(b.time);
       });
 
-    return res.status(200).json({
+    return {
       matches,
       count:    matches.length,
       live:     matches.filter(m=>m.isLive).length,
@@ -337,9 +342,13 @@ module.exports = async (req, res) => {
       aiEnabled: withAI,
       updated:  now.toISOString(),
       source:   "EDGE Scan Engine v2"
-    });
+    };
+  }
 
+  try {
+    const result = await Promise.race([runScan(), timeoutP]);
+    return res.status(200).json(result);
   } catch(e) {
-    return res.status(500).json({error: e.message, matches:[]});
+    return res.status(200).json({error: e.message, matches:[], count:0});
   }
 };
