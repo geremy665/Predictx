@@ -1,14 +1,23 @@
 {
   "version": 2,
   "builds": [
-    { "src": "api/*.js", "use": "@vercel/node", "config": { "maxDuration": 30 } },
+    { "src": "api/*.js", "use": "@vercel/node" },
     { "src": "index.html", "use": "@vercel/static" },
     { "src": "landing.html", "use": "@vercel/static" },
     { "src": "sw.js", "use": "@vercel/static" },
     { "src": "manifest.json", "use": "@vercel/static" }
   ],
   "routes": [
-    { "src": "/api/(.*)", "dest": "/api/$1" },
+    { "src": "/api/scan", "dest": "/api/scan.js" },
+    { "src": "/api/chat", "dest": "/api/chat.js" },
+    { "src": "/api/analyze", "dest": "/api/analyze.js" },
+    { "src": "/api/tips", "dest": "/api/tips.js" },
+    { "src": "/api/cron", "dest": "/api/cron.js" },
+    { "src": "/api/matches", "dest": "/api/matches.js" },
+    { "src": "/api/match", "dest": "/api/match.js" },
+    { "src": "/api/odds", "dest": "/api/odds.js" },
+    { "src": "/api/standings", "dest": "/api/standings.js" },
+    { "src": "/api/history", "dest": "/api/history.js" },
     { "src": "/landing", "dest": "/landing.html" },
     { "src": "/sw.js", "dest": "/sw.js" },
     { "src": "/manifest.json", "dest": "/manifest.json" },
