@@ -27,7 +27,7 @@ module.exports = async (req, res) => {
 
     const scanResp = await fetch(scanUrl, {
       headers: {"x-edge-cron": CRON_SECRET},
-      signal: AbortSignal.timeout(25000)
+      signal: (() => { const c=new AbortController(); setTimeout(()=>c.abort(),25000); return c.signal; })()
     });
     const scanData = await scanResp.json();
     log.push(`Scan terminé: ${scanData.count||0} matchs, ${scanData.live||0} live`);
