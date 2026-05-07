@@ -86,7 +86,7 @@ Réponds UNIQUEMENT avec ce JSON (sans markdown, sans texte autour):
         temperature:0.1,
         messages:[{role:"user",content:prompt}]
       }),
-      signal: AbortSignal.timeout(25000)
+      signal: (() => { const c=new AbortController(); setTimeout(()=>c.abort(),25000); return c.signal; })()
     });
     const data  = await resp.json();
     const text  = data.choices?.[0]?.message?.content||"";
