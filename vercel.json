@@ -1,7 +1,7 @@
 {
   "version": 2,
   "builds": [
-    { "src": "api/*.js", "use": "@vercel/node" },
+    { "src": "api/*.js", "use": "@vercel/node", "config": { "maxDuration": 30 } },
     { "src": "index.html", "use": "@vercel/static" },
     { "src": "landing.html", "use": "@vercel/static" },
     { "src": "sw.js", "use": "@vercel/static" },
