@@ -25,10 +25,13 @@ const lgIds = new Set(LEAGUES.map(l => l.id));
 // ── Fetch sécurisé ───────────────────────────────────────────
 async function apiFetch(url, key, ms=7000) {
   try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), ms);
     const r = await fetch(`https://v3.football.api-sports.io${url}`, {
       headers: {"x-apisports-key": key, "Accept": "application/json"},
-      signal: AbortSignal.timeout(ms)
+      signal: ctrl.signal
     });
+    clearTimeout(timer);
     if (!r.ok) return null;
     const d = await r.json();
     return d.response || null;
@@ -165,7 +168,7 @@ Règles absolues:
         temperature: 0.1,
         messages: [{role:"user", content: prompt}]
       }),
-      signal: AbortSignal.timeout(15000)
+      signal: (() => { const c=new AbortController(); setTimeout(()=>c.abort(),15000); return c.signal; })()
     });
     const data = await resp.json();
     const text = data.choices?.[0]?.message?.content || "";
