@@ -1,5 +1,5 @@
 // EDGE — api/scan.js
-// Récupère les vrais matchs aujourd'hui + demain avec vraies cotes
+// Récupère les vrais matchs aujourd'hui + demain avec vraies  cotes
 
 const LEAGUES = new Set([61,140,39,135,78,2,3,94,88,144,203,179,848]);
 const DONE    = new Set(["FT","AET","PEN","AWD","WO","ABD","CANC","SUSP","PST","TBD"]);
