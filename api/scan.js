@@ -1,4 +1,4 @@
-// EDGE — api/scan.js v4
+// EDGE scan v4 — 2026-05-11
 // Vrais matchs + vraies cotes bookmakers
 
 const LEAGUES = new Set([61,140,39,135,78,2,3,94,88,144,203,179,848]);
