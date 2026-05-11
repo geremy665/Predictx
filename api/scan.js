@@ -97,15 +97,19 @@ module.exports = async (req, res) => {
 
   try {
     const now  = new Date();
-    const days = [0,1,2,3].map(i =>
+    /* Support date param pour backtest */
+    const dateParam = req.query?.date;
+    const days = dateParam ? [dateParam] : [0,1,2,3].map(i =>
       new Date(now.getTime()+i*86400000).toISOString().split("T")[0]
     );
+    const isBacktest = !!dateParam;
 
-    // Fetch fixtures 4 jours
+    // Fetch fixtures
     const results = await Promise.all(days.map(d => apiFetch(`/fixtures?date=${d}`, KEY)));
     const all = results.flat().filter(Boolean)
       .filter(f => LEAGUES.has(f.league?.id))
-      .filter(f => !DONE.has(f.fixture?.status?.short || "NS"));
+      /* En mode backtest on garde les matchs terminés aussi */
+      .filter(f => isBacktest ? true : !DONE.has(f.fixture?.status?.short || "NS"));
 
     // Fetch cotes pour chaque match (par batch de 5)
     const BATCH = 5;
@@ -139,6 +143,10 @@ module.exports = async (req, res) => {
           id:         f.fixture?.id,
           leagueName: f.league?.name || "",
           leagueId:   f.league?.id,
+          goalsH:     f.goals?.home ?? null,
+          goalsA:     f.goals?.away ?? null,
+          scoreHT:    f.score?.halftime?.home ?? null,
+          scoreATHT:  f.score?.halftime?.away ?? null,
           c:          f.league?.name || "",
           f:          FLAG[f.league?.id] || "INT",
           home:       f.teams?.home?.name || "",
