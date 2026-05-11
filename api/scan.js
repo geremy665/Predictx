@@ -1,4 +1,4 @@
-// EDGE scan v4 — 2026-05-11
+// EDGE — api/scan.js v4
 // Vrais matchs + vraies cotes bookmakers
 
 const LEAGUES = new Set([61,140,39,135,78,2,3,94,88,144,203,179,848]);
@@ -105,7 +105,8 @@ module.exports = async (req, res) => {
     const isBacktest = !!dateParam;
 
     // Fetch fixtures
-    const results = await Promise.all(days.map(d => apiFetch(`/fixtures?date=${d}`, KEY)));
+    const season = now.getFullYear() === 2026 ? 2025 : now.getFullYear();
+    const results = await Promise.all(days.map(d => apiFetch(`/fixtures?date=${d}&season=${season}`, KEY)));
     const all = results.flat().filter(Boolean)
       .filter(f => LEAGUES.has(f.league?.id))
       /* En mode backtest on garde les matchs terminés aussi */
