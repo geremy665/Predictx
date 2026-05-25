@@ -1,10 +1,13 @@
-// EDGE — api/scan.js v3 stable
-// Vrais matchs + vraies cotes bookmakers
+// EDGE — api/scan.js v5
+// Vrais matchs + cotes depuis plusieurs bookmakers
 
 const LEAGUES = new Set([61,140,39,135,78,2,3,94,88,144,203,179,848]);
 const DONE    = new Set(["FT","AET","PEN","AWD","WO","ABD","CANC","SUSP","PST","TBD"]);
 const LIVE    = new Set(["1H","2H","HT","ET","BT","P","LIVE"]);
 const FLAG    = {61:"FR",140:"ES",39:"ENG",135:"IT",78:"DE",2:"UCL",3:"UEL",94:"PT",88:"NL",144:"BE",203:"TR",179:"SCO",848:"UEL"};
+
+// Bookmakers par ordre de priorité
+const BOOKMAKERS = [6, 8, 1, 2, 3];
 
 async function apiFetch(url, key) {
   try {
@@ -23,60 +26,80 @@ async function apiFetch(url, key) {
 
 async function getOdds(fixtureId, key) {
   try {
-    const data = await apiFetch(`/odds?fixture=${fixtureId}&bookmaker=6`, key);
+    // Essayer sans bookmaker spécifique — retourne tous les bookmakers dispo
+    const data = await apiFetch(`/odds?fixture=${fixtureId}`, key);
     if (!data || !data.length) return null;
-    const bets = data[0]?.bookmakers?.[0]?.bets || [];
-    const result = {};
-    const mw = bets.find(b => b.id === 1 || b.name === "Match Winner");
-    if (mw?.values) {
-      const h = mw.values.find(v => v.value === "Home");
-      const d = mw.values.find(v => v.value === "Draw");
-      const a = mw.values.find(v => v.value === "Away");
-      if (h) result.o1 = parseFloat(h.odd);
-      if (d) result.on = parseFloat(d.odd);
-      if (a) result.o2 = parseFloat(a.odd);
+
+    // Prendre le premier bookmaker qui a des cotes 1X2
+    let result = {};
+    for (const item of data) {
+      const bks = item.bookmakers || [];
+      for (const bk of bks) {
+        const bets = bk.bets || [];
+
+        const mw = bets.find(b => b.id === 1 || b.name === "Match Winner");
+        if (mw?.values?.length >= 3) {
+          const h = mw.values.find(v => v.value === "Home");
+          const d = mw.values.find(v => v.value === "Draw");
+          const a = mw.values.find(v => v.value === "Away");
+          if (h && d && a) {
+            result.o1 = parseFloat(h.odd);
+            result.on = parseFloat(d.odd);
+            result.o2 = parseFloat(a.odd);
+          }
+        }
+
+        const dc = bets.find(b => b.id === 12 || b.name === "Double Chance");
+        if (dc?.values) {
+          const hd = dc.values.find(v => v.value === "Home/Draw");
+          const ha = dc.values.find(v => v.value === "Home/Away");
+          const da = dc.values.find(v => v.value === "Draw/Away");
+          if (hd) result.dc1x = parseFloat(hd.odd);
+          if (ha) result.dc12 = parseFloat(ha.odd);
+          if (da) result.dcx2 = parseFloat(da.odd);
+        }
+
+        const ou = bets.find(b => b.id === 3 || b.name === "Goals Over/Under");
+        if (ou?.values) {
+          ou.values.forEach(v => {
+            const m = v.value.match(/(Over|Under)\s+([\d.]+)/i);
+            if (!m) return;
+            const k = (m[1].toLowerCase()==="over"?"over":"under")+m[2].replace(".","_");
+            result[k] = parseFloat(v.odd);
+          });
+        }
+
+        const btts = bets.find(b => b.id === 5 || b.name === "Both Teams Score");
+        if (btts?.values) {
+          const y = btts.values.find(v => v.value === "Yes");
+          const n = btts.values.find(v => v.value === "No");
+          if (y) result.bttsY = parseFloat(y.odd);
+          if (n) result.bttsN = parseFloat(n.odd);
+        }
+
+        const ht = bets.find(b => b.id === 8 || b.name === "HT Result");
+        if (ht?.values) {
+          const h = ht.values.find(v => v.value === "Home");
+          const d = ht.values.find(v => v.value === "Draw");
+          const a = ht.values.find(v => v.value === "Away");
+          if (h) result.ht1 = parseFloat(h.odd);
+          if (d) result.htN = parseFloat(d.odd);
+          if (a) result.ht2 = parseFloat(a.odd);
+        }
+
+        // Si on a les cotes 1X2 → on arrête
+        if (result.o1 && result.on && result.o2) break;
+      }
+      if (result.o1) break;
     }
-    const dc = bets.find(b => b.id === 12 || b.name === "Double Chance");
-    if (dc?.values) {
-      const hd = dc.values.find(v => v.value === "Home/Draw");
-      const ha = dc.values.find(v => v.value === "Home/Away");
-      const da = dc.values.find(v => v.value === "Draw/Away");
-      if (hd) result.dc1x = parseFloat(hd.odd);
-      if (ha) result.dc12 = parseFloat(ha.odd);
-      if (da) result.dcx2 = parseFloat(da.odd);
-    }
-    const ou = bets.find(b => b.id === 3 || b.name === "Goals Over/Under");
-    if (ou?.values) {
-      ou.values.forEach(v => {
-        const m = v.value.match(/(Over|Under)\s+([\d.]+)/i);
-        if (!m) return;
-        const k = (m[1].toLowerCase()==="over"?"over":"under")+m[2].replace(".","_");
-        result[k] = parseFloat(v.odd);
-      });
-    }
-    const btts = bets.find(b => b.id === 5 || b.name === "Both Teams Score");
-    if (btts?.values) {
-      const y = btts.values.find(v => v.value === "Yes");
-      const n = btts.values.find(v => v.value === "No");
-      if (y) result.bttsY = parseFloat(y.odd);
-      if (n) result.bttsN = parseFloat(n.odd);
-    }
-    const ht = bets.find(b => b.id === 8 || b.name === "HT Result");
-    if (ht?.values) {
-      const h = ht.values.find(v => v.value === "Home");
-      const d = ht.values.find(v => v.value === "Draw");
-      const a = ht.values.find(v => v.value === "Away");
-      if (h) result.ht1 = parseFloat(h.odd);
-      if (d) result.htN = parseFloat(d.odd);
-      if (a) result.ht2 = parseFloat(a.odd);
-    }
+
     return Object.keys(result).length ? result : null;
   } catch(e) { return null; }
 }
 
 module.exports = async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Cache-Control", "s-maxage=180, stale-while-revalidate=360");
+  res.setHeader("Cache-Control", "s-maxage=300, stale-while-revalidate=600");
   if (req.method === "OPTIONS") return res.status(200).end();
 
   const KEY = process.env.FOOTBALL_API_KEY || "";
@@ -93,7 +116,8 @@ module.exports = async (req, res) => {
       .filter(f => LEAGUES.has(f.league?.id))
       .filter(f => !DONE.has(f.fixture?.status?.short || "NS"));
 
-    const BATCH = 5;
+    // Fetch cotes par batch de 4
+    const BATCH = 4;
     const matches = [];
 
     for (let i = 0; i < all.length; i += BATCH) {
@@ -177,7 +201,7 @@ module.exports = async (req, res) => {
       count:    matches.length,
       withOdds: matches.filter(m => m.hasRealOdds).length,
       updated:  now.toISOString(),
-      source:   "EDGE Scan v3"
+      source:   "EDGE Scan v5"
     });
 
   } catch(e) {
