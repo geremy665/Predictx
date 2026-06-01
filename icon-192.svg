@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192">
+  <!-- Fond -->
+  <rect width="192" height="192" rx="40" fill="#060810"/>
+  <!-- Hexagone externe -->
+  <polygon points="96,18 162,56 162,136 96,174 30,136 30,56" 
+    fill="none" stroke="#4B7BEC" stroke-width="4" opacity="0.6"/>
+  <!-- Hexagone interne -->
+  <polygon points="96,40 140,65 140,115 96,140 52,115 52,65" 
+    fill="rgba(75,123,236,0.08)" stroke="#4B7BEC" stroke-width="2.5"/>
+  <!-- Point central lumineux -->
+  <circle cx="96" cy="96" r="16" fill="#4B7BEC" opacity="0.9"/>
+  <circle cx="96" cy="96" r="8" fill="#7099F0"/>
+  <!-- Texte EDGE -->
+  <text x="96" y="168" text-anchor="middle" 
+    font-family="Arial,sans-serif" font-size="20" font-weight="800" 
+    fill="#EEF0F8" letter-spacing="3">EDGE</text>
+</svg>
