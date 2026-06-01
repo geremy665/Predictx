@@ -1,4 +1,5 @@
-// EDGE Scanner — api/chat.js
+// EDGE — api/chat.js v2
+// Analyse IA via Claude Sonnet
 
 const RATE_LIMIT = new Map();
 
@@ -9,90 +10,79 @@ module.exports = async (req, res) => {
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") return res.status(405).json({ error: "POST requis" });
 
+  /* Rate limit: 20 requêtes/heure par IP */
   const ip = req.headers["x-forwarded-for"]?.split(",")[0] || "unknown";
   const now = Date.now();
   const hits = (RATE_LIMIT.get(ip) || []).filter(t => now - t < 3600000);
-  if (hits.length >= 30) return res.status(429).json({ error: "Limite atteinte" });
+  if (hits.length >= 20) return res.status(429).json({ error: "Limite atteinte — réessaie dans 1h" });
   hits.push(now);
   RATE_LIMIT.set(ip, hits);
 
   try {
-    let rawBody = "";
-    await new Promise((resolve, reject) => {
-      req.on("data", chunk => { rawBody += chunk.toString(); });
-      req.on("end", resolve);
-      req.on("error", reject);
-    });
-
-    let body = {};
-    if (req.body && typeof req.body === "object") {
-      body = req.body;
-    } else if (rawBody) {
-      try { body = JSON.parse(rawBody); } catch(e) { body = {}; }
+    /* Parser le body */
+    let body = req.body || {};
+    if (!body.messages) {
+      let raw = "";
+      await new Promise((resolve, reject) => {
+        req.on("data", c => raw += c);
+        req.on("end", resolve);
+        req.on("error", reject);
+      });
+      try { body = JSON.parse(raw); } catch(e) {}
     }
 
-    const KEY = process.env.MISTRAL_API_KEY
-      || process.env.MISTRAL
-      || body.clientKey
-      || "lvoeRXlFieBv5hpfh3TlZ12FZiFvIF8w";
-
-    const messages = body.messages?.length > 0
-      ? body.messages
-      : body.prompt
-        ? [{ role: "user", content: body.prompt }]
-        : [];
-
+    const messages = body.messages || [];
     if (!messages.length) return res.status(400).json({ error: "Messages requis" });
 
     const system = body.system ||
-      "Tu es EDGE Scanner, expert en analyse de paris sportifs. " +
-      "Tu utilises Dixon-Coles, Bayesien, Monte Carlo. " +
-      "Reponds en francais, de facon precise. Rappelle de parier responsablement (18+).";
+      "Tu es EDGE, expert en analyse de paris sportifs. " +
+      "Tu analyses les matchs avec rigueur : probabilités, value bets, gestion du risque. " +
+      "Sois direct, humain, sans jargon technique. " +
+      "Donne toujours un avis clair et une recommandation concrète. " +
+      "18+ — tu rappelles toujours de parier responsablement.";
 
-    const fullMessages = [
-      { role: "user", content: system + "\n\nCompris ?" },
-      { role: "assistant", content: "Compris. EDGE Scanner pret." },
-      ...messages.slice(-8)
-    ];
+    const maxTokens = Math.min(body.max_tokens || 1200, 2000);
 
-    const response = await fetch("https://api.mistral.ai/v1/chat/completions", {
+    /* Appel Claude */
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${KEY}`
+        "x-api-key": process.env.ANTHROPIC_API_KEY || "",
+        "anthropic-version": "2023-06-01"
       },
       body: JSON.stringify({
-        model: "mistral-small-latest",
-        max_tokens: 1024,
-        temperature: 0.3,
-        messages: fullMessages
-      }),
-      signal: AbortSignal.timeout(30000)
+        model: "claude-sonnet-4-6",
+        max_tokens: maxTokens,
+        system: system,
+        messages: messages.slice(-6)
+      })
     });
-
-    const responseText = await response.text();
-    if (!responseText?.trim()) return res.status(500).json({ error: "Reponse vide" });
-
-    let data;
-    try { data = JSON.parse(responseText); }
-    catch(e) { return res.status(500).json({ error: "JSON invalide: " + responseText.substring(0,100) }); }
 
     if (!response.ok) {
-      return res.status(response.status).json({
-        error: data.message || data.error || "Erreur Mistral " + response.status
-      });
+      const err = await response.text();
+      /* Fallback Mistral si Claude indispo */
+      const MISTRAL_KEY = process.env.MISTRAL_API_KEY || "";
+      if (MISTRAL_KEY) {
+        const mr = await fetch("https://api.mistral.ai/v1/chat/completions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${MISTRAL_KEY}` },
+          body: JSON.stringify({ model: "mistral-small-latest", max_tokens: maxTokens, messages })
+        });
+        if (mr.ok) {
+          const md = await mr.json();
+          return res.status(200).json({ text: md.choices?.[0]?.message?.content || "" });
+        }
+      }
+      return res.status(502).json({ error: "IA temporairement indisponible" });
     }
 
-    const text = data.choices?.[0]?.message?.content || "";
-    if (!text) return res.status(500).json({ error: "Reponse vide de Mistral" });
-
-    return res.status(200).json({
-      success: true, text,
-      content: [{ type: "text", text }],
-      model: data.model || "mistral-small-latest"
-    });
+    const data = await response.json();
+    const text = data.content?.[0]?.text || "";
+    return res.status(200).json({ text });
 
   } catch(e) {
-    return res.status(500).json({ error: e.message || "Erreur inconnue" });
+    console.error("chat.js error:", e.message);
+    return res.status(500).json({ error: "Erreur serveur: " + e.message });
   }
 };
