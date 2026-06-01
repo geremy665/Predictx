@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="100" fill="#060810"/>
+  <polygon points="256,48 432,148 432,348 256,448 80,348 80,148" 
+    fill="none" stroke="#4B7BEC" stroke-width="10" opacity="0.6"/>
+  <polygon points="256,108 376,172 376,300 256,364 136,300 136,172" 
+    fill="rgba(75,123,236,0.08)" stroke="#4B7BEC" stroke-width="6"/>
+  <circle cx="256" cy="240" r="44" fill="#4B7BEC" opacity="0.9"/>
+  <circle cx="256" cy="240" r="22" fill="#7099F0"/>
+  <text x="256" y="440" text-anchor="middle" 
+    font-family="Arial,sans-serif" font-size="52" font-weight="800" 
+    fill="#EEF0F8" letter-spacing="8">EDGE</text>
+</svg>
