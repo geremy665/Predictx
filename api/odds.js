@@ -19,6 +19,14 @@ const LEAGUES = [
   {id:113,name:"Allsvenskan",    f:"SE"},
   {id:200,name:"Botola Pro",     f:"MA"},
   {id:179,name:"Premiership",    f:"SCO"},
+  // Matchs internationaux
+  {id:10, name:"Amicaux Nations",f:"INT"},
+  {id:667,name:"Amicaux Clubs",  f:"AMI"},
+  {id:4,  name:"Euro",           f:"EUR"},
+  {id:5,  name:"UEFA Nations League",f:"UNL"},
+  {id:6,  name:"Africa Cup",     f:"CAN"},
+  {id:7,  name:"Asian Cup",      f:"ASI"},
+  {id:9,  name:"Copa America",   f:"CAM"},
 ];
 
 // Bookmakers sharp — par ordre de priorité
@@ -143,7 +151,7 @@ function extractOdds(oddsData){
 
 module.exports = async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin","*");
-  res.setHeader("Cache-Control","s-maxage=300,stale-while-revalidate=600");
+  res.setHeader("Cache-Control","s-maxage=3600,stale-while-revalidate=7200");
   if(req.method==="OPTIONS") return res.status(200).end();
 
   const KEY = process.env.FOOTBALL_API_KEY;
@@ -154,16 +162,24 @@ module.exports = async (req, res) => {
   const today = now.toISOString().split("T")[0];
   const tomorrow = new Date(now.getTime()+24*3600000).toISOString().split("T")[0];
   const day2 = new Date(now.getTime()+48*3600000).toISOString().split("T")[0];
+  const day3 = new Date(now.getTime()+72*3600000).toISOString().split("T")[0];
+  const day4 = new Date(now.getTime()+96*3600000).toISOString().split("T")[0];
+  const day5 = new Date(now.getTime()+120*3600000).toISOString().split("T")[0];
+  const day6 = new Date(now.getTime()+144*3600000).toISOString().split("T")[0];
 
   try{
     // Fetch fixtures 3 jours
-    const [r1,r2,r3] = await Promise.all([
+    const [r1,r2,r3,r4,r5,r6,r7] = await Promise.all([
       apiFetch(`/fixtures?date=${today}`, KEY),
       apiFetch(`/fixtures?date=${tomorrow}`, KEY),
-      apiFetch(`/fixtures?date=${day2}`, KEY)
+      apiFetch(`/fixtures?date=${day2}`, KEY),
+      apiFetch(`/fixtures?date=${day3}`, KEY),
+      apiFetch(`/fixtures?date=${day4}`, KEY),
+      apiFetch(`/fixtures?date=${day5}`, KEY),
+      apiFetch(`/fixtures?date=${day6}`, KEY)
     ]);
 
-    const allFix = [...(r1||[]),...(r2||[]),...(r3||[])]
+    const allFix = [...(r1||[]),...(r2||[]),...(r3||[]),...(r4||[]),...(r5||[]),...(r6||[]),...(r7||[])]
       .filter(f=>lgMap[f.league?.id]);
 
     if(!allFix.length){
@@ -175,14 +191,19 @@ module.exports = async (req, res) => {
       const homeId = fix.teams?.home?.id;
       const awayId = fix.teams?.away?.id;
       const lgId = fix.league?.id;
+      const fixDate = fix.fixture?.date?.split("T")[0];
+
+      // Enrichissement complet seulement pour aujourd'hui et demain
+      // Pour les matchs plus loin → données de base uniquement (économise les calls API)
+      const isCloseMatch = fixDate === today || fixDate === tomorrow;
 
       const [oddsData, homeFixtures, awayFixtures, homeStats, awayStats, h2hData] = await Promise.all([
         apiFetch(`/odds?fixture=${fId}&bet=1`, KEY, 5000),
-        apiFetch(`/fixtures?team=${homeId}&last=8&status=FT`, KEY, 5000),
-        apiFetch(`/fixtures?team=${awayId}&last=8&status=FT`, KEY, 5000),
-        apiFetch(`/teams/statistics?league=${lgId}&season=${season}&team=${homeId}`, KEY, 5000),
-        apiFetch(`/teams/statistics?league=${lgId}&season=${season}&team=${awayId}`, KEY, 5000),
-        apiFetch(`/fixtures/headtohead?h2h=${homeId}-${awayId}&last=6`, KEY, 5000)
+        isCloseMatch ? apiFetch(`/fixtures?team=${homeId}&last=8&status=FT`, KEY, 5000) : Promise.resolve(null),
+        isCloseMatch ? apiFetch(`/fixtures?team=${awayId}&last=8&status=FT`, KEY, 5000) : Promise.resolve(null),
+        isCloseMatch ? apiFetch(`/teams/statistics?league=${lgId}&season=${season}&team=${homeId}`, KEY, 5000) : Promise.resolve(null),
+        isCloseMatch ? apiFetch(`/teams/statistics?league=${lgId}&season=${season}&team=${awayId}`, KEY, 5000) : Promise.resolve(null),
+        isCloseMatch ? apiFetch(`/fixtures/headtohead?h2h=${homeId}-${awayId}&last=6`, KEY, 5000) : Promise.resolve(null)
       ]);
 
       // Cotes avec référence Pinnacle
