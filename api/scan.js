@@ -1,6 +1,12 @@
 // EDGE — api/scan.js v7
 // Ligues + matchs internationaux + amicaux
 
+// Force dot as decimal separator regardless of server locale
+function toNum(val, decimals) {
+  if(val === null || val === undefined || isNaN(val)) return 0;
+  return parseFloat(parseFloat(val).toFixed(decimals || 3));
+}
+
 const LEAGUES = new Set([
   // Ligues européennes
   61,140,39,135,78,2,3,94,88,144,203,179,848,113,200,
@@ -148,13 +154,13 @@ async function getTeamStats(teamId, leagueId, season, key) {
 
     return {
       played, wins, draws,
-      gf:   +(gf/played).toFixed(2),
-      ga:   +(ga/played).toFixed(2),
-      xgF:  xgFor  ? +(xgFor/played).toFixed(2)  : null,
-      xgA:  xgAgst ? +(xgAgst/played).toFixed(2) : null,
-      winRate:   +(wins/played).toFixed(3),
-      drawRate:  +(draws/played).toFixed(3),
-      form, formScore: +formScore.toFixed(3),
+      gf:   toNum(gf/played, 2),
+      ga:   toNum(ga/played, 2),
+      xgF:  xgFor  ? toNum(xgFor/played, 2)  : null,
+      xgA:  xgAgst ? toNum(xgAgst/played, 2) : null,
+      winRate:   toNum(wins/played, 3),
+      drawRate:  toNum(draws/played, 3),
+      form, formScore: toNum(formScore, 3),
       cleanSheets: d.clean_sheet?.total || 0,
     };
   } catch(e) { return null; }
@@ -230,8 +236,8 @@ module.exports = async (req, res) => {
         const mp1 = (1/o1)/mg;
         const mp2 = (1/o2)/mg;
 
-        const hxg = hSt?.xgF || hSt?.gf || +(1.20 + mp1*0.90).toFixed(2);
-        const axg = aSt?.xgF || aSt?.gf || +(1.20 + mp2*0.90).toFixed(2);
+        const hxg = hSt?.xgF || hSt?.gf || toNum(1.20 + mp1*0.90, 2);
+        const axg = aSt?.xgF || aSt?.gf || toNum(1.20 + mp2*0.90, 2);
 
         matches.push({
           id:         f.fixture?.id,
@@ -262,21 +268,21 @@ module.exports = async (req, res) => {
           over35: odds.over3_5 || null,
           bttsY: odds.bttsY || null, bttsN: odds.bttsN || null,
 
-          hxg: +hxg.toFixed(2), axg: +axg.toFixed(2),
-          hxga: aSt?.xgA ? +aSt.xgA.toFixed(2) : +(axg*0.85).toFixed(2),
-          axga: hSt?.xgA ? +hSt.xgA.toFixed(2) : +(hxg*0.85).toFixed(2),
-          hg:  hSt?.gf ? +hSt.gf.toFixed(2) : +(hxg*0.90).toFixed(2),
-          ag:  aSt?.gf ? +aSt.gf.toFixed(2) : +(axg*0.90).toFixed(2),
+          hxg: toNum(hxg, 2), axg: toNum(axg, 2),
+          hxga: aSt?.xgA ? toNum(aSt.xgA, 2) : toNum(axg*0.85, 2),
+          axga: hSt?.xgA ? toNum(hSt.xgA, 2) : toNum(hxg*0.85, 2),
+          hg:  hSt?.gf ? toNum(hSt.gf, 2) : toNum(hxg*0.90, 2),
+          ag:  aSt?.gf ? toNum(aSt.gf, 2) : toNum(axg*0.90, 2),
           hsh: Math.round(hxg*2.9), ash: Math.round(axg*2.9),
           hf:  hSt ? Math.round(hSt.winRate*15) : Math.round(mp1*15),
           af:  aSt ? Math.round(aSt.winRate*15) : Math.round(mp2*15),
           hcs: hSt?.cleanSheets || Math.round(mp1*30),
           acs: aSt?.cleanSheets || Math.round(mp2*30),
           hForm: hSt?.form || "", aForm: aSt?.form || "",
-          hFormScore: +(hSt?.formScore || mp1*0.8).toFixed(3),
-          aFormScore: +(aSt?.formScore || mp2*0.8).toFixed(3),
-          hWinRate: +(hSt?.winRate || mp1*0.9).toFixed(3),
-          aWinRate: +(aSt?.winRate || mp2*0.9).toFixed(3),
+          hFormScore: toNum(hSt?.formScore || mp1*0.8, 3),
+          aFormScore: toNum(aSt?.formScore || mp2*0.8, 3),
+          hWinRate: toNum(hSt?.winRate || mp1*0.9, 3),
+          aWinRate: toNum(aSt?.winRate || mp2*0.9, 3),
           hMatchesPlayed: hSt?.played || 10,
           aMatchesPlayed: aSt?.played || 10,
           h2h: [],
