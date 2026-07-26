@@ -1,314 +1,146 @@
-// EDGE — api/enrich.js v4 Pro
-// H2H + stats + forme + classement + compositions + blessés + stats match live
+// EDGE — api/enrich.js v1 — statistiques RÉELLES des équipes
+// Remplace les stats dérivées des cotes par des données indépendantes du marché.
+// Entrée : ?homeId=&awayId=&leagueId=&fixtureId=
+// Sortie : { homeStats, awayStats, h2h, source }
 
-async function apiFetch(url, key) {
+function num(v, fb) {
+  if (v === null || v === undefined || v === "") return fb;
+  const n = parseFloat(v);
+  return isNaN(n) ? fb : n;
+}
+
+async function apiFetch(url, key, ms) {
   try {
     const ctrl = new AbortController();
-    const t = setTimeout(() => ctrl.abort(), 8000);
+    const t = setTimeout(() => ctrl.abort(), ms || 7000);
     const r = await fetch(`https://v3.football.api-sports.io${url}`, {
       headers: { "x-apisports-key": key, "Accept": "application/json" },
-      signal: ctrl.signal
+      signal: ctrl.signal,
     });
     clearTimeout(t);
     if (!r.ok) return null;
     const d = await r.json();
-    return d.response || null;
-  } catch(e) { return null; }
+    return d.response !== undefined ? d.response : null;
+  } catch (e) { return null; }
+}
+
+// Transforme la réponse /teams/statistics en stats exploitables par le moteur
+// side = "home" | "away" → on utilise les moyennes SPÉCIFIQUES au terrain
+function mapStats(resp, side) {
+  if (!resp || !resp.fixtures) return null;
+  const g = resp.goals || {};
+  const gf = (g.for && g.for.average) || {};
+  const ga = (g.against && g.against.average) || {};
+  const fx = resp.fixtures || {};
+  const played = num(fx.played && fx.played[side], 0) || num(fx.played && fx.played.total, 0);
+  if (!played) return null;
+
+  const wins = num(fx.wins && fx.wins[side], null);
+  const winsTot = num(fx.wins && fx.wins.total, 0);
+  const playedTot = num(fx.played && fx.played.total, 0);
+
+  // Moyenne du terrain concerné, repli sur la moyenne totale
+  const avgFor = num(gf[side], num(gf.total, 1.3));
+  const avgAga = num(ga[side], num(ga.total, 1.3));
+
+  const cs = resp.clean_sheet || {};
+  const cleanSheets = num(cs[side], num(cs.total, 0));
+
+  // Forme : 5 derniers résultats
+  let form = "";
+  if (typeof resp.form === "string" && resp.form.length) {
+    form = resp.form.slice(-5);
+  }
+
+  const winRate = (wins !== null && played)
+    ? wins / played
+    : (playedTot ? winsTot / playedTot : null);
+
+  return {
+    avgGoalsFor: Math.round(avgFor * 100) / 100,
+    avgGoalsAga: Math.round(avgAga * 100) / 100,
+    form: form,
+    cleanSheets: cleanSheets,
+    played: played,
+    winRate: winRate !== null ? Math.round(winRate * 1000) / 1000 : undefined,
+  };
 }
 
 module.exports = async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Cache-Control", "s-maxage=1800, stale-while-revalidate=3600");
+  // Cache Vercel : les stats d'équipe bougent au plus une fois par jour
+  res.setHeader("Cache-Control", "s-maxage=3600, stale-while-revalidate=86400");
   if (req.method === "OPTIONS") return res.status(200).end();
 
-  const KEY       = process.env.FOOTBALL_API_KEY || "";
-  const homeId    = req.query?.homeId;
-  const awayId    = req.query?.awayId;
-  const leagueId  = req.query?.leagueId;
-  const fixtureId = req.query?.fixtureId;
+  const KEY = process.env.FOOTBALL_API_KEY || "";
+  if (!KEY) return res.status(200).json({ error: "no_key" });
 
-  const now = new Date();
-  const season = req.query?.season ||
-    String(now.getMonth() < 7 ? now.getFullYear()-1 : now.getFullYear());
-
-  if (!KEY || !homeId || !awayId) {
-    return res.status(400).json({ error: "homeId + awayId requis" });
-  }
+  const q = req.query || {};
+  const homeId = parseInt(q.homeId, 10);
+  const awayId = parseInt(q.awayId, 10);
+  const leagueId = parseInt(q.leagueId, 10);
+  if (!homeId || !awayId) return res.status(200).json({ error: "missing_ids" });
 
   try {
-    // Tout en parallèle pour minimiser la latence
-    const [
-      h2hData,
-      homeStats,
-      awayStats,
-      homeFixtures,
-      awayFixtures,
-      standings,
-      lineups,
-      injuries,
-      fixtureStats,
-    ] = await Promise.all([
-      // H2H — 10 dernières confrontations
+    const now = new Date();
+    // Saison européenne : août → juillet
+    const season = now.getMonth() < 7 ? now.getFullYear() - 1 : now.getFullYear();
+
+    const tasks = [
       apiFetch(`/fixtures/headtohead?h2h=${homeId}-${awayId}&last=10`, KEY),
-      // Stats saison équipes
-      leagueId ? apiFetch(`/teams/statistics?league=${leagueId}&season=${season}&team=${homeId}`, KEY) : null,
-      leagueId ? apiFetch(`/teams/statistics?league=${leagueId}&season=${season}&team=${awayId}`, KEY) : null,
-      // Forme récente — 5 derniers matchs
-      apiFetch(`/fixtures?team=${homeId}&last=5&status=FT`, KEY),
-      apiFetch(`/fixtures?team=${awayId}&last=5&status=FT`, KEY),
-      // Classement
-      leagueId ? apiFetch(`/standings?league=${leagueId}&season=${season}`, KEY) : null,
-      // Compositions (disponibles ~1h avant)
-      fixtureId ? apiFetch(`/fixtures/lineups?fixture=${fixtureId}`, KEY) : null,
-      // Blessés/Suspendus
-      fixtureId ? apiFetch(`/injuries?fixture=${fixtureId}`, KEY) : null,
-      // Stats du match en live
-      fixtureId ? apiFetch(`/fixtures/statistics?fixture=${fixtureId}`, KEY) : null,
-    ]);
-
-    /* ── H2H ── */
-    const h2h = (h2hData || []).map(f => ({
-      date: f.fixture?.date?.split("T")[0],
-      home: f.teams?.home?.name,
-      away: f.teams?.away?.name,
-      hG:   f.goals?.home ?? 0,
-      aG:   f.goals?.away ?? 0,
-      res:  f.goals?.home > f.goals?.away ? "H"
-          : f.goals?.away > f.goals?.home ? "A" : "D",
-    }));
-
-    const h2hStats = h2h.length >= 2 ? {
-      total:    h2h.length,
-      hWins:    h2h.filter(g => g.res==="H").length,
-      aWins:    h2h.filter(g => g.res==="A").length,
-      draws:    h2h.filter(g => g.res==="D").length,
-      avgGoals: +(h2h.reduce((s,g)=>s+g.hG+g.aG,0)/h2h.length).toFixed(2),
-      bttsRate: +(h2h.filter(g=>g.hG>0&&g.aG>0).length/h2h.length).toFixed(2),
-      over25:   +(h2h.filter(g=>g.hG+g.aG>2).length/h2h.length).toFixed(2),
-    } : null;
-
-    /* ── Stats équipe ── */
-    function parseStats(raw) {
-      if (!raw?.[0]) return null;
-      const d = raw[0];
-      const played = d.fixtures?.played?.total || 1;
-      const wins   = d.fixtures?.wins?.total   || 0;
-      const draws  = d.fixtures?.draws?.total  || 0;
-      const gf     = d.goals?.for?.total?.total    || 0;
-      const ga     = d.goals?.against?.total?.total || 0;
-      const form   = (d.form || "").slice(-5);
-      const formW  = (form.match(/W/g)||[]).length;
-      const formD  = (form.match(/D/g)||[]).length;
-      const formScore = (formW*3+formD)/Math.max(1,form.length*3);
-
-      // Forme domicile/extérieur séparée — clé Pro
-      const homePlayed = d.fixtures?.played?.home || 0;
-      const homeWins   = d.fixtures?.wins?.home   || 0;
-      const awayPlayed = d.fixtures?.played?.away || 0;
-      const awayWins   = d.fixtures?.wins?.away   || 0;
-
-      // xG si disponible
-      const xgFor  = d.goals?.for?.total?.xg    || null;
-      const xgAgst = d.goals?.against?.total?.xg || null;
-
-      // Tirs cadrés moyens
-      const shotsOn  = d.shots?.on?.total  || null;
-      const shotsOff = d.shots?.off?.total || null;
-
-      return {
-        played, wins, draws,
-        gf:  +(gf/played).toFixed(2),
-        ga:  +(ga/played).toFixed(2),
-        xgF: xgFor  ? +(xgFor/played).toFixed(2)  : null,
-        xgA: xgAgst ? +(xgAgst/played).toFixed(2) : null,
-        shotsOn:  shotsOn  ? +(shotsOn/played).toFixed(1)  : null,
-        shotsOff: shotsOff ? +(shotsOff/played).toFixed(1) : null,
-        winRate:   +(wins/played).toFixed(3),
-        drawRate:  +(draws/played).toFixed(3),
-        homeWinRate: homePlayed ? +(homeWins/homePlayed).toFixed(3) : null,
-        awayWinRate: awayPlayed ? +(awayWins/awayPlayed).toFixed(3) : null,
-        form, formW, formD,
-        formScore:   +formScore.toFixed(3),
-        cleanSheets: d.clean_sheet?.total || 0,
-        failedScore: d.failed_to_score?.total || 0,
-      };
+    ];
+    if (leagueId) {
+      tasks.push(apiFetch(`/teams/statistics?team=${homeId}&league=${leagueId}&season=${season}`, KEY));
+      tasks.push(apiFetch(`/teams/statistics?team=${awayId}&league=${leagueId}&season=${season}`, KEY));
     }
 
-    const hStats = parseStats(homeStats);
-    const aStats = parseStats(awayStats);
+    let [h2hRaw, hRaw, aRaw] = await Promise.all(tasks);
 
-    /* ── Forme récente ── */
-    function parseRecent(fixtures, teamId) {
-      if (!fixtures?.length) return null;
-      return fixtures.slice(0,5).map(f => {
-        const isHome = f.teams?.home?.id === +teamId;
-        const gf = isHome ? f.goals?.home : f.goals?.away;
-        const ga = isHome ? f.goals?.away : f.goals?.home;
-        const res = gf > ga ? "W" : ga > gf ? "L" : "D";
-        return {
-          date: f.fixture?.date?.split("T")[0],
-          opp:  isHome ? f.teams?.away?.name : f.teams?.home?.name,
-          gf, ga, res,
-          xgF: null, // Pas disponible dans cet endpoint
-        };
-      });
+    let homeStats = mapStats(hRaw, "home");
+    let awayStats = mapStats(aRaw, "away");
+
+    // Début de saison : peu ou pas de matchs joués → on prend la saison précédente
+    if (leagueId && (!homeStats || homeStats.played < 4 || !awayStats || awayStats.played < 4)) {
+      const prev = season - 1;
+      const [hPrev, aPrev] = await Promise.all([
+        apiFetch(`/teams/statistics?team=${homeId}&league=${leagueId}&season=${prev}`, KEY),
+        apiFetch(`/teams/statistics?team=${awayId}&league=${leagueId}&season=${prev}`, KEY),
+      ]);
+      const hp = mapStats(hPrev, "home");
+      const ap = mapStats(aPrev, "away");
+      if ((!homeStats || homeStats.played < 4) && hp) homeStats = hp;
+      if ((!awayStats || awayStats.played < 4) && ap) awayStats = ap;
     }
 
-    const hRecent = parseRecent(homeFixtures, homeId);
-    const aRecent = parseRecent(awayFixtures, awayId);
-
-    /* ── Classement ── */
-    let hRank=null, aRank=null, hPoints=null, aPoints=null;
-    let hHomeWins=null, aAwayWins=null; // Forme dom/ext depuis classement
-    if (standings?.[0]?.[0]?.league?.standings) {
-      const table = standings[0][0].league.standings[0] || [];
-      table.forEach(row => {
-        if (row.team?.id === +homeId) {
-          hRank   = row.rank;
-          hPoints = row.points;
-          hHomeWins = row.home?.win || null;
-        }
-        if (row.team?.id === +awayId) {
-          aRank   = row.rank;
-          aPoints = row.points;
-          aAwayWins = row.away?.win || null;
-        }
-      });
-    }
-
-    /* ── Compositions ── */
-    let hLineup=null, aLineup=null;
-    if (lineups?.length) {
-      const hL = lineups.find(l => l.team?.id === +homeId);
-      const aL = lineups.find(l => l.team?.id === +awayId);
-      if (hL) hLineup = {
-        formation: hL.formation,
-        coach:     hL.coach?.name,
-        startXI:  (hL.startXI||[]).map(p => ({
-          name:   p.player?.name,
-          pos:    p.player?.pos,
-          number: p.player?.number,
-          grid:   p.player?.grid,
-        })),
-        substitutes: (hL.substitutes||[]).map(p => ({
-          name: p.player?.name,
-          pos:  p.player?.pos,
-        })),
-      };
-      if (aL) aLineup = {
-        formation: aL.formation,
-        coach:     aL.coach?.name,
-        startXI:  (aL.startXI||[]).map(p => ({
-          name:   p.player?.name,
-          pos:    p.player?.pos,
-          number: p.player?.number,
-        })),
-        substitutes: (aL.substitutes||[]).map(p => ({
-          name: p.player?.name,
-          pos:  p.player?.pos,
-        })),
-      };
-    }
-
-    /* ── Blessés/Suspendus ── */
-    let hInjuries=[], aInjuries=[];
-    if (injuries?.length) {
-      injuries.forEach(inj => {
-        const entry = {
-          name:   inj.player?.name,
-          pos:    inj.player?.type,
-          reason: inj.player?.reason,
-        };
-        if (inj.team?.id === +homeId) hInjuries.push(entry);
-        if (inj.team?.id === +awayId) aInjuries.push(entry);
-      });
-    }
-
-    /* ── Stats match live ── */
-    let liveStats = null;
-    if (fixtureStats?.length) {
-      const hLive = fixtureStats.find(s => s.team?.id === +homeId);
-      const aLive = fixtureStats.find(s => s.team?.id === +awayId);
-      if (hLive || aLive) {
-        const getStat = (team, name) => {
-          const s = team?.statistics?.find(s => s.type === name);
-          return s?.value || null;
-        };
-        liveStats = {
-          hPossession: getStat(hLive, "Ball Possession"),
-          aPossession: getStat(aLive, "Ball Possession"),
-          hShots:      getStat(hLive, "Total Shots"),
-          aShots:      getStat(aLive, "Total Shots"),
-          hShotsOn:    getStat(hLive, "Shots on Goal"),
-          aShotsOn:    getStat(aLive, "Shots on Goal"),
-          hCorners:    getStat(hLive, "Corner Kicks"),
-          aCorners:    getStat(aLive, "Corner Kicks"),
-          hXG:         getStat(hLive, "expected_goals"),
-          aXG:         getStat(aLive, "expected_goals"),
-        };
+    // Confrontations directes
+    const h2h = [];
+    if (Array.isArray(h2hRaw)) {
+      for (const f of h2hRaw) {
+        const gh = f.goals && f.goals.home;
+        const ga = f.goals && f.goals.away;
+        if (gh === null || gh === undefined || ga === null || ga === undefined) continue;
+        const hostIsHome = f.teams && f.teams.home && f.teams.home.id === homeId;
+        // On normalise dans le sens du match courant
+        h2h.push({
+          gh: hostIsHome ? gh : ga,
+          ga: hostIsHome ? ga : gh,
+          date: (f.fixture && f.fixture.date) ? f.fixture.date.split("T")[0] : null,
+        });
       }
     }
 
-    /* ── xG enrichis ── */
-    // Priorité: xG réel > stats moyennes > dérivé des cotes
-    const hxg = hStats?.xgF || hStats?.gf || null;
-    const axg = aStats?.xgF || aStats?.gf || null;
-
-    // Impact des blessés sur le xG
-    let hxgAdj = hxg, axgAdj = axg;
-    if (hxg && hInjuries.length) {
-      const hAtt = hInjuries.filter(p => p.pos==="Attacker"||p.pos==="Midfielder").length;
-      if (hAtt > 0) hxgAdj = +(hxg * (1-hAtt*0.035)).toFixed(2);
-    }
-    if (axg && aInjuries.length) {
-      const aAtt = aInjuries.filter(p => p.pos==="Attacker"||p.pos==="Midfielder").length;
-      if (aAtt > 0) axgAdj = +(axg * (1-aAtt*0.035)).toFixed(2);
-    }
+    const hasReal = !!(homeStats || awayStats || h2h.length >= 3);
+    if (!hasReal) return res.status(200).json({ error: "no_data" });
 
     return res.status(200).json({
-      h2h,
-      h2hStats,
-      homeStats:   hStats,
-      awayStats:   aStats,
-      hRecent,
-      aRecent,
-      hLineup,
-      aLineup,
-      hInjuries,
-      aInjuries,
-      liveStats,
-      hRank,  aRank,
-      hPoints, aPoints,
-      hHomeWins, aAwayWins,
-      enriched: {
-        hxg:   hxgAdj, axg: axgAdj,
-        hxga:  aStats?.xgA || null,
-        axga:  hStats?.xgA || null,
-        hg:    hStats?.gf  || null,
-        ag:    aStats?.gf  || null,
-        hf:    hStats ? Math.round(hStats.winRate*15) : null,
-        af:    aStats ? Math.round(aStats.winRate*15) : null,
-        hsh:   hStats?.shotsOn ? Math.round(hStats.shotsOn) : null,
-        ash:   aStats?.shotsOn ? Math.round(aStats.shotsOn) : null,
-        hcs:   hStats?.cleanSheets || null,
-        acs:   aStats?.cleanSheets || null,
-        hForm: hStats?.form?.slice(-5) || null,
-        aForm: aStats?.form?.slice(-5) || null,
-        hWinRate:    hStats?.winRate  || null,
-        aWinRate:    aStats?.winRate  || null,
-        hHomeWinRate: hStats?.homeWinRate || null,
-        aAwayWinRate: aStats?.awayWinRate || null,
-        hFormScore:  hStats?.formScore || 0.5,
-        aFormScore:  aStats?.formScore || 0.5,
-        hasLineups:  !!(hLineup && aLineup),
-        hasInjuries: !!(hInjuries.length || aInjuries.length),
-        hasLiveStats: !!liveStats,
-        hxgInjAdj:  hxg !== hxgAdj,
-        axgInjAdj:  axg !== axgAdj,
-      }
+      homeStats: homeStats || undefined,
+      awayStats: awayStats || undefined,
+      h2h: h2h.slice(0, 10),
+      season,
+      source: "EDGE Enrich v1",
     });
 
-  } catch(e) {
-    return res.status(500).json({ error: e.message });
+  } catch (e) {
+    return res.status(200).json({ error: e.message });
   }
 };
