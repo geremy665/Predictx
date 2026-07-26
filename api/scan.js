@@ -1,4 +1,4 @@
-// EDGE — api/scan.js v10 — 100% Europe
+// EDGE — api/scan.js v13 — Europe · cotes groupées · VALUE = comparaison entre bookmakers
 function toNum(val, decimals) {
   if(val === null || val === undefined || isNaN(val)) return 0;
   return parseFloat(parseFloat(val).toFixed(decimals || 3));
@@ -93,6 +93,94 @@ async function apiFetch(url, key) {
   } catch(e) { return null; }
 }
 
+// Récupère TOUTES les cotes 1X2 d'une journée en 1 à 3 requêtes (au lieu d'une par match)
+// → permet de couvrir une semaine entière sans exploser le quota API
+async function getOddsBulk(date, key, maxPages) {
+  const map = {};
+  const limit = maxPages || 3;
+  let page = 1, totalPages = 1;
+  while (page <= Math.min(limit, totalPages)) {
+    let d = null;
+    try {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 9000);
+      const r = await fetch(`https://v3.football.api-sports.io/odds?date=${date}&bet=1&page=${page}`, {
+        headers: { "x-apisports-key": key, "Accept": "application/json" },
+        signal: ctrl.signal,
+      });
+      clearTimeout(t);
+      if (!r.ok) break;
+      d = await r.json();
+    } catch (e) { break; }
+    if (!d || !Array.isArray(d.response)) break;
+    totalPages = (d.paging && d.paging.total) ? d.paging.total : 1;
+
+    for (const item of d.response) {
+      const fid = item.fixture && item.fixture.id;
+      if (!fid || map[fid]) continue;
+      const bks = item.bookmakers || [];
+      bks.sort((a, b) => {
+        const ia = SHARP_BK.indexOf(a.id), ib = SHARP_BK.indexOf(b.id);
+        return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+      });
+      // On collecte TOUS les bookmakers pour calculer consensus + meilleure cote
+      const all1 = [], allN = [], all2 = [];
+      let ref = null, hasPin = false;
+      for (const bk of bks) {
+        const mw = (bk.bets || []).find(b => b.id === 1 || b.name === "Match Winner");
+        if (!mw || !mw.values || mw.values.length < 3) continue;
+        const h = mw.values.find(v => v.value === "Home");
+        const dr = mw.values.find(v => v.value === "Draw");
+        const a = mw.values.find(v => v.value === "Away");
+        if (!h || !dr || !a) continue;
+        const c1 = parseFloat(h.odd), cn = parseFloat(dr.odd), c2 = parseFloat(a.odd);
+        if (!(c1 > 1.01 && cn > 1.01 && c2 > 1.01)) continue;
+        all1.push({ o: c1, b: bk.name });
+        allN.push({ o: cn, b: bk.name });
+        all2.push({ o: c2, b: bk.name });
+        if (bk.id === 8) hasPin = true;
+        if (!ref) ref = { o1: c1, on: cn, o2: c2, book: bk.name };
+      }
+      if (!ref || all1.length === 0) continue;
+
+      // Consensus = médiane des probabilités implicites, puis dé-viggé
+      const med = arr => {
+        const s = arr.map(x => x.o).sort((a, b) => a - b);
+        const n = s.length;
+        return n % 2 ? s[(n - 1) / 2] : (s[n / 2 - 1] + s[n / 2]) / 2;
+      };
+      const m1 = med(all1), mn = med(allN), m2 = med(all2);
+      const marg = 1 / m1 + 1 / mn + 1 / m2;
+      const cons = { p1: (1 / m1) / marg, pn: (1 / mn) / marg, p2: (1 / m2) / marg };
+
+      // Meilleure cote disponible par issue
+      const best = a => a.reduce((x, y) => (y.o > x.o ? y : x), a[0]);
+      const b1 = best(all1), bN = best(allN), b2 = best(all2);
+
+      // Value = espérance au meilleur prix, évaluée avec la probabilité consensus
+      const cand = [
+        { k: "1", edge: cons.p1 * b1.o - 1, odd: b1.o, book: b1.b },
+        { k: "N", edge: cons.pn * bN.o - 1, odd: bN.o, book: bN.b },
+        { k: "2", edge: cons.p2 * b2.o - 1, odd: b2.o, book: b2.b },
+      ].sort((x, y) => y.edge - x.edge);
+      const top = cand[0];
+
+      map[fid] = {
+        o1: ref.o1, on: ref.on, o2: ref.o2,
+        pinnacle: hasPin,
+        nBooks: all1.length,
+        bestO1: b1.o, bestON: bN.o, bestO2: b2.o,
+        bestBook1: b1.b, bestBookN: bN.b, bestBook2: b2.b,
+        lineValue: (all1.length >= 3 && top.edge > 0)
+          ? { pick: top.k, edge: +top.edge.toFixed(4), odd: top.odd, book: top.book, nBooks: all1.length }
+          : null,
+      };
+    }
+    page++;
+  }
+  return map;
+}
+
 async function getOdds(fixtureId, key) {
   try {
     const data = await apiFetch(`/odds?fixture=${fixtureId}`, key);
@@ -167,8 +255,8 @@ module.exports = async (req, res) => {
     const now = new Date();
     const season = now.getMonth() < 7 ? now.getFullYear()-1 : now.getFullYear();
 
-    // -1 = hier (pour régler les signaux), 0..2 = affichage
-    const days = [-1,0,1,2].map(i =>
+    // -1 = hier (règlement du track record), 0..6 = une semaine d'avance
+    const days = [-1,0,1,2,3,4,5,6].map(i =>
       new Date(now.getTime()+i*86400000).toISOString().split("T")[0]
     );
 
@@ -204,16 +292,31 @@ module.exports = async (req, res) => {
     // Équilibre garanti : max 12 live, le reste = matchs à venir prioritaires
     const liveArr = all.filter(f => LIVE.has(f.fixture?.status?.short));
     const upArr   = all.filter(f => !LIVE.has(f.fixture?.status?.short));
-    const fixtures = liveArr.slice(0, 12).concat(upArr.slice(0, 30 - Math.min(liveArr.length, 12)));
+    const fixtures = liveArr.slice(0, 12).concat(upArr.slice(0, 60 - Math.min(liveArr.length, 12)));
     const today = days[1];
     const tomorrow = days[2];
 
-    const oddsArr = await Promise.all(fixtures.map(f => {
-      const d = f.fixture?.date?.split("T")[0];
+    // ── COTES EN MASSE : 1 à 3 requêtes par jour au lieu d'une par match ──
+    const oddDays = days.filter(d => d >= days[1]); // à partir d'aujourd'hui
+    const bulkMaps = await Promise.all(oddDays.map(d => getOddsBulk(d, KEY, 3)));
+    const oddsByFixture = Object.assign({}, ...bulkMaps);
+
+    // Marchés complets (double chance, over/under, BTTS) pour les 10 matchs prioritaires
+    const detailTargets = fixtures
+      .filter(f => !LIVE.has(f.fixture?.status?.short) && oddsByFixture[f.fixture?.id])
+      .slice(0, 10);
+    const detailArr = await Promise.all(detailTargets.map(f => getOdds(f.fixture?.id, KEY)));
+    const detailById = {};
+    detailTargets.forEach((f, i) => { if (detailArr[i]) detailById[f.fixture.id] = detailArr[i]; });
+
+    const oddsArr = fixtures.map(f => {
+      const fid = f.fixture?.id;
       const st = f.fixture?.status?.short || "NS";
-      if (LIVE.has(st) || !(d === today || d === tomorrow)) return Promise.resolve(null);
-      return getOdds(f.fixture?.id, KEY);
-    }));
+      if (LIVE.has(st)) return null;
+      const base = oddsByFixture[fid];
+      if (!base) return null;
+      return Object.assign({}, base, detailById[fid] || {});
+    });
 
     const matches = fixtures.map((f, j) => {
       const st = f.fixture?.status?.short || "NS";
@@ -255,6 +358,10 @@ module.exports = async (req, res) => {
         o1, on, o2,
         hasRealOdds: !!(odds.o1),
         hasPinnacle: !!(odds.pinnacle),
+        nBooks: odds.nBooks || 0,
+        bestO1: odds.bestO1 || null, bestON: odds.bestON || null, bestO2: odds.bestO2 || null,
+        bestBook1: odds.bestBook1 || null, bestBookN: odds.bestBookN || null, bestBook2: odds.bestBook2 || null,
+        lineValue: odds.lineValue || null,
         dc1x: odds.dc1x || null, dc12: odds.dc12 || null, dcx2: odds.dcx2 || null,
         over25: odds.over2_5 || null, under25: odds.under2_5 || null,
         over35: odds.over3_5 || null, over15: odds.over1_5 || null,
@@ -273,6 +380,13 @@ module.exports = async (req, res) => {
       };
     });
 
+    // Live d'abord, puis les matchs réellement cotés (exploitables), puis par heure
+    matches.sort((a,b) => {
+      if(a.isLive !== b.isLive) return a.isLive ? -1 : 1;
+      if(a.hasRealOdds !== b.hasRealOdds) return a.hasRealOdds ? -1 : 1;
+      return (a.time||"") < (b.time||"") ? -1 : 1;
+    });
+
     return res.status(200).json({
       matches,
       finished,
@@ -280,7 +394,9 @@ module.exports = async (req, res) => {
       withOdds: matches.filter(m => m.hasRealOdds).length,
       withPinnacle: matches.filter(m => m.hasPinnacle).length,
       updated: now.toISOString(),
-      source: "EDGE Scan v9",
+      daysCovered: days.length - 1,
+      withValue: matches.filter(m => m.lineValue).length,
+      source: "EDGE Scan v13",
       season,
     });
 
