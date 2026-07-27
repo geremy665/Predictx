@@ -1,4 +1,4 @@
-// EDGE — api/enrich.js v1 — statistiques RÉELLES des équipes
+// EDGE — api/enrich.js v3 — statistiques RÉELLES + infos qui font bouger les cotes (blessures, compos)
 // Remplace les stats dérivées des cotes par des données indépendantes du marché.
 // Entrée : ?homeId=&awayId=&leagueId=&fixtureId=
 // Sortie : { homeStats, awayStats, h2h, source }
@@ -86,13 +86,31 @@ module.exports = async (req, res) => {
     // Saison européenne : août → juillet
     const season = now.getMonth() < 7 ? now.getFullYear() - 1 : now.getFullYear();
 
+    // Coupes et sélections : les statistiques dans la compétition elle-même sont
+    // inexploitables (1 à 2 matchs joués). On bascule sur le championnat national.
+    const CUPS = new Set([2, 3, 848, 4, 5, 1, 34, 10, 667, 6, 7, 9, 15]);
+    const isCup = CUPS.has(leagueId);
+
+    async function domesticLeagueOf(teamId) {
+      const d = await apiFetch(`/leagues?team=${teamId}&season=${season}&type=league`, KEY);
+      if (!Array.isArray(d) || !d.length) return null;
+      // On prend le championnat national (le plus souvent unique pour ces clubs)
+      const dom = d.find(x => x.league && x.league.type === "League");
+      return dom && dom.league ? dom.league.id : null;
+    }
+
+    let hLeague = leagueId, aLeague = leagueId;
+    if (isCup || !leagueId) {
+      const [hd, ad] = await Promise.all([domesticLeagueOf(homeId), domesticLeagueOf(awayId)]);
+      hLeague = hd || leagueId;
+      aLeague = ad || leagueId;
+    }
+
     const tasks = [
       apiFetch(`/fixtures/headtohead?h2h=${homeId}-${awayId}&last=10`, KEY),
+      hLeague ? apiFetch(`/teams/statistics?team=${homeId}&league=${hLeague}&season=${season}`, KEY) : Promise.resolve(null),
+      aLeague ? apiFetch(`/teams/statistics?team=${awayId}&league=${aLeague}&season=${season}`, KEY) : Promise.resolve(null),
     ];
-    if (leagueId) {
-      tasks.push(apiFetch(`/teams/statistics?team=${homeId}&league=${leagueId}&season=${season}`, KEY));
-      tasks.push(apiFetch(`/teams/statistics?team=${awayId}&league=${leagueId}&season=${season}`, KEY));
-    }
 
     let [h2hRaw, hRaw, aRaw] = await Promise.all(tasks);
 
@@ -100,11 +118,11 @@ module.exports = async (req, res) => {
     let awayStats = mapStats(aRaw, "away");
 
     // Début de saison : peu ou pas de matchs joués → on prend la saison précédente
-    if (leagueId && (!homeStats || homeStats.played < 4 || !awayStats || awayStats.played < 4)) {
+    if ((hLeague || aLeague) && (!homeStats || homeStats.played < 4 || !awayStats || awayStats.played < 4)) {
       const prev = season - 1;
       const [hPrev, aPrev] = await Promise.all([
-        apiFetch(`/teams/statistics?team=${homeId}&league=${leagueId}&season=${prev}`, KEY),
-        apiFetch(`/teams/statistics?team=${awayId}&league=${leagueId}&season=${prev}`, KEY),
+        hLeague ? apiFetch(`/teams/statistics?team=${homeId}&league=${hLeague}&season=${prev}`, KEY) : Promise.resolve(null),
+        aLeague ? apiFetch(`/teams/statistics?team=${awayId}&league=${aLeague}&season=${prev}`, KEY) : Promise.resolve(null),
       ]);
       const hp = mapStats(hPrev, "home");
       const ap = mapStats(aPrev, "away");
@@ -129,15 +147,45 @@ module.exports = async (req, res) => {
       }
     }
 
-    const hasReal = !!(homeStats || awayStats || h2h.length >= 3);
+    // ── Infos décisionnelles : absents et compositions ──
+    // C'est ce qui déplace réellement une cote — bien plus qu'une actualité générale.
+    let injuries = [], lineups = null;
+    const fixtureId = parseInt(q.fixtureId, 10);
+    if (fixtureId) {
+      const [injRaw, lupRaw] = await Promise.all([
+        apiFetch(`/injuries?fixture=${fixtureId}`, KEY),
+        apiFetch(`/fixtures/lineups?fixture=${fixtureId}`, KEY),
+      ]);
+      if (Array.isArray(injRaw)) {
+        injuries = injRaw.map(x => ({
+          team: x.team && x.team.id === homeId ? "home" : "away",
+          name: x.player && x.player.name ? x.player.name : null,
+          reason: x.player && x.player.reason ? x.player.reason : null,
+          type: x.player && x.player.type ? x.player.type : null,
+        })).filter(x => x.name).slice(0, 12);
+      }
+      if (Array.isArray(lupRaw) && lupRaw.length) {
+        lineups = lupRaw.map(l => ({
+          team: l.team && l.team.id === homeId ? "home" : "away",
+          formation: l.formation || null,
+          coach: l.coach && l.coach.name ? l.coach.name : null,
+          starters: (l.startXI || []).map(p => p.player && p.player.name).filter(Boolean),
+        }));
+      }
+    }
+
+    const hasReal = !!(homeStats || awayStats || h2h.length >= 3 || injuries.length || lineups);
     if (!hasReal) return res.status(200).json({ error: "no_data" });
 
     return res.status(200).json({
       homeStats: homeStats || undefined,
       awayStats: awayStats || undefined,
       h2h: h2h.slice(0, 10),
+      injuries: injuries,
+      lineups: lineups,
       season,
-      source: "EDGE Enrich v1",
+      leaguesUsed: { home: hLeague, away: aLeague },
+      source: "EDGE Enrich v2",
     });
 
   } catch (e) {
