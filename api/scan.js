@@ -1,4 +1,4 @@
-// EDGE — api/scan.js v13 — Europe · cotes groupées · VALUE = comparaison entre bookmakers
+// EDGE — api/scan.js v14 — Europe · couverture cotes garantie (groupé + rattrapage ciblé)
 function toNum(val, decimals) {
   if(val === null || val === undefined || isNaN(val)) return 0;
   return parseFloat(parseFloat(val).toFixed(decimals || 3));
@@ -78,7 +78,9 @@ const DONE = new Set(["FT","AET","PEN","AWD","WO","ABD","CANC","SUSP","PST","TBD
 const LIVE = new Set(["1H","2H","HT","ET","BT","P","LIVE"]);
 const SHARP_BK = [8, 6, 1, 2, 3];
 
+let API_CALLS = 0;
 async function apiFetch(url, key) {
+  API_CALLS++;
   try {
     const ctrl = new AbortController();
     const t = setTimeout(() => ctrl.abort(), 8000);
@@ -104,6 +106,7 @@ async function getOddsBulk(date, key, maxPages) {
     try {
       const ctrl = new AbortController();
       const t = setTimeout(() => ctrl.abort(), 9000);
+      API_CALLS++;
       const r = await fetch(`https://v3.football.api-sports.io/odds?date=${date}&bet=1&page=${page}`, {
         headers: { "x-apisports-key": key, "Accept": "application/json" },
         signal: ctrl.signal,
@@ -245,9 +248,10 @@ async function getOdds(fixtureId, key) {
 
 module.exports = async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Cache-Control", "s-maxage=180, stale-while-revalidate=300");
+  res.setHeader("Cache-Control", "s-maxage=300, stale-while-revalidate=900");
   if (req.method === "OPTIONS") return res.status(200).end();
 
+  API_CALLS = 0;
   const KEY = process.env.FOOTBALL_API_KEY || "";
   if (!KEY) return res.status(200).json({ matches: [], error: "no_key" });
 
@@ -297,9 +301,28 @@ module.exports = async (req, res) => {
     const tomorrow = days[2];
 
     // ── COTES EN MASSE : 1 à 3 requêtes par jour au lieu d'une par match ──
-    const oddDays = days.filter(d => d >= days[1]); // à partir d'aujourd'hui
-    const bulkMaps = await Promise.all(oddDays.map(d => getOddsBulk(d, KEY, 3)));
+    // Cotes groupées sur 3 jours seulement : au-delà, les bookmakers publient rarement.
+    // Les matchs plus lointains restent visibles et passent par le rattrapage si prioritaires.
+    const oddDays = days.slice(1, 4);
+    const bulkMaps = await Promise.all(oddDays.map((d, i) => getOddsBulk(d, KEY, i === 0 ? 8 : 6)));
     const oddsByFixture = Object.assign({}, ...bulkMaps);
+
+    // ── RATTRAPAGE : matchs prioritaires oubliés par la pagination groupée ──
+    // (Champions/Europa/Conference et grands championnats ne doivent JAMAIS manquer)
+    const missing = fixtures.filter(f => {
+      const st = f.fixture?.status?.short || "NS";
+      if (LIVE.has(st)) return false;
+      if (oddsByFixture[f.fixture?.id]) return false;
+      return (PRIORITY[f.league?.id] || 0) >= 70;
+    }).slice(0, 15);
+
+    if (missing.length) {
+      const rescued = await Promise.all(missing.map(f => getOdds(f.fixture?.id, KEY)));
+      missing.forEach((f, i) => {
+        const o = rescued[i];
+        if (o && o.o1) oddsByFixture[f.fixture.id] = Object.assign({ nBooks: 1 }, o);
+      });
+    }
 
     // Marchés complets (double chance, over/under, BTTS) pour les 10 matchs prioritaires
     const detailTargets = fixtures
@@ -396,7 +419,10 @@ module.exports = async (req, res) => {
       updated: now.toISOString(),
       daysCovered: days.length - 1,
       withValue: matches.filter(m => m.lineValue).length,
-      source: "EDGE Scan v13",
+      oddsRescued: missing.length,
+      apiCalls: API_CALLS,
+      missingOdds: matches.filter(m => !m.hasRealOdds).map(m => m.c + ": " + m.h + " - " + m.a).slice(0, 12),
+      source: "EDGE Scan v14",
       season,
     });
 
