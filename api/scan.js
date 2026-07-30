@@ -1,4 +1,4 @@
-// EDGE — api/scan.js v14 — Europe · couverture cotes garantie (groupé + rattrapage ciblé)
+// EDGE — api/scan.js v17 — quota par compétition + consommation API maîtrisée
 function toNum(val, decimals) {
   if(val === null || val === undefined || isNaN(val)) return 0;
   return parseFloat(parseFloat(val).toFixed(decimals || 3));
@@ -248,7 +248,7 @@ async function getOdds(fixtureId, key) {
 
 module.exports = async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Cache-Control", "s-maxage=300, stale-while-revalidate=900");
+  res.setHeader("Cache-Control", "s-maxage=600, stale-while-revalidate=1800");
   if (req.method === "OPTIONS") return res.status(200).end();
 
   API_CALLS = 0;
@@ -260,13 +260,36 @@ module.exports = async (req, res) => {
     const season = now.getMonth() < 7 ? now.getFullYear()-1 : now.getFullYear();
 
     // -1 = hier (règlement du track record), 0..6 = une semaine d'avance
-    const days = [-1,0,1,2,3,4,5,6].map(i =>
+    const days = [-1,0,1,2,3,4].map(i =>
       new Date(now.getTime()+i*86400000).toISOString().split("T")[0]
     );
 
-    const results = await Promise.all(
-      days.map(d => apiFetch(`/fixtures?date=${d}`, KEY))
-    );
+    // ── Pagination : /fixtures?date= renvoie tous les matchs du monde.
+    // Sans lire les pages suivantes, des compétitions entières disparaissent.
+    async function fixturesForDate(date, maxPages) {
+      let out = [], page = 1, total = 1;
+      while (page <= Math.min(maxPages, total)) {
+        API_CALLS++;
+        let d = null;
+        try {
+          const ctrl = new AbortController();
+          const t = setTimeout(() => ctrl.abort(), 9000);
+          const r = await fetch(`https://v3.football.api-sports.io/fixtures?date=${date}&page=${page}`, {
+            headers: { "x-apisports-key": KEY, "Accept": "application/json" }, signal: ctrl.signal });
+          clearTimeout(t);
+          if (!r.ok) break;
+          d = await r.json();
+        } catch (e) { break; }
+        if (!d || !Array.isArray(d.response)) break;
+        out = out.concat(d.response);
+        total = (d.paging && d.paging.total) ? d.paging.total : 1;
+        page++;
+      }
+      return out;
+    }
+    // Pagination complète sur les 4 premiers jours, allégée au-delà
+    // Pagination dégressive : les jours proches comptent, les lointains beaucoup moins
+    const results = await Promise.all(days.map((d, i) => fixturesForDate(d, i <= 1 ? 3 : (i === 2 ? 2 : 1))));
 
     const pool = results.flat().filter(Boolean)
       .filter(f => LEAGUES.has(f.league?.id));
@@ -293,18 +316,49 @@ module.exports = async (req, res) => {
       return (a.fixture?.date||"") < (b.fixture?.date||"") ? -1 : 1;
     });
 
-    // Équilibre garanti : max 12 live, le reste = matchs à venir prioritaires
-    const liveArr = all.filter(f => LIVE.has(f.fixture?.status?.short));
+    // ── SÉLECTION PAR QUOTA ──
+    // Un simple tri par priorité affame les compétitions moins bien classées :
+    // 40 matchs de Ligue 1 peuvent évincer toute la Conference League.
+    // On sert donc chaque compétition à tour de rôle, par ordre de priorité.
+    const liveArr = all.filter(f => LIVE.has(f.fixture?.status?.short)).slice(0, 12);
     const upArr   = all.filter(f => !LIVE.has(f.fixture?.status?.short));
-    const fixtures = liveArr.slice(0, 12).concat(upArr.slice(0, 60 - Math.min(liveArr.length, 12)));
+
+    const byLeague = new Map();
+    for (const f of upArr) {
+      const id = f.league?.id;
+      if (!byLeague.has(id)) byLeague.set(id, []);
+      byLeague.get(id).push(f);
+    }
+    // Ligues classées par priorité, matchs classés par heure
+    const ordered = Array.from(byLeague.entries())
+      .sort((a, b) => (PRIORITY[b[0]] || 30) - (PRIORITY[a[0]] || 30));
+    ordered.forEach(([, arr]) => arr.sort((a, b) => (a.fixture?.date || "") < (b.fixture?.date || "") ? -1 : 1));
+
+    const LIMIT = 60 - liveArr.length;
+    const picked = [];
+    let round = 0;
+    // Tour 1 : 3 matchs par compétition. Tours suivants : on complète.
+    while (picked.length < LIMIT && round < 30) {
+      let added = 0;
+      for (const [, arr] of ordered) {
+        const quota = round === 0 ? 3 : 1;
+        for (let q = 0; q < quota && picked.length < LIMIT; q++) {
+          if (arr.length) { picked.push(arr.shift()); added++; }
+        }
+        if (picked.length >= LIMIT) break;
+      }
+      if (!added) break;
+      round++;
+    }
+    const fixtures = liveArr.concat(picked);
     const today = days[1];
     const tomorrow = days[2];
 
     // ── COTES EN MASSE : 1 à 3 requêtes par jour au lieu d'une par match ──
     // Cotes groupées sur 3 jours seulement : au-delà, les bookmakers publient rarement.
     // Les matchs plus lointains restent visibles et passent par le rattrapage si prioritaires.
-    const oddDays = days.slice(1, 4);
-    const bulkMaps = await Promise.all(oddDays.map((d, i) => getOddsBulk(d, KEY, i === 0 ? 8 : 6)));
+    const oddDays = days.slice(1, 3);
+    const bulkMaps = await Promise.all(oddDays.map((d, i) => getOddsBulk(d, KEY, i === 0 ? 6 : 4)));
     const oddsByFixture = Object.assign({}, ...bulkMaps);
 
     // ── RATTRAPAGE : matchs prioritaires oubliés par la pagination groupée ──
@@ -314,7 +368,7 @@ module.exports = async (req, res) => {
       if (LIVE.has(st)) return false;
       if (oddsByFixture[f.fixture?.id]) return false;
       return (PRIORITY[f.league?.id] || 0) >= 70;
-    }).slice(0, 15);
+    }).slice(0, 12);
 
     if (missing.length) {
       const rescued = await Promise.all(missing.map(f => getOdds(f.fixture?.id, KEY)));
@@ -327,7 +381,7 @@ module.exports = async (req, res) => {
     // Marchés complets (double chance, over/under, BTTS) pour les 10 matchs prioritaires
     const detailTargets = fixtures
       .filter(f => !LIVE.has(f.fixture?.status?.short) && oddsByFixture[f.fixture?.id])
-      .slice(0, 10);
+      .slice(0, 8);
     const detailArr = await Promise.all(detailTargets.map(f => getOdds(f.fixture?.id, KEY)));
     const detailById = {};
     detailTargets.forEach((f, i) => { if (detailArr[i]) detailById[f.fixture.id] = detailArr[i]; });
@@ -420,9 +474,11 @@ module.exports = async (req, res) => {
       daysCovered: days.length - 1,
       withValue: matches.filter(m => m.lineValue).length,
       oddsRescued: missing.length,
+      leaguesFound: Array.from(new Set(matches.map(m => m.leagueId + " " + m.c))).sort(),
+      fixturesScanned: pool.length,
       apiCalls: API_CALLS,
       missingOdds: matches.filter(m => !m.hasRealOdds).map(m => m.c + ": " + m.h + " - " + m.a).slice(0, 12),
-      source: "EDGE Scan v14",
+      source: "EDGE Scan v16",
       season,
     });
 
