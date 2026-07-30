@@ -69,7 +69,7 @@ function mapStats(resp, side) {
 module.exports = async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   // Cache Vercel : les stats d'équipe bougent au plus une fois par jour
-  res.setHeader("Cache-Control", "s-maxage=3600, stale-while-revalidate=86400");
+  res.setHeader("Cache-Control", "s-maxage=21600, stale-while-revalidate=86400");
   if (req.method === "OPTIONS") return res.status(200).end();
 
   const KEY = process.env.FOOTBALL_API_KEY || "";
