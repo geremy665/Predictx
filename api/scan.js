@@ -1,4 +1,4 @@
-// EDGE — api/scan.js v19 — toute l'Europe (filtrage par pays, plus de liste fermée)
+// EDGE — api/scan.js v20 — CORRECTIF : /fixtures n'a pas de paramètre page
 function toNum(val, decimals) {
   if(val === null || val === undefined || isNaN(val)) return 0;
   return parseFloat(parseFloat(val).toFixed(decimals || 3));
@@ -320,32 +320,29 @@ module.exports = async (req, res) => {
 
     // ── Pagination : /fixtures?date= renvoie tous les matchs du monde.
     // Sans lire les pages suivantes, des compétitions entières disparaissent.
-    async function fixturesForDate(date, maxPages) {
-      let out = [], page = 1, total = 1;
-      while (page <= Math.min(maxPages, total)) {
-        if (API_STOP) break;
-        API_CALLS++;
-        let d = null;
-        try {
-          const ctrl = new AbortController();
-          const t = setTimeout(() => ctrl.abort(), 9000);
-          const r = await fetch(`https://v3.football.api-sports.io/fixtures?date=${date}&page=${page}`, {
-            headers: { "x-apisports-key": KEY, "Accept": "application/json" }, signal: ctrl.signal });
-          clearTimeout(t);
-          if (!r.ok) { noteApiError(null, r.status); break; }
-          d = await r.json();
-          noteApiError(d);
-        } catch (e) { break; }
-        if (!d || !Array.isArray(d.response)) break;
-        out = out.concat(d.response);
-        total = (d.paging && d.paging.total) ? d.paging.total : 1;
-        page++;
-      }
+    async function fixturesForDate(date) {
+      // /fixtures?date= n'est PAS paginé : il renvoie tous les matchs du jour
+      // en une seule réponse (contrairement à /odds qui, lui, l'est).
+      let out = [];
+      if (API_STOP) return out;
+      API_CALLS++;
+      let d = null;
+      try {
+        const ctrl = new AbortController();
+        const t = setTimeout(() => ctrl.abort(), 9000);
+        const r = await fetch(`https://v3.football.api-sports.io/fixtures?date=${date}`, {
+          headers: { "x-apisports-key": KEY, "Accept": "application/json" }, signal: ctrl.signal });
+        clearTimeout(t);
+        if (!r.ok) { noteApiError(null, r.status); return out; }
+        d = await r.json();
+        noteApiError(d);
+      } catch (e) { return out; }
+      if (d && Array.isArray(d.response)) out = d.response;
       return out;
     }
     // Pagination complète sur les 4 premiers jours, allégée au-delà
     // Pagination dégressive : les jours proches comptent, les lointains beaucoup moins
-    const results = await Promise.all(days.map((d, i) => fixturesForDate(d, (i === 1 || i === 2) ? 2 : 1)));
+    const results = await Promise.all(days.map(d => fixturesForDate(d)));
 
     const pool = results.flat().filter(Boolean)
       .filter(f => ligueRetenue(f.league));
@@ -523,7 +520,7 @@ module.exports = async (req, res) => {
     // Aucun match ET une erreur API : on le dit clairement au lieu d'afficher le vide
     if (!matches.length && API_ERROR) {
       return res.status(200).json({ matches: [], finished: [], count: 0,
-        error: API_ERROR, apiError: API_ERROR, apiCalls: API_CALLS, source: "EDGE Scan v19" });
+        error: API_ERROR, apiError: API_ERROR, apiCalls: API_CALLS, source: "EDGE Scan v20" });
     }
 
     return res.status(200).json({
@@ -540,7 +537,7 @@ module.exports = async (req, res) => {
       fixturesScanned: pool.length,
       apiCalls: API_CALLS,
       missingOdds: matches.filter(m => !m.hasRealOdds).map(m => m.c + ": " + m.h + " - " + m.a).slice(0, 12),
-      source: "EDGE Scan v19",
+      source: "EDGE Scan v20",
       season,
     });
 
