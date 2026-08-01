@@ -1,4 +1,4 @@
-// EDGE — api/scan.js v21 — CORRECTIF : bet=1 supposait un ID non garanti (0 cote sur tous les matchs)
+// EDGE — api/scan.js v22 — CORRECTIF : filtre jeunes trop strict (Junioren, Youth Cup...) + priorité amateur abaissée
 function toNum(val, decimals) {
   if(val === null || val === undefined || isNaN(val)) return 0;
   return parseFloat(parseFloat(val).toFixed(decimals || 3));
@@ -23,7 +23,9 @@ const EU = new Set([
 const UEFA = new Set([2,3,848,4,5,1,10,667,531,525]);
 
 // On écarte les catégories qui ne se parient pas
-const EXCLURE = /\b(U1[5-9]|U2[0-3]|Youth|Junior|Women|Feminine|Femenin|Reserve|Amateur|Futsal|Beach)\b/i;
+// \w* après la racine capte les formes fléchies : Junior/Junioren/Juniors,
+// Youth/Youths, Women/Womens, Reserve/Reserves, etc.
+const EXCLURE = /\b(U1[5-9]|U2[0-3]|Youths?|Juniors?|Junioren|Jugend|Women'?s?|Feminine|Femenin|Reserves?|Amateur|Futsal|Beach)\w*\b/i;
 
 function ligueRetenue(l){
   if(!l) return false;
@@ -366,8 +368,8 @@ module.exports = async (req, res) => {
       const aLive = LIVE.has(a.fixture?.status?.short) ? 1 : 0;
       const bLive = LIVE.has(b.fixture?.status?.short) ? 1 : 0;
       if (aLive !== bLive) return bLive - aLive;
-      const pa = PRIORITY[a.league?.id] || 45;
-      const pb = PRIORITY[b.league?.id] || 45;
+      const pa = PRIORITY[a.league?.id] || 25;
+      const pb = PRIORITY[b.league?.id] || 25;
       if (pa !== pb) return pb - pa;
       return (a.fixture?.date||"") < (b.fixture?.date||"") ? -1 : 1;
     });
@@ -387,7 +389,7 @@ module.exports = async (req, res) => {
     }
     // Ligues classées par priorité, matchs classés par heure
     const ordered = Array.from(byLeague.entries())
-      .sort((a, b) => (PRIORITY[b[0]] || 45) - (PRIORITY[a[0]] || 45));
+      .sort((a, b) => (PRIORITY[b[0]] || 25) - (PRIORITY[a[0]] || 25));
     ordered.forEach(([, arr]) => arr.sort((a, b) => (a.fixture?.date || "") < (b.fixture?.date || "") ? -1 : 1));
 
     const LIMIT = 80 - liveArr.length;
@@ -523,7 +525,7 @@ module.exports = async (req, res) => {
     // Aucun match ET une erreur API : on le dit clairement au lieu d'afficher le vide
     if (!matches.length && API_ERROR) {
       return res.status(200).json({ matches: [], finished: [], count: 0,
-        error: API_ERROR, apiError: API_ERROR, apiCalls: API_CALLS, source: "EDGE Scan v21" });
+        error: API_ERROR, apiError: API_ERROR, apiCalls: API_CALLS, source: "EDGE Scan v22" });
     }
 
     return res.status(200).json({
@@ -540,7 +542,7 @@ module.exports = async (req, res) => {
       fixturesScanned: pool.length,
       apiCalls: API_CALLS,
       missingOdds: matches.filter(m => !m.hasRealOdds).map(m => m.c + ": " + m.h + " - " + m.a).slice(0, 12),
-      source: "EDGE Scan v21",
+      source: "EDGE Scan v22",
       season,
     });
 
