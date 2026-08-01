@@ -1,45 +1,6 @@
 // ═══════════════════════════════════════════════════════════════
-// EDGE — api/analyze.js v4
-// Analyse ultra-précise avec buteurs, combos, scénario complet
+// EDGE — api/analyze.js v4 — Analyse ultra-complète
 // ═══════════════════════════════════════════════════════════════
-
-// Base joueurs clés par équipe/sélection
-const PLAYERS_DB = {
-  "France":["Kylian Mbappé","Antoine Griezmann","Ousmane Dembélé","Marcus Thuram","Adrien Rabiot","Aurélien Tchouaméni","William Saliba","Mike Maignan","Randal Kolo Muani","Michael Olise","Christopher Nkunku"],
-  "Espagne":["Rodri","Pedri","Gavi","Lamine Yamal","Nico Williams","Álvaro Morata","David Raya","Dani Carvajal","Aymeric Laporte","Mikel Merino","Ferran Torres"],
-  "Allemagne":["Florian Wirtz","Jamal Musiala","Kai Havertz","Leroy Sané","Thomas Müller","Manuel Neuer","Joshua Kimmich","Antonio Rüdiger","Niklas Füllkrug","Deniz Undav","Chris Führich"],
-  "Angleterre":["Jude Bellingham","Harry Kane","Phil Foden","Bukayo Saka","Cole Palmer","Jordan Pickford","Declan Rice","Trent Alexander-Arnold","Luke Shaw","Marcus Rashford","Ollie Watkins"],
-  "Portugal":["Cristiano Ronaldo","Bruno Fernandes","Bernardo Silva","Rafael Leão","Gonçalo Ramos","Diogo Costa","João Cancelo","Rúben Dias","Vitinha","Pedro Neto","Diogo Jota"],
-  "Brésil":["Vinicius Jr","Rodrygo","Richarlison","Casemiro","Alisson","Marquinhos","Endrick","Lucas Paquetá","Gabriel Martinelli","Raphinha","Éder Militão"],
-  "Argentine":["Lionel Messi","Lautaro Martínez","Julián Álvarez","Rodrigo De Paul","Emiliano Martínez","Cristian Romero","Alexis Mac Allister","Enzo Fernández","Paulo Dybala","Nahuel Molina","Lisandro Martínez"],
-  "PSG":["Kylian Mbappé","Ousmane Dembélé","Gonçalo Ramos","Achraf Hakimi","Marquinhos","Gianluigi Donnarumma","Vitinha","Warren Zaïre-Emery","Bradley Barcola","Marco Asensio","Lucas Hernández"],
-  "Real Madrid":["Vinícius Jr","Rodrygo","Jude Bellingham","Federico Valverde","Luka Modric","Thibaut Courtois","Dani Carvajal","Éder Militão","Aurélien Tchouaméni","Eduardo Camavinga","Brahim Díaz"],
-  "Barcelona":["Robert Lewandowski","Pedri","Lamine Yamal","Raphinha","Gavi","Marc-André ter Stegen","Ronald Araújo","Jules Koundé","Frenkie de Jong","Fermín López","Ansu Fati"],
-  "Bayern Munich":["Harry Kane","Leroy Sané","Jamal Musiala","Thomas Müller","Manuel Neuer","Joshua Kimmich","Leon Goretzka","Kingsley Coman","Mathys Tel","Serge Gnabry","Konrad Laimer"],
-  "Manchester City":["Erling Haaland","Kevin De Bruyne","Phil Foden","Bernardo Silva","Ederson","Kyle Walker","Rúben Dias","Rodri","Jeremy Doku","Jack Grealish","Mateo Kovačić"],
-  "Liverpool":["Mohamed Salah","Darwin Núñez","Luis Díaz","Trent Alexander-Arnold","Virgil van Dijk","Alisson","Andrew Robertson","Dominik Szoboszlai","Cody Gakpo","Diogo Jota","Curtis Jones"],
-  "Arsenal":["Bukayo Saka","Martin Ødegaard","Leandro Trossard","Kai Havertz","Gabriel Jesus","David Raya","Ben White","William Saliba","Gabriel Magalhães","Thomas Partey","Declan Rice"],
-  "Chelsea":["Cole Palmer","Nicolas Jackson","Christopher Nkunku","Reece James","Enzo Fernández","Robert Sánchez","Moisés Caicedo","Romeo Lavia","Noni Madueke","Raheem Sterling","Axel Disasi"],
-  "Atletico Madrid":["Antoine Griezmann","Álvaro Morata","Memphis Depay","Rodrigo De Paul","Jan Oblak","Nahuel Molina","José María Giménez","Koke","Marcos Llorente","Saúl","Reinildo"],
-  "Juventus":["Dušan Vlahović","Federico Chiesa","Adrien Rabiot","Manuel Locatelli","Bremer","Wojciech Szczęsny","Andrea Cambiaso","Weston McKennie","Filip Kostić","Kenan Yıldız","Gleison Bremer"],
-  "Inter Milan":["Lautaro Martínez","Marcus Thuram","Nicolò Barella","Hakan Çalhanoğlu","Yann Sommer","Alessandro Bastoni","Denzel Dumfries","Stefan de Vrij","Davide Frattesi","Carlos Augusto","Alexis Sánchez"],
-  "AC Milan":["Rafael Leão","Olivier Giroud","Christian Pulisic","Tijjani Reijnders","Mike Maignan","Theo Hernández","Fikayo Tomori","Ruben Loftus-Cheek","Samuel Chukwueze","Davide Calabria","Noah Okafor"],
-  "Borussia Dortmund":["Niclas Füllkrug","Donyell Malen","Julian Brandt","Marcel Sabitzer","Gregor Kobel","Mats Hummels","Nico Schlotterbeck","Karim Adeyemi","Salih Özcan","Giovanni Reyna","Jamie Gittens"],
-  "Maroc":["Hakim Ziyech","Youssef En-Nesyri","Achraf Hakimi","Sofyan Amrabat","Romain Saïss","Yassine Bounou","Noussair Mazraoui","Azzedine Ounahi","Bilal El Khannouss","Abde Ezzalzouli","Selim Amallah"],
-  "Sénégal":["Sadio Mané","Ismaïla Sarr","Édouard Mendy","Kalidou Koulibaly","Cheikhou Kouyaté","Idrissa Gana Gueye","Famara Diédhiou","Boulaye Dia","Pape Matar Sarr","Lamine Camara","Nampalys Mendy"],
-};
-
-function getPlayers(teamName) {
-  if (!teamName) return [];
-  if (PLAYERS_DB[teamName]) return PLAYERS_DB[teamName];
-  for (const k of Object.keys(PLAYERS_DB)) {
-    if (teamName.toLowerCase().includes(k.toLowerCase()) ||
-        k.toLowerCase().includes(teamName.toLowerCase().split(" ")[0])) {
-      return PLAYERS_DB[k];
-    }
-  }
-  return [];
-}
 
 module.exports = async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin","*");
@@ -48,12 +9,13 @@ module.exports = async (req, res) => {
   if (req.method==="OPTIONS") return res.status(200).end();
 
   const MKEY = process.env.MISTRAL_API_KEY;
-  if (!MKEY) return res.status(500).json({error:"MISTRAL_API_KEY manquante"});
+  const CKEY = process.env.ANTHROPIC_API_KEY;
+  if (!MKEY && !CKEY) return res.status(500).json({error:"Clés IA manquantes"});
 
   let body={};
   try {
-    if(req.body&&typeof req.body==="object") body=req.body;
-    else {
+    if(req.body&&typeof req.body==="object"){body=req.body;}
+    else{
       let raw="";
       await new Promise((r2,rj)=>{req.on("data",c=>{raw+=c.toString();});req.on("end",r2);req.on("error",rj);});
       if(raw) body=JSON.parse(raw);
@@ -62,183 +24,265 @@ module.exports = async (req, res) => {
 
   const d = body.match || body;
   const r = body.result || body.calc;
-
   if (!d.home && !d.h) return res.status(400).json({error:"Données match manquantes"});
 
-  const home = d.home || d.h || "DOM";
-  const away = d.away || d.a || "EXT";
-  const league = d.leagueName || d.league || d.c || "Football";
-  const o1 = parseFloat(d.o1) || 0;
-  const oN = parseFloat(d.on || d.oN) || 0;
-  const o2 = parseFloat(d.o2) || 0;
-  const hasOdds = o1 > 1.05 && oN > 1.05 && o2 > 1.05;
+  const home = d.home||d.h||"?";
+  const away = d.away||d.a||"?";
+  const league = d.leagueName||d.league||d.c||"?";
+  const o1 = d.o1||0, oN = d.on||d.oN||0, o2 = d.o2||0;
+  const hasOdds = o1>1.05 && oN>1.05 && o2>1.05;
 
-  // Joueurs connus
-  const hPlayers = getPlayers(home);
-  const aPlayers = getPlayers(away);
-  const hScorer = hPlayers[0] || "";
-  const hAssist = hPlayers[1] || "";
-  const aScorer = aPlayers[0] || "";
-  const aAssist = aPlayers[1] || "";
+  // ── CONSTRUCTION DU PROMPT ULTRA-DÉTAILLÉ ─────────────────
+  const L = []; // lines
 
-  // Probabilités moteur
-  const pH = r ? ((r.pH||0)*100).toFixed(1) : "?";
-  const pN = r ? ((r.pN||0)*100).toFixed(1) : "?";
-  const pA = r ? ((r.pA||0)*100).toFixed(1) : "?";
-  const lH = r ? (+(r.lH||0)).toFixed(2) : "?";
-  const lA = r ? (+(r.lA||0)).toFixed(2) : "?";
-  const conf = r ? (r.conf||0) : 0;
-  const signal = r ? (r.bR||"?") : "?";
-  const edgPct = r ? ((r.edg||0)*100).toFixed(1) : "0";
-  const pOver25 = r ? ((r.pOver25||0)*100).toFixed(0) : "?";
-  const pBtts = r ? ((r.pBttsY||0)*100).toFixed(0) : "?";
-  const sc2 = r && r.sc2 ? r.sc2.slice(0,4).map(s=>`${s.h}-${s.a}(${(s.p*100).toFixed(0)}%)`).join(" | ") : "";
-  const dataQ = r ? (r.dataQ||1) : 1;
+  L.push("Tu es EDGE, le meilleur analyste de paris sportifs.");
+  L.push("Tu as accès à toutes les données ci-dessous. Utilise-les toutes.");
+  L.push("Ton analyse doit être complète, précise, et actionnable.");
+  L.push("");
 
-  // Favori déterminé
-  const pHnum = r ? (r.pH||0) : 0;
-  const pAnum = r ? (r.pA||0) : 0;
-  const favTeam = pHnum > pAnum ? home : away;
-  const favOdd = pHnum > pAnum ? o1 : o2;
-  const favScorer = pHnum > pAnum ? hScorer : aScorer;
-  const favAssist = pHnum > pAnum ? hAssist : aAssist;
-  const lSum = r ? ((r.lH||1.35)+(r.lA||1.10)) : 2.45;
+  // MATCH
+  L.push("════ MATCH ════");
+  L.push(`${home} vs ${away}`);
+  L.push(`Compétition: ${league}`);
+  if(d.time) L.push(`Heure: ${new Date(d.time).toLocaleString("fr-FR",{weekday:"long",day:"2-digit",month:"long",hour:"2-digit",minute:"2-digit"})}`);
+  L.push("");
 
-  // Estimation cotes combos
-  const oO15 = d.over15 || (lSum > 2.0 ? 1.30 : 1.50);
-  const oO25 = d.over25 || (lSum > 2.5 ? 1.80 : 2.10);
-  const oBtts = d.bttsY || 1.85;
-  const oDC   = pHnum > pAnum ? (d.dc1x || parseFloat((1/(1/o1+1/oN)*0.95).toFixed(2))) : (d.dcx2 || parseFloat((1/(1/o2+1/oN)*0.95).toFixed(2)));
-
-  // Cote combo sécurisé: favori + O1.5
-  const comboSecOdd = hasOdds && favOdd > 1 ? (favOdd * oO15).toFixed(2) : "?";
-  // Cote combo fun: favori + scorer buteur + assist décisif (~estimation)
-  const comboFunOdd = hasOdds && favOdd > 1 ? (favOdd * 2.40 * 2.80).toFixed(2) : "?";
-  // DC + O2.5
-  const comboDcOdd = hasOdds && oDC > 1 ? (oDC * oO25).toFixed(2) : "?";
-
-  // Forme H2H
-  let h2hStr = "";
-  if (d.h2h && d.h2h.length) {
-    const h2h = d.h2h.slice(0,5);
-    const hW = h2h.filter(g=>g.winner==="home"||g.hG>g.aG).length;
-    const aW = h2h.filter(g=>g.winner==="away"||g.aG>g.hG).length;
-    const dr = h2h.length - hW - aW;
-    h2hStr = `H2H ${h2h.length} matchs: ${home} ${hW}V ${dr}N ${aW}D | Scores: ${h2h.slice(0,4).map(g=>`${g.hG||g.homeGoals||0}-${g.aG||g.awayGoals||0}`).join(" ")}`;
+  // COTES ET PROBABILITÉS MARCHÉ
+  if(hasOdds){
+    const mg = 1/o1+1/oN+1/o2;
+    const pH_mkt = ((1/o1)/mg*100).toFixed(1);
+    const pN_mkt = ((1/oN)/mg*100).toFixed(1);
+    const pA_mkt = ((1/o2)/mg*100).toFixed(1);
+    const margin = (mg-1)*100;
+    L.push("════ COTES MARCHÉ ════");
+    L.push(`DOM victoire: ${o1}x → proba implicite ${pH_mkt}%`);
+    L.push(`Match nul:    ${oN}x → proba implicite ${pN_mkt}%`);
+    L.push(`EXT victoire: ${o2}x → proba implicite ${pA_mkt}%`);
+    L.push(`Marge bookmaker: ${margin.toFixed(1)}% | ${d.hasSharp?"Pinnacle disponible ✓":"Cotes moyennes marché"}`);
+    if(d.pinnacle){
+      const p=d.pinnacle;
+      L.push(`Pinnacle (référence sharp): DOM ${p.o1}x | NUL ${p.on}x | EXT ${p.o2}x`);
+    }
+    if(d.valueBks&&d.valueBks.length>0){
+      L.push(`Value vs référence: ${d.valueBks.slice(0,3).map(b=>`${b.n} DOM+${(b.edgeH*100).toFixed(1)}% NUL+${(b.edgeN*100).toFixed(1)}% EXT+${(b.edgeA*100).toFixed(1)}%`).join(" | ")}`);
+    }
+    L.push("");
   }
 
-  // ─── PROMPT ULTRA-CALIBRÉ ─────────────────────────────────
-  const prompt = `Tu es l'analyste principal de EDGE, l'outil de pronostics sportifs le plus précis du marché.
+  // MOTEUR EDGE
+  if(r){
+    L.push("════ MOTEUR EDGE (Dixon-Coles + Monte Carlo + Bayésien) ════");
+    L.push(`Qualité données: ${["⚠️ Faible","📊 Moyenne","📈 Bonne","✅ Excellente"][Math.min((r.dataQ||1)-1,3)]} (niveau ${r.dataQ||1}/4)`);
+    L.push("");
+    L.push(`Probabilités calculées:`);
+    L.push(`  DOM: ${((r.pH||0)*100).toFixed(1)}% | NUL: ${((r.pN||0)*100).toFixed(1)}% | EXT: ${((r.pA||0)*100).toFixed(1)}%`);
+    if(r.mcH!=null){
+      L.push(`Monte Carlo 800 simulations:`);
+      L.push(`  DOM: ${((r.mcH||0)*100).toFixed(0)}% | NUL: ${((r.mcN||0)*100).toFixed(0)}% | EXT: ${((r.mcA||0)*100).toFixed(0)}%`);
+    }
+    L.push(`Buts attendus: ${home} λ=${(+(r.lH||0)).toFixed(2)} buts | ${away} λ=${(+(r.lA||0)).toFixed(2)} buts`);
+    L.push("");
+    L.push(`Signal principal: ${r.label||r.bR||"?"} @ ${r.bO||"?"}x`);
+    L.push(`Edge: ${((r.edg||0)*100).toFixed(1)}% | Confiance: ${r.conf||0}/100${r.hasPinnacle&&r.edgVsPinnacle?` | Edge vs Pinnacle: ${((r.edgVsPinnacle||0)*100).toFixed(1)}%`:""}`);
+    L.push(`Kelly fractionnel: ${((r.kel||0)*100).toFixed(1)}% du bankroll`);
 
-═══ DONNÉES DU MATCH ═══
-${home} vs ${away} | ${league}
-${hasOdds ? `Cotes: 1=${o1}x | N=${oN}x | 2=${o2}x` : "Pas de cotes disponibles"}
-
-═══ MOTEUR EDGE (Dixon-Coles + Monte Carlo 800 sim) ═══
-Probabilités: ${home} ${pH}% | Nul ${pN}% | ${away} ${pA}%
-Buts attendus (λ): ${home} ${lH} | ${away} ${lA}
-Plus de 2.5 buts: ${pOver25}% | Les 2 marquent: ${pBtts}%
-${sc2 ? `Scores les plus probables: ${sc2}` : ""}
-Signal moteur: ${signal} | Edge: ${edgPct}% | Confiance: ${conf}/100
-Qualité données: ${dataQ}/4
-
-${h2hStr ? `═══ H2H ═══\n${h2hStr}\n` : ""}
-${d.hf ? `═══ FORME ═══\n${home}: ${d.hf}/15 pts | ${away}: ${d.af||"?"}/15 pts\n` : ""}
-${d.hRank ? `Classement: ${home} #${d.hRank} | ${away} #${d.aRank||"?"}\n` : ""}
-${hScorer ? `Joueurs clés ${home}: ${hPlayers.slice(0,5).join(", ")}` : ""}
-${aScorer ? `Joueurs clés ${away}: ${aPlayers.slice(0,5).join(", ")}` : ""}
-
-═══ COTES MARCHÉS ═══
-Double Chance favori: ${oDC}x | Over 1.5: ${oO15}x | Over 2.5: ${oO25}x | BTTS: ${oBtts}x
-Combo sécurisé (${favTeam} + O1.5): ~${comboSecOdd}x
-Combo fun (${favTeam} + ${favScorer} buteur + ${favAssist} décisif): ~${comboFunOdd}x
-DC favori + O2.5: ~${comboDcOdd}x
-
-═══ TA MISSION ═══
-Génère une analyse COMPLÈTE et PRÉCISE. Sois direct comme un expert qui parle à un ami.
-Même si la cote est faible (ex: 1.20x), propose quand même le pari — l'utilisateur veut un pronostic clair.
-Base-toi sur les probabilités du moteur ET ta connaissance des équipes.
-
-STRUCTURE OBLIGATOIRE (respecte exactement ces emojis et titres):
-
-🏆 VERDICT
-[1-2 phrases percutantes sur qui va gagner et pourquoi. Ex: "La France devrait s'imposer nettement face à l'Irak, les statistiques sont sans appel."]
-
-🎯 PARI PRINCIPAL
-[Pari exact] @ [cote]x
-[1 phrase justification]
-
-⚡ COMBO SÉCURISÉ
-[Ex: France gagne + Plus 1.5 buts] @ ~${comboSecOdd}x
-[1 phrase pourquoi c'est sûr]
-
-🎰 PARI FUN
-[Ex: ${favTeam} gagne + ${favScorer} buteur + ${favAssist} décisif] @ ~${comboFunOdd}x
-[1 phrase d'ambiance]
-
-📊 ANALYSE RAPIDE
-- ${home}: [force principale en 1 ligne]
-- ${away}: [force/faiblesse en 1 ligne]
-- Scénario: [comment le match va se dérouler en 1-2 phrases]
-
-⚠️ RISQUE PRINCIPAL
-[1 phrase sur le principal danger]
-
-🔁 ALTERNATIVE
-[1 autre marché intéressant avec sa cote]
-
-RÈGLES ABSOLUES:
-- Maximum 220 mots
-- Toujours proposer un pari même si cote basse
-- Nommer les joueurs quand pertinent (${favScorer}, ${hAssist}, etc.)
-- Jamais dire "données insuffisantes" — analyse toujours
-- Ton: expert confiant, direct, humain`;
-
-  try {
-    const resp = await fetch("https://api.mistral.ai/v1/chat/completions",{
-      method:"POST",
-      headers:{"Content-Type":"application/json","Authorization":`Bearer ${MKEY}`},
-      body:JSON.stringify({
-        model:"mistral-small-latest",
-        max_tokens:900,
-        temperature:0.20,
-        messages:[
-          {
-            role:"system",
-            content:"Tu es l'analyste expert de EDGE. Tu donnes toujours des pronostics précis, clairs et actionnables. Tu nommes les joueurs clés. Tu proposes toujours un pari même sur les gros favoris. Ton style: expert confiant, direct, humain. Jamais de formules vagues. Toujours le format demandé avec les emojis."
-          },
-          {role:"user", content:prompt}
-        ]
-      }),
-      signal:(()=>{const c=new AbortController();setTimeout(()=>c.abort(),28000);return c.signal;})()
-    });
-
-    if(!resp.ok){
-      const err=await resp.text();
-      return res.status(502).json({error:`Mistral indisponible (${resp.status}): ${err.slice(0,100)}`});
+    if(r.sc2&&r.sc2.length){
+      const top = r.sc2.slice(0,5);
+      L.push(`\nScores les plus probables:`);
+      top.forEach(s=>L.push(`  ${s.h}-${s.a}: ${(s.p*100).toFixed(1)}%`));
     }
 
-    const data=await resp.json();
-    const text=data.choices?.[0]?.message?.content||"";
-    if(!text) return res.status(500).json({error:"Réponse vide"});
+    // Marchés alternatifs
+    if(r.altMarkets&&r.altMarkets.length>0){
+      L.push(`\nMarchés alternatifs détectés (basés sur 885 matchs réels):`);
+      r.altMarkets.forEach(m=>{
+        L.push(`  → ${m.n} @ ${m.o}x | Proba: ${(m.p*100).toFixed(0)}% | EV: +${(m.ev*100).toFixed(1)}% | Réussite historique: ${m.conf}%`);
+      });
+    }
 
-    return res.status(200).json({
-      text: text.replace(/```[a-z]*/g,"").replace(/```/g,"").trim(),
-      model:"mistral-small-latest",
-      tokens: data.usage?.total_tokens||0,
-      home, away,
-      favTeam,
-      favScorer,
-      combos: {
-        secure: { label:`${favTeam} gagne + Plus 1.5 buts`, odd: comboSecOdd },
-        fun: { label:`${favTeam} + ${favScorer} buteur + ${favAssist} décisif`, odd: comboFunOdd },
-        dc: { label:`Double Chance favori + Plus 2.5 buts`, odd: comboDcOdd }
-      }
-    });
-
-  } catch(e){
-    return res.status(500).json({
-      error: e.name==="AbortError"?"Timeout (28s)":e.message
-    });
+    // Probabilités marchés buts
+    if(r.pOver25||r.pBttsY){
+      L.push(`\nProbabilités marchés buts:`);
+      if(r.pOver25) L.push(`  Plus 2.5 buts: ${((r.pOver25||0)*100).toFixed(0)}% | Moins 2.5: ${((r.pUnder25||0)*100).toFixed(0)}%`);
+      if(r.pOver35) L.push(`  Plus 3.5 buts: ${((r.pOver35||0)*100).toFixed(0)}%`);
+      if(r.pBttsY)  L.push(`  Les 2 marquent: ${((r.pBttsY||0)*100).toFixed(0)}% | Les 2 ne marquent pas: ${((r.pBttsN||0)*100).toFixed(0)}%`);
+      if(r.pUnder15) L.push(`  Moins 1.5 buts: ${((r.pUnder15||0)*100).toFixed(0)}%`);
+    }
+    L.push("");
   }
+
+  // STATISTIQUES COMPLÈTES
+  L.push("════ STATISTIQUES ════");
+  const hxg=d.hxg||d.hXG, axg=d.axg||d.aXG;
+  const hxga=d.hxga||d.hXGA, axga=d.axga||d.aXGA;
+  const hg=d.hg||d.hG, ag=d.ag||d.aG;
+  const hf=d.hf||d.hF, af=d.af||d.aF;
+  const hcs=d.hcs, acs=d.acs;
+
+  L.push(`${home}:`);
+  if(hxg) L.push(`  xG moyen: ${hxg} buts/match | xGA (buts concédés): ${hxga||"?"}`);
+  if(hg)  L.push(`  Buts marqués/match: ${typeof hg==="number"?hg.toFixed(2):hg}`);
+  if(hf!=null) L.push(`  Forme récente: ${hf}/15 pts`);
+  if(hcs!=null) L.push(`  Clean sheets: ${hcs}%`);
+  if(d.hRank) L.push(`  Classement: #${d.hRank}`);
+  if(d.hWinRate) L.push(`  Taux victoire: ${(d.hWinRate*100).toFixed(0)}%`);
+
+  L.push(`\n${away}:`);
+  if(axg) L.push(`  xG moyen: ${axg} buts/match | xGA: ${axga||"?"}`);
+  if(ag)  L.push(`  Buts marqués/match: ${typeof ag==="number"?ag.toFixed(2):ag}`);
+  if(af!=null) L.push(`  Forme récente: ${af}/15 pts`);
+  if(acs!=null) L.push(`  Clean sheets: ${acs}%`);
+  if(d.aRank) L.push(`  Classement: #${d.aRank}`);
+  L.push("");
+
+  // CONTEXTE MATCH
+  const ctx=[];
+  if(d.keyPlayerOut>0)   ctx.push(`Absents importants DOM: ${d.keyPlayerOut}/10`);
+  if(d.keyPlayerOutA>0)  ctx.push(`Absents importants EXT: ${d.keyPlayerOutA}/10`);
+  if(d.rotationH>0)      ctx.push(`Rotation DOM: ${d.rotationH===2?"massive":"légère"}`);
+  if(d.rotationA>0)      ctx.push(`Rotation EXT: ${d.rotationA===2?"massive":"légère"}`);
+  if(d.matchsLast7H>=2)  ctx.push(`Fatigue DOM: ${d.matchsLast7H} matchs en 7 jours`);
+  if(d.matchsLast7A>=2)  ctx.push(`Fatigue EXT: ${d.matchsLast7A} matchs en 7 jours`);
+  if(d.derby)            ctx.push("Derby — variance élevée, résultat imprévisible");
+  if(d.stakeLevel===0)   ctx.push("Match sans enjeu — risque de relâchement");
+  if(d.stakeLevel===3)   ctx.push("Match décisif — pression maximale des deux côtés");
+  if(d.motivH<0)         ctx.push(`Moral DOM bas`);
+  if(d.motivA<0)         ctx.push(`Moral EXT bas`);
+  if(d.tactH)            ctx.push(`Tactique DOM: ${d.tactH}`);
+  if(d.tactA)            ctx.push(`Tactique EXT: ${d.tactA}`);
+  if(r&&r.ctx&&r.ctx.length) ctx.push(...r.ctx.slice(0,3));
+
+  if(ctx.length){
+    L.push("════ CONTEXTE ════");
+    ctx.forEach(c=>L.push(`• ${c}`));
+    L.push("");
+  }
+
+  // H2H
+  if(d.h2h&&d.h2h.length){
+    const h2h=d.h2h.slice(0,6);
+    const hW=h2h.filter(g=>g.winner==="home").length;
+    const aW=h2h.filter(g=>g.winner==="away").length;
+    const draws=h2h.length-hW-aW;
+    const avgGH=(h2h.reduce((s,g)=>s+(g.homeGoals||0),0)/h2h.length).toFixed(1);
+    const avgGA=(h2h.reduce((s,g)=>s+(g.awayGoals||0),0)/h2h.length).toFixed(1);
+    const avgTot=(h2h.reduce((s,g)=>s+(g.homeGoals||0)+(g.awayGoals||0),0)/h2h.length).toFixed(1);
+    L.push("════ HISTORIQUE H2H ════");
+    L.push(`${h2h.length} confrontations directes:`);
+    L.push(`  DOM ${hW}V | ${draws}N | ${aW}D EXT`);
+    L.push(`  Buts moyens: ${home} ${avgGH} | ${away} ${avgGA} | Total: ${avgTot}/match`);
+    L.push(`  Résultats récents: ${h2h.slice(0,5).map(g=>`${g.homeGoals||0}-${g.awayGoals||0}`).join(" | ")}`);
+    if(d.h2hStats){
+      const s=d.h2hStats;
+      L.push(`  Équipe dominante H2H: ${s.hWins>s.aWins?home:s.aWins>s.hWins?away:"Équilibré"}`);
+    }
+    L.push("");
+  }
+
+  // BLESSÉS
+  if(d.injuries){
+    const hInj=(d.injuries.homeInj||[]).slice(0,6);
+    const aInj=(d.injuries.awayInj||[]).slice(0,6);
+    if(hInj.length||aInj.length){
+      L.push("════ BLESSÉS / SUSPENDUS ════");
+      if(hInj.length) L.push(`${home}: ${hInj.map(i=>`${i.player}${i.type?" ("+i.type+")":""}`).join(", ")}`);
+      if(aInj.length) L.push(`${away}: ${aInj.map(i=>`${i.player}${i.type?" ("+i.type+")":""}`).join(", ")}`);
+      L.push("");
+    }
+  }
+
+  // PRÉDICTIONS API (si disponibles)
+  if(d.apiPredH||d.apiPredN){
+    L.push("════ PRÉDICTIONS API-FOOTBALL ════");
+    if(d.apiPredH) L.push(`DOM: ${(d.apiPredH*100).toFixed(0)}% | NUL: ${(d.apiPredN*100).toFixed(0)}% | EXT: ${(d.apiPredA*100).toFixed(0)}%`);
+    L.push("");
+  }
+
+  // MISSION — STRUCTURE IMPOSÉE
+  L.push("════ TA MISSION ════");
+  L.push(`Analyse complète de ${home} vs ${away}.`);
+  L.push("Utilise TOUTES les données ci-dessus. Ne répète pas les chiffres bruts — interprète-les.");
+  L.push("Si une donnée manque, signale-le brièvement et passe à ce que tu sais.");
+  L.push("");
+  L.push("Réponds EXACTEMENT dans ce format:");
+  L.push("");
+  L.push("⚡ VERDICT");
+  L.push("[Pari principal recommandé ou 'Pas de signal clair' si données insuffisantes]");
+  L.push("Cote: [X]x | Mise: [Y]% du bankroll | Confiance: [Z]/100");
+  L.push("");
+  L.push("📊 ANALYSE");
+  L.push("[3-4 phrases sur les forces/faiblesses des deux équipes basées sur xG, forme, H2H]");
+  L.push("");
+  L.push("⚠️ RISQUES");
+  L.push("[Blessures, fatigue, enjeu, derby, variance — ce qui peut faire foirer le pari]");
+  L.push("");
+  L.push("🎯 MARCHÉS ALTERNATIFS");
+  L.push("[2-3 marchés avec probabilité et cote estimée — Over/Under, BTTS, Double Chance]");
+  L.push("");
+  L.push("📈 SCÉNARIO PROBABLE");
+  L.push("[Comment le match va se dérouler, score probable]");
+  L.push("");
+  L.push("350 mots maximum. Sois direct. Sois précis. Sois honnête sur les incertitudes.");
+  L.push("18+ — rappelle toujours de parier responsablement à la fin.");
+
+  const prompt = L.join("\n");
+
+  // Essayer Claude en premier (meilleure analyse)
+  if(CKEY){
+    try{
+      const resp = await fetch("https://api.anthropic.com/v1/messages",{
+        method:"POST",
+        headers:{
+          "Content-Type":"application/json",
+          "x-api-key":CKEY,
+          "anthropic-version":"2023-06-01"
+        },
+        body:JSON.stringify({
+          model:"claude-sonnet-4-6",
+          max_tokens:1500,
+          system:"Tu es EDGE, le meilleur analyste de paris sportifs. Tu analyses avec rigueur et honnêteté. Tu ne promets jamais de gains garantis mais tu identifies les opportunités réelles basées sur les données. Tu rappelles toujours de parier responsablement.",
+          messages:[{role:"user",content:prompt}]
+        })
+      });
+      if(resp.ok){
+        const data=await resp.json();
+        const text=data.content?.[0]?.text||"";
+        if(text) return res.status(200).json({text,model:"claude-sonnet-4-6",tokens:data.usage?.output_tokens||0});
+      }
+    }catch(e){}
+  }
+
+  // Fallback Mistral
+  if(MKEY){
+    try{
+      const resp = await fetch("https://api.mistral.ai/v1/chat/completions",{
+        method:"POST",
+        headers:{"Content-Type":"application/json","Authorization":`Bearer ${MKEY}`},
+        body:JSON.stringify({
+          model:"mistral-small-latest",
+          max_tokens:1500,
+          temperature:0.10,
+          messages:[
+            {role:"user",content:"Tu es EDGE, analyste de paris sportifs. Tu analyses avec rigueur et honnêteté, sans jamais promettre de gains garantis. Compris?"},
+            {role:"assistant",content:"Compris. J'analyse avec rigueur en me basant uniquement sur les données. Honnêteté totale sur les incertitudes."},
+            {role:"user",content:prompt}
+          ]
+        }),
+        signal:(()=>{const c=new AbortController();setTimeout(()=>c.abort(),28000);return c.signal;})()
+      });
+      if(resp.ok){
+        const data=await resp.json();
+        const text=data.choices?.[0]?.message?.content||"";
+        if(text) return res.status(200).json({
+          text:text.replace(/```[a-z]*/g,"").replace(/```/g,"").trim(),
+          model:"mistral-small-latest",
+          tokens:data.usage?.total_tokens||0
+        });
+      }
+    }catch(e){
+      return res.status(500).json({error:e.name==="AbortError"?"Timeout (28s)":e.message});
+    }
+  }
+
+  return res.status(502).json({error:"IA temporairement indisponible"});
 };
