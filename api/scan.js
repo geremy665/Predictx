@@ -1,4 +1,4 @@
-// EDGE — api/scan.js v20 — CORRECTIF : /fixtures n'a pas de paramètre page
+// EDGE — api/scan.js v21 — CORRECTIF : bet=1 supposait un ID non garanti (0 cote sur tous les matchs)
 function toNum(val, decimals) {
   if(val === null || val === undefined || isNaN(val)) return 0;
   return parseFloat(parseFloat(val).toFixed(decimals || 3));
@@ -160,7 +160,10 @@ async function getOddsBulk(date, key, maxPages) {
       const t = setTimeout(() => ctrl.abort(), 9000);
       if (API_STOP) break;
       API_CALLS++;
-      const r = await fetch(`https://v3.football.api-sports.io/odds?date=${date}&bet=1&page=${page}`, {
+      // Pas de filtre "bet=" : l'ID du marché "Match Winner" n'est PAS garanti
+      // être 1 sur tous les comptes/versions — un mauvais ID renvoie une réponse
+      // vide sans erreur. On filtre nous-mêmes par NOM plus bas (fiable).
+      const r = await fetch(`https://v3.football.api-sports.io/odds?date=${date}&page=${page}`, {
         headers: { "x-apisports-key": key, "Accept": "application/json" },
         signal: ctrl.signal,
       });
@@ -520,7 +523,7 @@ module.exports = async (req, res) => {
     // Aucun match ET une erreur API : on le dit clairement au lieu d'afficher le vide
     if (!matches.length && API_ERROR) {
       return res.status(200).json({ matches: [], finished: [], count: 0,
-        error: API_ERROR, apiError: API_ERROR, apiCalls: API_CALLS, source: "EDGE Scan v20" });
+        error: API_ERROR, apiError: API_ERROR, apiCalls: API_CALLS, source: "EDGE Scan v21" });
     }
 
     return res.status(200).json({
@@ -537,7 +540,7 @@ module.exports = async (req, res) => {
       fixturesScanned: pool.length,
       apiCalls: API_CALLS,
       missingOdds: matches.filter(m => !m.hasRealOdds).map(m => m.c + ": " + m.h + " - " + m.a).slice(0, 12),
-      source: "EDGE Scan v20",
+      source: "EDGE Scan v21",
       season,
     });
 
