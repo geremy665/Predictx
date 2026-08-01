@@ -1,4 +1,4 @@
-// EDGE — api/scan.js v22 — CORRECTIF : filtre jeunes trop strict (Junioren, Youth Cup...) + priorité amateur abaissée
+// EDGE — api/scan.js v23 — CORRECTIF : rattrapage individuel trop restrictif (10 cotes/page, ligues moyennes jamais rattrapées)
 function toNum(val, decimals) {
   if(val === null || val === undefined || isNaN(val)) return 0;
   return parseFloat(parseFloat(val).toFixed(decimals || 3));
@@ -416,7 +416,7 @@ module.exports = async (req, res) => {
     // Cotes groupées sur 3 jours seulement : au-delà, les bookmakers publient rarement.
     // Les matchs plus lointains restent visibles et passent par le rattrapage si prioritaires.
     const oddDays = days.slice(1, 3);
-    const bulkMaps = await Promise.all(oddDays.map((d, i) => getOddsBulk(d, KEY, i === 0 ? 4 : 3)));
+    const bulkMaps = await Promise.all(oddDays.map((d, i) => getOddsBulk(d, KEY, i === 0 ? 8 : 5)));
     const oddsByFixture = Object.assign({}, ...bulkMaps);
 
     // ── RATTRAPAGE : matchs prioritaires oubliés par la pagination groupée ──
@@ -425,8 +425,10 @@ module.exports = async (req, res) => {
       const st = f.fixture?.status?.short || "NS";
       if (LIVE.has(st)) return false;
       if (oddsByFixture[f.fixture?.id]) return false;
-      return (PRIORITY[f.league?.id] || 0) >= 70;
-    }).slice(0, 8);
+      // Toute ligue qu'on a explicitement classée mérite le rattrapage individuel —
+      // seules les ligues totalement inconnues restent exclues de ce filet.
+      return f.league?.id in PRIORITY;
+    }).slice(0, 25);
 
     if (missing.length) {
       const rescued = await Promise.all(missing.map(f => getOdds(f.fixture?.id, KEY)));
@@ -525,7 +527,7 @@ module.exports = async (req, res) => {
     // Aucun match ET une erreur API : on le dit clairement au lieu d'afficher le vide
     if (!matches.length && API_ERROR) {
       return res.status(200).json({ matches: [], finished: [], count: 0,
-        error: API_ERROR, apiError: API_ERROR, apiCalls: API_CALLS, source: "EDGE Scan v22" });
+        error: API_ERROR, apiError: API_ERROR, apiCalls: API_CALLS, source: "EDGE Scan v23" });
     }
 
     return res.status(200).json({
@@ -542,7 +544,7 @@ module.exports = async (req, res) => {
       fixturesScanned: pool.length,
       apiCalls: API_CALLS,
       missingOdds: matches.filter(m => !m.hasRealOdds).map(m => m.c + ": " + m.h + " - " + m.a).slice(0, 12),
-      source: "EDGE Scan v22",
+      source: "EDGE Scan v23",
       season,
     });
 
