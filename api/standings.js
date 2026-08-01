@@ -1,137 +1,86 @@
-// EDGE - API Football V3 - Classements toutes ligues
-// FOOTBALL_API_KEY dans Vercel env vars
+// EDGE — api/standings.js v1 — classement d'une ligue
+// Entrée : ?league=<id>
+// Sortie : { standings:[{rank,team:{id,name,logo},all:{played,win,draw,lose},points,goalsDiff,form,description}], season }
 
-const LEAGUES = [
-  {id:61,  name:"Ligue 1",          f:"FR", flag:"🇫🇷"},
-  {id:140, name:"La Liga",          f:"ES", flag:"🇪🇸"},
-  {id:39,  name:"Premier League",   f:"ENG",flag:"🏴󠁧󠁢󠁥󠁮󠁧󠁿"},
-  {id:135, name:"Serie A",          f:"IT", flag:"🇮🇹"},
-  {id:78,  name:"Bundesliga",       f:"DE", flag:"🇩🇪"},
-  {id:2,   name:"Champions League", f:"UCL",flag:"⭐"},
-  {id:3,   name:"Europa League",    f:"UEL",flag:"🟠"},
-  {id:848, name:"Conference League",f:"UEL",flag:"🟤"},
-  {id:94,  name:"Liga Portugal",    f:"PT", flag:"🇵🇹"},
-  {id:88,  name:"Eredivisie",       f:"NL", flag:"🇳🇱"},
-  {id:144, name:"Pro League",       f:"BE", flag:"🇧🇪"},
-  {id:203, name:"Super Lig",        f:"TR", flag:"🇹🇷"},
-  {id:179, name:"Premiership",      f:"SCO",flag:"🏴󠁧󠁢󠁳󠁣󠁴󠁿"}
-];
-
-async function apiFetch(url, key, ms = 8000) {
+async function apiFetch(url, key, ms) {
   try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), ms || 8000);
     const r = await fetch(`https://v3.football.api-sports.io${url}`, {
       headers: { "x-apisports-key": key, "Accept": "application/json" },
-      signal: AbortSignal.timeout(ms)
+      signal: ctrl.signal,
     });
+    clearTimeout(t);
     if (!r.ok) return null;
     const d = await r.json();
     return d.response || null;
   } catch (e) { return null; }
 }
 
-// Batch : max 5 requêtes en parallèle avec pause entre batches
-async function batch(items, fn, size = 5, delay = 300) {
-  const out = [];
-  for (let i = 0; i < items.length; i += size) {
-    const res = await Promise.all(items.slice(i, i + size).map(fn));
-    out.push(...res);
-    if (i + size < items.length) await new Promise(r => setTimeout(r, delay));
-  }
-  return out;
-}
-
 module.exports = async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET,OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-  // Cache 1h — les classements ne changent pas toutes les minutes
-  res.setHeader("Cache-Control", "s-maxage=3600, stale-while-revalidate=7200");
-
+  res.setHeader("Cache-Control", "s-maxage=3600, stale-while-revalidate=21600");
   if (req.method === "OPTIONS") return res.status(200).end();
 
-  const KEY = process.env.FOOTBALL_API_KEY;
-  if (!KEY) return res.status(500).json({ error: "FOOTBALL_API_KEY manquante", standings: [] });
+  const KEY = process.env.FOOTBALL_API_KEY || "";
+  if (!KEY) return res.status(200).json({ standings: [], error: "no_key" });
 
-  const now    = new Date();
-  const season = now.getMonth() >= 6 ? now.getFullYear() : now.getFullYear() - 1;
+  const q = req.query || {};
+  const leagueId = parseInt(q.league, 10);
+  if (!leagueId) return res.status(200).json({ standings: [], error: "missing_league" });
 
   try {
-    // Fetch tous les classements en batch
-    const results = await batch(LEAGUES, async lg => {
-      const data = await apiFetch(`/standings?league=${lg.id}&season=${season}`, KEY);
-      if (!data?.length) return null;
+    const now = new Date();
+    let season = now.getMonth() < 7 ? now.getFullYear() - 1 : now.getFullYear();
 
-      // L'API retourne un tableau de groupes (ex: Champions League a plusieurs groupes)
-      const groups = data[0]?.league?.standings || [];
+    let resp = await apiFetch(`/standings?league=${leagueId}&season=${season}`, KEY);
 
-      const parsedGroups = groups.map((group, gIdx) => {
-        const rows = (Array.isArray(group) ? group : [group]).map(team => ({
-          rank:        team.rank,
-          team:        team.team?.name,
-          teamId:      team.team?.id,
-          logo:        team.team?.logo,
-          played:      team.all?.played || 0,
-          win:         team.all?.win    || 0,
-          draw:        team.all?.draw   || 0,
-          lose:        team.all?.lose   || 0,
-          goalsFor:    team.all?.goals?.for    || 0,
-          goalsAgainst:team.all?.goals?.against|| 0,
-          goalDiff:    team.goalsDiff || 0,
-          points:      team.points    || 0,
-          form:        team.form      || "",
-          // Statut (Champions, Europa, Relegation...)
-          status:      team.description || "",
-          // Derniers résultats
-          last5:       (team.form || "").slice(-5).split(""),
-          // Home & away séparés
-          home: {
-            played: team.home?.played || 0,
-            win:    team.home?.win    || 0,
-            draw:   team.home?.draw   || 0,
-            lose:   team.home?.lose   || 0,
-            gf:     team.home?.goals?.for     || 0,
-            ga:     team.home?.goals?.against || 0
-          },
-          away: {
-            played: team.away?.played || 0,
-            win:    team.away?.win    || 0,
-            draw:   team.away?.draw   || 0,
-            lose:   team.away?.lose   || 0,
-            gf:     team.away?.goals?.for     || 0,
-            ga:     team.away?.goals?.against || 0
-          }
-        }));
+    // Certaines compétitions (coupes UEFA en phase de groupes, saison qui vient
+    // de démarrer) n'ont pas encore de classement pour la saison en cours.
+    if (!resp || !resp.length) {
+      season = season - 1;
+      resp = await apiFetch(`/standings?league=${leagueId}&season=${season}`, KEY);
+    }
+    if (!resp || !resp.length) {
+      return res.status(200).json({ standings: [], error: "no_data", leagueId, season });
+    }
 
-        return {
-          groupName: rows.length > 0 && groups.length > 1 ? `Groupe ${gIdx + 1}` : null,
-          rows
-        };
-      });
+    // La forme peut être standings[0].league.standings[0] (groupe unique)
+    // ou standings[0].league.standings (plusieurs groupes/poules)
+    const lg = resp[0] && resp[0].league;
+    let raw = [];
+    if (lg && Array.isArray(lg.standings) && lg.standings.length) {
+      raw = lg.standings[0] || [];
+    }
+    if (!raw.length) return res.status(200).json({ standings: [], error: "empty", leagueId, season });
 
-      return {
-        leagueId:   lg.id,
-        leagueName: lg.name,
-        f:          lg.f,
-        flag:       lg.flag,
-        season,
-        groups:     parsedGroups,
-        // Flat pour accès rapide (premier groupe = classement principal)
-        standings:  parsedGroups[0]?.rows || []
-      };
-    });
-
-    const standings = results.filter(Boolean);
+    const standings = raw.map((r) => ({
+      rank: r.rank,
+      team: {
+        id: r.team && r.team.id,
+        name: r.team && r.team.name,
+        logo: r.team && r.team.logo,
+      },
+      all: {
+        played: r.all && r.all.played,
+        win: r.all && r.all.win,
+        draw: r.all && r.all.draw,
+        lose: r.all && r.all.lose,
+      },
+      points: r.points,
+      goalsDiff: r.goalsDiff,
+      form: r.form,
+      description: r.description,
+    }));
 
     return res.status(200).json({
       standings,
-      count:   standings.length,
+      leagueId,
       season,
-      updated: now.toISOString(),
-      source:  "API-Football V3 Standings"
+      leagueName: lg && lg.name,
+      source: "EDGE Standings v1",
     });
-
   } catch (e) {
-    return res.status(500).json({ error: e.message, standings: [] });
+    return res.status(200).json({ standings: [], error: e.message });
   }
 };
-
