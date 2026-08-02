@@ -1,11 +1,11 @@
-// EDGE — api/backtest.js v2 — toute l'Europe (filtrage par pays)
+// EDGE — api/backtest.js v3 — filtre jeunes/féminines renforcé (formes fléchies + filet équipes)
 // Le moteur les analyse sans connaître le score, puis on compare.
 // Entrée : ?days=7&leagueId=61
 // Sortie : { matches:[{...cotes..., realResult, goalsH, goalsA}], count }
 
 const EU = new Set(["France","Spain","England","Italy","Germany","Portugal","Netherlands","Belgium","Scotland","Wales","Ireland","Northern-Ireland","Turkey","Switzerland","Austria","Greece","Poland","Czech-Republic","Romania","Croatia","Serbia","Ukraine","Russia","Sweden","Norway","Denmark","Finland","Iceland","Estonia","Latvia","Lithuania","Belarus","Bulgaria","Hungary","Slovakia","Slovenia","Bosnia","Bosnia-and-Herzegovina","Albania","North-Macedonia","Macedonia","Montenegro","Kosovo","Moldova","Malta","Cyprus","Luxembourg","Faroe-Islands","Andorra","San-Marino","Gibraltar","Armenia","Georgia","Azerbaijan","Kazakhstan","Israel","World"]);
 const UEFA = new Set([2,3,848,4,5,1,10,667,531,525]);
-const EXCLURE = /\b(U1[5-9]|U2[0-3]|Youth|Junior|Women|Feminine|Femenin|Reserve|Amateur|Futsal|Beach)\b/i;
+const EXCLURE = /\b(U1[5-9]|U2[0-3]|Youths?|Juniors?|Junioren|Jugend|Women'?s?|Feminine|Femenin|Reserves?|Amateur|Futsal|Beach)\w*\b/i;
 function ligueRetenue(l){
   if(!l) return false;
   if(l.name && EXCLURE.test(l.name)) return false;
@@ -107,6 +107,11 @@ module.exports = async (req, res) => {
       .filter(f => DONE.has(f.fixture && f.fixture.status && f.fixture.status.short))
       .filter(f => f.goals && f.goals.home !== null && f.goals.away !== null)
       .filter(f => ligueRetenue(f.league))
+      .filter(f => {
+        const hn = (f.teams && f.teams.home && f.teams.home.name) || "";
+        const an = (f.teams && f.teams.away && f.teams.away.name) || "";
+        return !EXCLURE.test(hn) && !EXCLURE.test(an);
+      })
       .filter(f => !leagueId || (f.league && f.league.id === leagueId));
 
     // Cotes : une requête groupée par date
@@ -152,7 +157,7 @@ module.exports = async (req, res) => {
       matches: matches.slice(0, 300),
       count: matches.length,
       daysAnalysed: days,
-      source: "EDGE Backtest v2",
+      source: "EDGE Backtest v3",
     });
   } catch (e) {
     return res.status(200).json({ matches: [], error: e.message });
