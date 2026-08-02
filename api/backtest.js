@@ -1,9 +1,11 @@
-// EDGE — api/backtest.js v3 — filtre jeunes/féminines renforcé (formes fléchies + filet équipes)
+// EDGE — api/backtest.js v4 — resserré sur les mêmes championnats que scan.js (Winamax/Betclic)
 // Le moteur les analyse sans connaître le score, puis on compare.
 // Entrée : ?days=7&leagueId=61
 // Sortie : { matches:[{...cotes..., realResult, goalsH, goalsA}], count }
 
-const EU = new Set(["France","Spain","England","Italy","Germany","Portugal","Netherlands","Belgium","Scotland","Wales","Ireland","Northern-Ireland","Turkey","Switzerland","Austria","Greece","Poland","Czech-Republic","Romania","Croatia","Serbia","Ukraine","Russia","Sweden","Norway","Denmark","Finland","Iceland","Estonia","Latvia","Lithuania","Belarus","Bulgaria","Hungary","Slovakia","Slovenia","Bosnia","Bosnia-and-Herzegovina","Albania","North-Macedonia","Macedonia","Montenegro","Kosovo","Moldova","Malta","Cyprus","Luxembourg","Faroe-Islands","Andorra","San-Marino","Gibraltar","Armenia","Georgia","Azerbaijan","Kazakhstan","Israel","World"]);
+// Resserré sur les pays des championnats réellement affichés par scan.js —
+// les mêmes que ceux proposés par Winamax/Betclic.
+const EU = new Set(["France","Spain","England","Italy","Germany","Portugal","Netherlands","Belgium","Scotland","Turkey","World"]);
 const UEFA = new Set([2,3,848,4,5,1,10,667,531,525]);
 const EXCLURE = /\b(U1[5-9]|U2[0-3]|Youths?|Juniors?|Junioren|Jugend|Women'?s?|Feminine|Femenin|Reserves?|Amateur|Futsal|Beach)\w*\b/i;
 function ligueRetenue(l){
@@ -18,7 +20,7 @@ function ligueRetenue(l){
   if(l.country === "World") return UEFA.has(l.id);
   return EU.has(l.country);
 }
-const LEAGUE_NAME = {61:"Ligue 1",62:"Ligue 2",140:"La Liga",141:"La Liga 2",39:"Premier League",40:"Championship",135:"Serie A",136:"Serie B",78:"Bundesliga",79:"2. Bundesliga",2:"Champions League",3:"Europa League",848:"Conference League",94:"Liga Portugal",88:"Eredivisie",144:"Pro League",203:"Süper Lig",179:"Premiership",113:"Allsvenskan",103:"Eliteserien",119:"Superligaen",244:"Veikkausliiga",357:"League of Ireland",207:"Super League CH",218:"Bundesliga AT",197:"Super League GR",106:"Ekstraklasa",345:"Fortuna Liga",283:"Liga I",210:"HNL",286:"Super Liga RS",333:"Premier League UA",10:"Amicaux Nations",667:"Amicaux Clubs",4:"Euro",5:"UEFA Nations League",1:"Qualif. Mondial",34:"Qualif. Mondial"};
+const LEAGUE_NAME = {61:"Ligue 1",62:"Ligue 2",140:"La Liga",39:"Premier League",135:"Serie A",78:"Bundesliga",2:"Champions League",3:"Europa League",848:"Conference League",94:"Liga Portugal",88:"Eredivisie",144:"Pro League",203:"Süper Lig",179:"Premiership",10:"Amicaux Nations",667:"Amicaux Clubs",4:"Euro",5:"UEFA Nations League",1:"Qualif. Mondial",34:"Qualif. Mondial"};
 const DONE = new Set(["FT","AET","PEN"]);
 const SHARP_BK = [8,6,1,2,3];
 
@@ -157,7 +159,7 @@ module.exports = async (req, res) => {
       matches: matches.slice(0, 300),
       count: matches.length,
       daysAnalysed: days,
-      source: "EDGE Backtest v3",
+      source: "EDGE Backtest v4",
     });
   } catch (e) {
     return res.status(200).json({ matches: [], error: e.message });
