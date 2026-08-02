@@ -1,4 +1,4 @@
-// EDGE — api/scan.js v25 — équilibre quota/couverture : rattrapage limité à AUJOURD'HUI uniquement
+// EDGE — api/scan.js v27 — CORRECTIF STRUCTUREL : ligueRetenue() ignorait LEAGUES quand le pays était connu
 function toNum(val, decimals) {
   if(val === null || val === undefined || isNaN(val)) return 0;
   return parseFloat(parseFloat(val).toFixed(decimals || 3));
@@ -8,19 +8,6 @@ function toNum(val, decimals) {
 // ── Pays européens : on accepte TOUTE compétition qui s'y déroule ──
 // Une liste fermée de ligues laissait de côté l'Islande, les pays baltes,
 // la Bulgarie, la Hongrie, Chypre… c'est-à-dire l'Europe qui joue en été.
-const EU = new Set([
-  "France","Spain","England","Italy","Germany","Portugal","Netherlands","Belgium",
-  "Scotland","Wales","Ireland","Northern-Ireland","Turkey","Switzerland","Austria",
-  "Greece","Poland","Czech-Republic","Romania","Croatia","Serbia","Ukraine","Russia",
-  "Sweden","Norway","Denmark","Finland","Iceland","Estonia","Latvia","Lithuania",
-  "Belarus","Bulgaria","Hungary","Slovakia","Slovenia","Bosnia","Bosnia-and-Herzegovina",
-  "Albania","North-Macedonia","Macedonia","Montenegro","Kosovo","Moldova","Malta",
-  "Cyprus","Luxembourg","Faroe-Islands","Andorra","San-Marino","Gibraltar","Armenia",
-  "Georgia","Azerbaijan","Kazakhstan","Israel","World"
-]);
-
-// Compétitions UEFA (pays = "World" chez le fournisseur)
-const UEFA = new Set([2,3,848,4,5,1,10,667,531,525]);
 
 // On écarte les catégories qui ne se parient pas
 // \w* après la racine capte les formes fléchies : Junior/Junioren/Juniors,
@@ -30,82 +17,55 @@ const EXCLURE = /\b(U1[5-9]|U2[0-3]|Youths?|Juniors?|Junioren|Jugend|Women'?s?|F
 function ligueRetenue(l){
   if(!l) return false;
   if(l.name && EXCLURE.test(l.name)) return false;
-  if(UEFA.has(l.id)) return true;
-  // Filet de sécurité : si le fournisseur n'envoie pas le pays, on retombe
-  // sur la liste des ligues connues plutôt que de tout rejeter.
-  if(l.country === undefined || l.country === null || l.country === "") {
-    return LEAGUES.has(l.id);
-  }
-  if(l.country === "World") return UEFA.has(l.id);
-  return EU.has(l.country);
+  // LEAGUES est désormais la SEULE source de vérité : la liste précise des
+  // championnats retenus (Winamax/Betclic). Le pays ne sert plus qu'à un
+  // filet de sécurité si l'identifiant de la ligue n'est pas reconnu.
+  return LEAGUES.has(l.id);
 }
 
+// Liste resserrée sur ce qui est réellement pariable chez Winamax/Betclic —
+// les Big 5, les coupes européennes, et les championnats secondaires les
+// plus suivis. Toutes les D2/D3 étrangères et petites ligues mineures ont
+// été retirées : elles gaspillaient le quota sans intéresser personne.
 const LEAGUES = new Set([
   // Big 5
   61,140,39,135,78,
-  // Coupes d'Europe + qualifications (dès juillet)
+  // Coupes d'Europe + qualifications
   2,3,848,
-  // Championnats européens
+  // Championnats secondaires les plus suivis en France
   94,   // Liga Portugal
   88,   // Eredivisie
   144,  // Pro League (Belgique)
-  203,  // Süper Lig
+  203,  // Süper Lig (Turquie)
   179,  // Premiership (Écosse)
-  113,  // Allsvenskan (Suède)
-  103,  // Eliteserien (Norvège)
-  119,  // Superligaen (Danemark)
-  244,  // Veikkausliiga (Finlande)
-  357,  // League of Ireland
-  207,  // Super League (Suisse)
-  218,  // Bundesliga (Autriche)
-  197,  // Super League (Grèce)
-  106,  // Ekstraklasa (Pologne)
-  345,  // Fortuna Liga (Tchéquie)
-  283,  // Liga I (Roumanie)
-  210,  // HNL (Croatie)
-  286,  // Super Liga (Serbie)
-  333,  // Premier League (Ukraine)
+  // Ligue 2 française uniquement — les autres D2 étrangères sont retirées
   62,   // Ligue 2
-  40,   // Championship (Angleterre)
-  141,  // La Liga 2
-  136,  // Serie B
-  79,   // 2. Bundesliga
   // International UEFA + amicaux
   4,5,10,667,1,34,
 ]);
 
 // Priorité d'affichage (plus haut = montré en premier)
 const PRIORITY = {
-  2:95, 3:92, 848:88,               // UCL, UEL, Conference (qualifs dès juillet)
+  2:95, 3:92, 848:88,               // UCL, UEL, Conference
   61:90,140:90,39:90,135:90,78:90,  // Big 5
   94:74, 88:74, 144:72, 203:72,     // PT, NL, BE, TR
-  40:70, 62:64, 141:62, 136:62, 79:62, // D2 majeures
-  179:66, 207:64, 218:62, 197:60,   // Écosse, Suisse, Autriche, Grèce
-  113:62, 103:62, 119:60, 244:56, 357:54, // Nordiques + Irlande
-  106:56, 345:54, 283:52, 210:52, 286:50, 333:50, // Europe centrale/Est
+  62:70,                            // Ligue 2
+  179:66,                           // Écosse
   4:94, 5:75, 1:68, 34:68,          // Euro, Nations League, qualifs
   10:40, 667:18,                    // Amicaux (dernier)
 };
 
 const FLAG = {
-  61:"FR",62:"FR",140:"ES",141:"ES",39:"ENG",40:"ENG",135:"IT",136:"IT",
-  78:"DE",79:"DE",2:"UCL",3:"UEL",848:"UECL",94:"PT",88:"NL",144:"BE",
-  203:"TR",179:"SCO",113:"SE",103:"NO",119:"DK",244:"FI",357:"IE",
-  207:"CH",218:"AT",197:"GR",106:"PL",345:"CZ",283:"RO",210:"HR",
-  286:"RS",333:"UA",10:"INT",667:"AMI",4:"EUR",5:"UNL",1:"WCQ",34:"WCQ"
+  61:"FR",62:"FR",140:"ES",39:"ENG",135:"IT",78:"DE",
+  2:"UCL",3:"UEL",848:"UECL",94:"PT",88:"NL",144:"BE",203:"TR",179:"SCO",
+  10:"INT",667:"AMI",4:"EUR",5:"UNL",1:"WCQ",34:"WCQ"
 };
 
 const LEAGUE_NAME = {
-  61:"Ligue 1",62:"Ligue 2",140:"La Liga",141:"La Liga 2",
-  39:"Premier League",40:"Championship",135:"Serie A",136:"Serie B",
-  78:"Bundesliga",79:"2. Bundesliga",
-  2:"Champions League",3:"Europa League",848:"Conference League",
+  61:"Ligue 1",62:"Ligue 2",140:"La Liga",39:"Premier League",135:"Serie A",
+  78:"Bundesliga",2:"Champions League",3:"Europa League",848:"Conference League",
   94:"Liga Portugal",88:"Eredivisie",144:"Pro League",203:"Süper Lig",
-  179:"Premiership",113:"Allsvenskan",103:"Eliteserien",119:"Superligaen",
-  244:"Veikkausliiga",357:"League of Ireland",207:"Super League CH",
-  218:"Bundesliga AT",197:"Super League GR",106:"Ekstraklasa",
-  345:"Fortuna Liga",283:"Liga I",210:"HNL",286:"Super Liga RS",
-  333:"Premier League UA",10:"Amicaux Nations",667:"Amicaux Clubs",
+  179:"Premiership",10:"Amicaux Nations",667:"Amicaux Clubs",
   4:"Euro",5:"UEFA Nations League",1:"Qualif. Mondial",34:"Qualif. Mondial"
 };
 
@@ -536,7 +496,7 @@ module.exports = async (req, res) => {
     // Aucun match ET une erreur API : on le dit clairement au lieu d'afficher le vide
     if (!matches.length && API_ERROR) {
       return res.status(200).json({ matches: [], finished: [], count: 0,
-        error: API_ERROR, apiError: API_ERROR, apiCalls: API_CALLS, source: "EDGE Scan v25" });
+        error: API_ERROR, apiError: API_ERROR, apiCalls: API_CALLS, source: "EDGE Scan v27" });
     }
 
     return res.status(200).json({
@@ -553,7 +513,7 @@ module.exports = async (req, res) => {
       fixturesScanned: pool.length,
       apiCalls: API_CALLS,
       missingOdds: matches.filter(m => !m.hasRealOdds).map(m => m.c + ": " + m.h + " - " + m.a).slice(0, 12),
-      source: "EDGE Scan v25",
+      source: "EDGE Scan v27",
       season,
     });
 
