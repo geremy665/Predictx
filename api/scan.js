@@ -1,4 +1,4 @@
-// EDGE — api/scan.js v27 — CORRECTIF STRUCTUREL : ligueRetenue() ignorait LEAGUES quand le pays était connu
+// EDGE — api/scan.js v29 — CORRECTIF MAJEUR : on ne lisait que 3 pages de cotes sur ~37 disponibles
 function toNum(val, decimals) {
   if(val === null || val === undefined || isNaN(val)) return 0;
   return parseFloat(parseFloat(val).toFixed(decimals || 3));
@@ -279,7 +279,7 @@ module.exports = async (req, res) => {
     const season = now.getMonth() < 7 ? now.getFullYear()-1 : now.getFullYear();
 
     // -1 = hier (règlement du track record), 0..6 = une semaine d'avance
-    const days = [-1,0,1].map(i =>
+    const days = [-1,0,1,2,3].map(i =>
       new Date(now.getTime()+i*86400000).toISOString().split("T")[0]
     );
 
@@ -382,22 +382,24 @@ module.exports = async (req, res) => {
     // ── COTES EN MASSE : 1 à 3 requêtes par jour au lieu d'une par match ──
     // Cotes groupées sur 3 jours seulement : au-delà, les bookmakers publient rarement.
     // Les matchs plus lointains restent visibles et passent par le rattrapage si prioritaires.
-    const oddDays = days.slice(1, 2);  // aujourd'hui seulement
-    const bulkMaps = await Promise.all(oddDays.map(d => getOddsBulk(d, KEY, 3)));
+    // L'API renvoie 10 cotes par page et compte ~37 pages par jour :
+    // se limiter à 3 pages ne captait que 8% des matchs cotés.
+    // Le forfait Pro (7500 req/jour) permet enfin de tout lire.
+    const oddDays = days.slice(1, 3);  // aujourd'hui + demain
+    const bulkMaps = await Promise.all(oddDays.map((d, i) => getOddsBulk(d, KEY, i === 0 ? 40 : 20)));
     const oddsByFixture = Object.assign({}, ...bulkMaps);
 
     // ── RATTRAPAGE : matchs prioritaires oubliés par la pagination groupée ──
     // (Champions/Europa/Conference et grands championnats ne doivent JAMAIS manquer)
     const missing = fixtures.filter(f => {
-      const st = f.fixture?.status?.short || "NS";
-      if (LIVE.has(st)) return false;
       if (oddsByFixture[f.fixture?.id]) return false;
       const d = f.fixture?.date?.split("T")[0];
-      // Rattrapage concentré sur AUJOURD'HUI (là où l'utilisateur regarde) et
-      // les compétitions de priorité réelle (>=50) — préserve le quota tout
-      // en couvrant réellement ce qui compte pour la session en cours.
-      return d === today && (PRIORITY[f.league?.id] || 0) >= 50;
-    }).slice(0, 12);
+      // Rattrapage concentré sur AUJOURD'HUI (là où l'utilisateur regarde).
+      // Plus de seuil de priorité : tout match AFFICHÉ mérite une tentative,
+      // sinon certaines compétitions restent condamnées à "cotes indisponibles".
+      // Le plafond de 12 ci-dessous suffit à protéger le quota.
+      return d === today;
+    }).slice(0, 30);
 
     if (missing.length) {
       const rescued = await Promise.all(missing.map(f => getOdds(f.fixture?.id, KEY)));
@@ -410,16 +412,16 @@ module.exports = async (req, res) => {
     // Marchés complets (double chance, over/under, BTTS) pour les 10 matchs prioritaires
     const detailTargets = fixtures
       .filter(f => !LIVE.has(f.fixture?.status?.short) && oddsByFixture[f.fixture?.id])
-      .slice(0, 3);
+      .slice(0, 15);
     const detailArr = await Promise.all(detailTargets.map(f => getOdds(f.fixture?.id, KEY)));
     const detailById = {};
     detailTargets.forEach((f, i) => { if (detailArr[i]) detailById[f.fixture.id] = detailArr[i]; });
 
     const oddsArr = fixtures.map(f => {
       const fid = f.fixture?.id;
-      const st = f.fixture?.status?.short || "NS";
-      if (LIVE.has(st)) return null;
       const base = oddsByFixture[fid];
+      // On conserve les cotes même pour les matchs LIVE : mieux vaut une cote
+      // d'ouverture identifiée comme telle qu'un écran "cotes indisponibles".
       if (!base) return null;
       return Object.assign({}, base, detailById[fid] || {});
     });
@@ -496,7 +498,7 @@ module.exports = async (req, res) => {
     // Aucun match ET une erreur API : on le dit clairement au lieu d'afficher le vide
     if (!matches.length && API_ERROR) {
       return res.status(200).json({ matches: [], finished: [], count: 0,
-        error: API_ERROR, apiError: API_ERROR, apiCalls: API_CALLS, source: "EDGE Scan v27" });
+        error: API_ERROR, apiError: API_ERROR, apiCalls: API_CALLS, source: "EDGE Scan v29" });
     }
 
     return res.status(200).json({
@@ -513,7 +515,7 @@ module.exports = async (req, res) => {
       fixturesScanned: pool.length,
       apiCalls: API_CALLS,
       missingOdds: matches.filter(m => !m.hasRealOdds).map(m => m.c + ": " + m.h + " - " + m.a).slice(0, 12),
-      source: "EDGE Scan v27",
+      source: "EDGE Scan v29",
       season,
     });
 
