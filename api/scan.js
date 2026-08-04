@@ -1,4 +1,4 @@
-// EDGE — api/scan.js v29 — CORRECTIF MAJEUR : on ne lisait que 3 pages de cotes sur ~37 disponibles
+// EDGE — api/scan.js v30 — signaux de marché : cotes Pinnacle isolées + dispersion entre bookmakers
 function toNum(val, decimals) {
   if(val === null || val === undefined || isNaN(val)) return 0;
   return parseFloat(parseFloat(val).toFixed(decimals || 3));
@@ -147,7 +147,7 @@ async function getOddsBulk(date, key, maxPages) {
       });
       // On collecte TOUS les bookmakers pour calculer consensus + meilleure cote
       const all1 = [], allN = [], all2 = [];
-      let ref = null, hasPin = false;
+      let ref = null, hasPin = false, pinOdds = null;
       for (const bk of bks) {
         const mw = (bk.bets || []).find(b => b.id === 1 || b.name === "Match Winner");
         if (!mw || !mw.values || mw.values.length < 3) continue;
@@ -160,7 +160,7 @@ async function getOddsBulk(date, key, maxPages) {
         all1.push({ o: c1, b: bk.name });
         allN.push({ o: cn, b: bk.name });
         all2.push({ o: c2, b: bk.name });
-        if (bk.id === 8) hasPin = true;
+        if (bk.id === 8) { hasPin = true; pinOdds = { o1: c1, on: cn, o2: c2 }; }
         if (!ref) ref = { o1: c1, on: cn, o2: c2, book: bk.name };
       }
       if (!ref || all1.length === 0) continue;
@@ -174,6 +174,18 @@ async function getOddsBulk(date, key, maxPages) {
       const m1 = med(all1), mn = med(allN), m2 = med(all2);
       const marg = 1 / m1 + 1 / mn + 1 / m2;
       const cons = { p1: (1 / m1) / marg, pn: (1 / mn) / marg, p2: (1 / m2) / marg };
+
+      // ── DISPERSION : à quel point les bookmakers sont-ils d'accord ? ──
+      // Un fort désaccord signale de l'incertitude sur le marché — souvent
+      // là où se cachent les meilleures opportunités de prix.
+      const ecartType = arr => {
+        if (arr.length < 2) return 0;
+        const probs = arr.map(x => 1 / x.o);
+        const moy = probs.reduce((a, b) => a + b, 0) / probs.length;
+        const v = probs.reduce((a, b) => a + Math.pow(b - moy, 2), 0) / probs.length;
+        return Math.sqrt(v) / Math.max(moy, 0.01);   // coefficient de variation
+      };
+      const dispersion = Math.round(Math.max(ecartType(all1), ecartType(allN), ecartType(all2)) * 1000) / 1000;
 
       // Meilleure cote disponible par issue
       const best = a => a.reduce((x, y) => (y.o > x.o ? y : x), a[0]);
@@ -190,6 +202,10 @@ async function getOddsBulk(date, key, maxPages) {
       map[fid] = {
         o1: ref.o1, on: ref.on, o2: ref.o2,
         pinnacle: hasPin,
+        pinO1: pinOdds ? pinOdds.o1 : null,
+        pinON: pinOdds ? pinOdds.on : null,
+        pinO2: pinOdds ? pinOdds.o2 : null,
+        dispersion: dispersion,
         nBooks: all1.length,
         bestO1: b1.o, bestON: bN.o, bestO2: b2.o,
         bestBook1: b1.b, bestBookN: bN.b, bestBook2: b2.b,
@@ -466,6 +482,10 @@ module.exports = async (req, res) => {
         o1, on, o2,
         hasRealOdds: !!(odds.o1),
         hasPinnacle: !!(odds.pinnacle),
+        pinO1: odds.pinO1 || null,
+        pinON: odds.pinON || null,
+        pinO2: odds.pinO2 || null,
+        dispersion: odds.dispersion || 0,
         nBooks: odds.nBooks || 0,
         bestO1: odds.bestO1 || null, bestON: odds.bestON || null, bestO2: odds.bestO2 || null,
         bestBook1: odds.bestBook1 || null, bestBookN: odds.bestBookN || null, bestBook2: odds.bestBook2 || null,
@@ -498,7 +518,7 @@ module.exports = async (req, res) => {
     // Aucun match ET une erreur API : on le dit clairement au lieu d'afficher le vide
     if (!matches.length && API_ERROR) {
       return res.status(200).json({ matches: [], finished: [], count: 0,
-        error: API_ERROR, apiError: API_ERROR, apiCalls: API_CALLS, source: "EDGE Scan v29" });
+        error: API_ERROR, apiError: API_ERROR, apiCalls: API_CALLS, source: "EDGE Scan v30" });
     }
 
     return res.status(200).json({
@@ -515,7 +535,7 @@ module.exports = async (req, res) => {
       fixturesScanned: pool.length,
       apiCalls: API_CALLS,
       missingOdds: matches.filter(m => !m.hasRealOdds).map(m => m.c + ": " + m.h + " - " + m.a).slice(0, 12),
-      source: "EDGE Scan v29",
+      source: "EDGE Scan v30",
       season,
     });
 
