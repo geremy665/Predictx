@@ -1,8 +1,15 @@
-// EDGE — Service Worker v2 — cache + notifications
-const CACHE = "edge-v2";
+// EDGE — Service Worker v3 — mises à jour transparentes
+// Le numéro de version change à chaque déploiement : il force le navigateur
+// à détecter le nouveau fichier et à prévenir l'app qu'une version existe.
+const CACHE = "edge-v3";
 
 self.addEventListener("install", (e) => {
   self.skipWaiting();
+});
+
+// La page peut demander l'activation immédiate d'une nouvelle version
+self.addEventListener("message", (e) => {
+  if (e.data === "SKIP_WAITING") self.skipWaiting();
 });
 
 self.addEventListener("activate", (e) => {
