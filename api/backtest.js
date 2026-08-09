@@ -1,24 +1,24 @@
-// EDGE — api/backtest.js v5 — CORRECTIFS repris de scan.js : bet=1 retiré + pagination complète
+// EDGE — api/backtest.js v6 — LEAGUES défini + filtrage aligné sur scan.js
 // Le moteur les analyse sans connaître le score, puis on compare.
 // Entrée : ?days=7&leagueId=61
 // Sortie : { matches:[{...cotes..., realResult, goalsH, goalsA}], count }
 
 // Resserré sur les pays des championnats réellement affichés par scan.js —
 // les mêmes que ceux proposés par Winamax/Betclic.
-const EU = new Set(["France","Spain","England","Italy","Germany","Portugal","Netherlands","Belgium","Scotland","Turkey","World"]);
-const UEFA = new Set([2,3,848,4,5,1,10,667,531,525]);
 const EXCLURE = /\b(U1[5-9]|U2[0-3]|Youths?|Juniors?|Junioren|Jugend|Women'?s?|Feminine|Femenin|Reserves?|Amateur|Futsal|Beach)\w*\b/i;
+// Mêmes championnats que scan.js — sinon le backtest mesurerait la
+// calibration sur des ligues que l'app n'affiche jamais.
+const LEAGUES = new Set([
+  61,140,39,135,78,        // Big 5
+  2,3,848,                 // Coupes d'Europe
+  94,88,144,203,179,       // PT, NL, BE, TR, Écosse
+  62,                      // Ligue 2
+  4,5,10,667,1,34          // International + amicaux
+]);
 function ligueRetenue(l){
   if(!l) return false;
   if(l.name && EXCLURE.test(l.name)) return false;
-  if(UEFA.has(l.id)) return true;
-  // Filet de sécurité : si le fournisseur n'envoie pas le pays, on retombe
-  // sur la liste des ligues connues plutôt que de tout rejeter.
-  if(l.country === undefined || l.country === null || l.country === "") {
-    return LEAGUES.has(l.id);
-  }
-  if(l.country === "World") return UEFA.has(l.id);
-  return EU.has(l.country);
+  return LEAGUES.has(l.id);
 }
 const LEAGUE_NAME = {61:"Ligue 1",62:"Ligue 2",140:"La Liga",39:"Premier League",135:"Serie A",78:"Bundesliga",2:"Champions League",3:"Europa League",848:"Conference League",94:"Liga Portugal",88:"Eredivisie",144:"Pro League",203:"Süper Lig",179:"Premiership",10:"Amicaux Nations",667:"Amicaux Clubs",4:"Euro",5:"UEFA Nations League",1:"Qualif. Mondial",34:"Qualif. Mondial"};
 const DONE = new Set(["FT","AET","PEN"]);
@@ -161,7 +161,7 @@ module.exports = async (req, res) => {
       matches: matches.slice(0, 300),
       count: matches.length,
       daysAnalysed: days,
-      source: "EDGE Backtest v5",
+      source: "EDGE Backtest v6",
     });
   } catch (e) {
     return res.status(200).json({ matches: [], error: e.message });
