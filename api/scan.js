@@ -1,4 +1,4 @@
-// EDGE — api/scan.js v30 — signaux de marché : cotes Pinnacle isolées + dispersion entre bookmakers
+// EDGE — api/scan.js v31 — CORRECTIF : on affichait 5 jours de matchs mais ne récupérait les cotes que sur 2
 function toNum(val, decimals) {
   if(val === null || val === undefined || isNaN(val)) return 0;
   return parseFloat(parseFloat(val).toFixed(decimals || 3));
@@ -295,7 +295,10 @@ module.exports = async (req, res) => {
     const season = now.getMonth() < 7 ? now.getFullYear()-1 : now.getFullYear();
 
     // -1 = hier (règlement du track record), 0..6 = une semaine d'avance
-    const days = [-1,0,1,2,3].map(i =>
+    // Les bookmakers publient leurs cotes 24 à 48h avant le coup d'envoi.
+    // Afficher des matchs à J+2 ou J+3 revenait à montrer des rencontres
+    // qui n'auraient JAMAIS de cotes — d'où l'impression que rien n'en a.
+    const days = [-1,0,1,2].map(i =>
       new Date(now.getTime()+i*86400000).toISOString().split("T")[0]
     );
 
@@ -401,8 +404,8 @@ module.exports = async (req, res) => {
     // L'API renvoie 10 cotes par page et compte ~37 pages par jour :
     // se limiter à 3 pages ne captait que 8% des matchs cotés.
     // Le forfait Pro (7500 req/jour) permet enfin de tout lire.
-    const oddDays = days.slice(1, 3);  // aujourd'hui + demain
-    const bulkMaps = await Promise.all(oddDays.map((d, i) => getOddsBulk(d, KEY, i === 0 ? 40 : 20)));
+    const oddDays = days.slice(1);   // J0, J+1, J+2 — tous les jours affichés  // aujourd'hui + demain
+    const bulkMaps = await Promise.all(oddDays.map((d, i) => getOddsBulk(d, KEY, i === 0 ? 40 : (i === 1 ? 22 : 12))));
     const oddsByFixture = Object.assign({}, ...bulkMaps);
 
     // ── RATTRAPAGE : matchs prioritaires oubliés par la pagination groupée ──
@@ -414,7 +417,7 @@ module.exports = async (req, res) => {
       // Plus de seuil de priorité : tout match AFFICHÉ mérite une tentative,
       // sinon certaines compétitions restent condamnées à "cotes indisponibles".
       // Le plafond de 12 ci-dessous suffit à protéger le quota.
-      return d === today;
+      return d === today || d === tomorrow;
     }).slice(0, 30);
 
     if (missing.length) {
@@ -518,7 +521,7 @@ module.exports = async (req, res) => {
     // Aucun match ET une erreur API : on le dit clairement au lieu d'afficher le vide
     if (!matches.length && API_ERROR) {
       return res.status(200).json({ matches: [], finished: [], count: 0,
-        error: API_ERROR, apiError: API_ERROR, apiCalls: API_CALLS, source: "EDGE Scan v30" });
+        error: API_ERROR, apiError: API_ERROR, apiCalls: API_CALLS, source: "EDGE Scan v31" });
     }
 
     return res.status(200).json({
@@ -535,7 +538,7 @@ module.exports = async (req, res) => {
       fixturesScanned: pool.length,
       apiCalls: API_CALLS,
       missingOdds: matches.filter(m => !m.hasRealOdds).map(m => m.c + ": " + m.h + " - " + m.a).slice(0, 12),
-      source: "EDGE Scan v30",
+      source: "EDGE Scan v31",
       season,
     });
 
