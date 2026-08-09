@@ -1,4 +1,4 @@
-// EDGE — api/backtest.js v4 — resserré sur les mêmes championnats que scan.js (Winamax/Betclic)
+// EDGE — api/backtest.js v5 — CORRECTIFS repris de scan.js : bet=1 retiré + pagination complète
 // Le moteur les analyse sans connaître le score, puis on compare.
 // Entrée : ?days=7&leagueId=61
 // Sortie : { matches:[{...cotes..., realResult, goalsH, goalsA}], count }
@@ -41,8 +41,10 @@ async function api(url, key, ms) {
 async function oddsForDate(date, key, maxPages) {
   const map = {};
   let page = 1, total = 1;
-  while (page <= Math.min(maxPages || 3, total)) {
-    const d = await api(`/odds?date=${date}&bet=1&page=${page}`, key);
+  while (page <= Math.min(maxPages || 30, total)) {
+    // Pas de filtre "bet=" : l'ID du marché "Match Winner" n'est pas garanti
+    // être 1 — un mauvais ID renvoie une réponse vide sans erreur.
+    const d = await api(`/odds?date=${date}&page=${page}`, key);
     if (!d || !Array.isArray(d.response)) break;
     total = (d.paging && d.paging.total) ? d.paging.total : 1;
     for (const item of d.response) {
@@ -117,7 +119,7 @@ module.exports = async (req, res) => {
       .filter(f => !leagueId || (f.league && f.league.id === leagueId));
 
     // Cotes : une requête groupée par date
-    const oddMaps = await Promise.all(dates.map(d => oddsForDate(d, KEY, 3)));
+    const oddMaps = await Promise.all(dates.map(d => oddsForDate(d, KEY, 30)));
     const odds = Object.assign({}, ...oddMaps);
 
     const matches = [];
@@ -159,7 +161,7 @@ module.exports = async (req, res) => {
       matches: matches.slice(0, 300),
       count: matches.length,
       daysAnalysed: days,
-      source: "EDGE Backtest v4",
+      source: "EDGE Backtest v5",
     });
   } catch (e) {
     return res.status(200).json({ matches: [], error: e.message });
