@@ -1,4 +1,4 @@
-// EDGE — api/backtest.js v6 — LEAGUES défini + filtrage aligné sur scan.js
+// EDGE — api/backtest.js v7 — compteurs de diagnostic : on voit quel filtre vide le résultat
 // Le moteur les analyse sans connaître le score, puis on compare.
 // Entrée : ?days=7&leagueId=61
 // Sortie : { matches:[{...cotes..., realResult, goalsH, goalsA}], count }
@@ -107,20 +107,37 @@ module.exports = async (req, res) => {
     let fixtures = [];
     fixRes.forEach(d => { if (d && Array.isArray(d.response)) fixtures = fixtures.concat(d.response); });
 
-    fixtures = fixtures
-      .filter(f => DONE.has(f.fixture && f.fixture.status && f.fixture.status.short))
-      .filter(f => f.goals && f.goals.home !== null && f.goals.away !== null)
-      .filter(f => ligueRetenue(f.league))
-      .filter(f => {
-        const hn = (f.teams && f.teams.home && f.teams.home.name) || "";
-        const an = (f.teams && f.teams.away && f.teams.away.name) || "";
-        return !EXCLURE.test(hn) && !EXCLURE.test(an);
-      })
-      .filter(f => !leagueId || (f.league && f.league.id === leagueId));
+    // ── Compteurs de diagnostic : savoir QUEL filtre vide le résultat ──
+    const diag = { recus: fixtures.length };
+
+    fixtures = fixtures.filter(f => DONE.has(f.fixture && f.fixture.status && f.fixture.status.short));
+    diag.termines = fixtures.length;
+
+    fixtures = fixtures.filter(f => f.goals && f.goals.home !== null && f.goals.away !== null);
+    diag.avecScore = fixtures.length;
+
+    // Quelles compétitions arrivent réellement, avant filtrage ?
+    diag.liguesRecues = Array.from(new Set(fixtures.map(f =>
+      (f.league ? f.league.id + " " + (f.league.name || "") : "?")))).slice(0, 25);
+
+    fixtures = fixtures.filter(f => ligueRetenue(f.league));
+    diag.liguesRetenues = fixtures.length;
+
+    fixtures = fixtures.filter(f => {
+      const hn = (f.teams && f.teams.home && f.teams.home.name) || "";
+      const an = (f.teams && f.teams.away && f.teams.away.name) || "";
+      return !EXCLURE.test(hn) && !EXCLURE.test(an);
+    });
+    diag.apresExclusions = fixtures.length;
+
+    fixtures = fixtures.filter(f => !leagueId || (f.league && f.league.id === leagueId));
+    diag.apresLigueChoisie = fixtures.length;
 
     // Cotes : une requête groupée par date
     const oddMaps = await Promise.all(dates.map(d => oddsForDate(d, KEY, 30)));
     const odds = Object.assign({}, ...oddMaps);
+    diag.cotesTrouvees = Object.keys(odds).length;
+    diag.correspondances = fixtures.filter(f => odds[f.fixture.id]).length;
 
     const matches = [];
     for (const f of fixtures) {
@@ -158,10 +175,11 @@ module.exports = async (req, res) => {
 
     matches.sort((a, b) => (a.time < b.time ? 1 : -1));
     return res.status(200).json({
+      diagnostic: diag,
       matches: matches.slice(0, 300),
       count: matches.length,
       daysAnalysed: days,
-      source: "EDGE Backtest v6",
+      source: "EDGE Backtest v7",
     });
   } catch (e) {
     return res.status(200).json({ matches: [], error: e.message });
