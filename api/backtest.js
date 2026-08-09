@@ -1,4 +1,4 @@
-// EDGE — api/backtest.js v7 — compteurs de diagnostic : on voit quel filtre vide le résultat
+// EDGE — api/backtest.js v8 — cotes récupérées PAR MATCH (le flux par date noie l'Europe dans le monde entier)
 // Le moteur les analyse sans connaître le score, puis on compare.
 // Entrée : ?days=7&leagueId=61
 // Sortie : { matches:[{...cotes..., realResult, goalsH, goalsA}], count }
@@ -136,8 +136,48 @@ module.exports = async (req, res) => {
     // Cotes : une requête groupée par date
     const oddMaps = await Promise.all(dates.map(d => oddsForDate(d, KEY, 30)));
     const odds = Object.assign({}, ...oddMaps);
-    diag.cotesTrouvees = Object.keys(odds).length;
+    diag.cotesParDate = Object.keys(odds).length;
+    diag.correspondancesParDate = fixtures.filter(f => odds[f.fixture.id]).length;
+
+    // ── RATTRAPAGE INDIVIDUEL ──
+    // Le flux /odds?date= renvoie les cotes du monde entier (NWSL, Amérique
+    // du Sud, Australie…) : nos matchs européens s'y noient. On interroge donc
+    // directement les matchs qui nous intéressent, un par un.
+    const manquants = fixtures.filter(f => !odds[f.fixture.id]).slice(0, 90);
+    const lots = [];
+    for (let i = 0; i < manquants.length; i += 10) lots.push(manquants.slice(i, i + 10));
+    for (const lot of lots) {
+      const res = await Promise.all(lot.map(f => api(`/odds?fixture=${f.fixture.id}`, KEY)));
+      res.forEach((d, idx) => {
+        if (!d || !Array.isArray(d.response) || !d.response.length) return;
+        const item = d.response[0];
+        const fid = lot[idx].fixture.id;
+        const all1 = [], allN = [], all2 = [];
+        let ref = null;
+        for (const bk of (item.bookmakers || [])) {
+          const mw = (bk.bets || []).find(b => b.id === 1 || b.name === "Match Winner");
+          if (!mw || !mw.values || mw.values.length < 3) continue;
+          const hv = mw.values.find(v => /home|1/i.test(v.value));
+          const dv = mw.values.find(v => /draw|x/i.test(v.value));
+          const av = mw.values.find(v => /away|2/i.test(v.value));
+          if (!hv || !dv || !av) continue;
+          const c1 = parseFloat(hv.odd), cn = parseFloat(dv.odd), c2 = parseFloat(av.odd);
+          if (!(c1 > 1 && cn > 1 && c2 > 1)) continue;
+          all1.push(c1); allN.push(cn); all2.push(c2);
+          if (!ref) ref = { o1: c1, on: cn, o2: c2 };
+        }
+        if (!ref || !all1.length) return;
+        const med = a => { const s = a.slice().sort((x, y) => x - y); return s[Math.floor(s.length / 2)]; };
+        odds[fid] = {
+          o1: med(all1), on: med(allN), o2: med(all2),
+          bestO1: Math.max(...all1), bestON: Math.max(...allN), bestO2: Math.max(...all2),
+          nBooks: all1.length,
+        };
+      });
+    }
+    diag.cotesApresRattrapage = Object.keys(odds).length;
     diag.correspondances = fixtures.filter(f => odds[f.fixture.id]).length;
+    diag.requetesRattrapage = manquants.length;
 
     const matches = [];
     for (const f of fixtures) {
@@ -179,7 +219,7 @@ module.exports = async (req, res) => {
       matches: matches.slice(0, 300),
       count: matches.length,
       daysAnalysed: days,
-      source: "EDGE Backtest v7",
+      source: "EDGE Backtest v8",
     });
   } catch (e) {
     return res.status(200).json({ matches: [], error: e.message });
