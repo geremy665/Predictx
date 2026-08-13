@@ -1,4 +1,4 @@
-// EDGE — api/scan.js v31 — CORRECTIF : on affichait 5 jours de matchs mais ne récupérait les cotes que sur 2
+// EDGE — api/scan.js v34 — marchés alternatifs sur bien plus de matchs (16 → 45)
 function toNum(val, decimals) {
   if(val === null || val === undefined || isNaN(val)) return 0;
   return parseFloat(parseFloat(val).toFixed(decimals || 3));
@@ -40,6 +40,25 @@ const LEAGUES = new Set([
   179,  // Premiership (Écosse)
   // Ligue 2 française uniquement — les autres D2 étrangères sont retirées
   62,   // Ligue 2
+  // Coupes nationales des Big 5 — très suivies et bien cotées
+  66,   // Coupe de France
+  45,   // FA Cup
+  48,   // League Cup (Angleterre)
+  137,  // Coppa Italia
+  143,  // Copa del Rey
+  81,   // DFB Pokal
+  96,   // Taça de Portugal
+  // Supercoupes — matchs uniques mais très suivis
+  531,  // Supercoupe d'Europe (UEFA)
+  526,  // Trophée des Champions
+  528,  // Community Shield
+  556,  // Supercoupe d'Espagne
+  547,  // Supercoupe d'Italie
+  90,   // Supercoupe d'Allemagne
+  // Championnats nordiques : ils jouent d'avril à novembre, exactement
+  // quand les Big 5 sont à l'arrêt. Comblent le creux estival.
+  113,  // Allsvenskan (Suède)
+  103,  // Eliteserien (Norvège)
   // International UEFA + amicaux
   4,5,10,667,1,34,
 ]);
@@ -51,6 +70,10 @@ const PRIORITY = {
   94:74, 88:74, 144:72, 203:72,     // PT, NL, BE, TR
   62:70,                            // Ligue 2
   179:66,                           // Écosse
+  531:93,                           // Supercoupe d'Europe — trophée majeur
+  45:78, 66:76, 137:76, 143:76, 81:76, 48:70, 96:68,   // Coupes nationales
+  526:72, 528:72, 556:72, 547:72, 90:72,               // Supercoupes nationales
+  113:64, 103:64,                   // Suède, Norvège (pleine saison l'été)
   4:94, 5:75, 1:68, 34:68,          // Euro, Nations League, qualifs
   10:40, 667:18,                    // Amicaux (dernier)
 };
@@ -58,6 +81,9 @@ const PRIORITY = {
 const FLAG = {
   61:"FR",62:"FR",140:"ES",39:"ENG",135:"IT",78:"DE",
   2:"UCL",3:"UEL",848:"UECL",94:"PT",88:"NL",144:"BE",203:"TR",179:"SCO",
+  66:"FR",45:"ENG",48:"ENG",137:"IT",143:"ES",81:"DE",96:"PT",
+  531:"UEFA",526:"FR",528:"ENG",556:"ES",547:"IT",90:"DE",
+  113:"SE",103:"NO",
   10:"INT",667:"AMI",4:"EUR",5:"UNL",1:"WCQ",34:"WCQ"
 };
 
@@ -65,7 +91,13 @@ const LEAGUE_NAME = {
   61:"Ligue 1",62:"Ligue 2",140:"La Liga",39:"Premier League",135:"Serie A",
   78:"Bundesliga",2:"Champions League",3:"Europa League",848:"Conference League",
   94:"Liga Portugal",88:"Eredivisie",144:"Pro League",203:"Süper Lig",
-  179:"Premiership",10:"Amicaux Nations",667:"Amicaux Clubs",
+  179:"Premiership",
+  66:"Coupe de France",45:"FA Cup",48:"League Cup",137:"Coppa Italia",
+  143:"Copa del Rey",81:"DFB Pokal",96:"Taça de Portugal",
+  531:"Supercoupe d'Europe",526:"Trophée des Champions",528:"Community Shield",
+  556:"Supercoupe d'Espagne",547:"Supercoupe d'Italie",90:"Supercoupe d'Allemagne",
+  113:"Allsvenskan",103:"Eliteserien",
+  10:"Amicaux Nations",667:"Amicaux Clubs",
   4:"Euro",5:"UEFA Nations League",1:"Qualif. Mondial",34:"Qualif. Mondial"
 };
 
@@ -283,10 +315,26 @@ async function getOdds(fixtureId, key) {
 
 module.exports = async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Cache-Control", "s-maxage=600, stale-while-revalidate=1800");
+  // Cache 30 min : les cotes pré-match bougent lentement, et c'est ce qui
+  // permet de tenir dans le quota même avec plusieurs utilisateurs simultanés.
+  res.setHeader("Cache-Control", "s-maxage=1800, stale-while-revalidate=3600");
   if (req.method === "OPTIONS") return res.status(200).end();
 
   API_CALLS = 0; API_ERROR = null; API_STOP = false;
+
+  // ── EFFORT ADAPTÉ AU JOUR ──
+  // Le samedi et le dimanche concentrent l'essentiel des matchs.
+  // Mardi et mercredi : soirs de Champions League et Europa League.
+  // Lundi et jeudi : peu de matchs, on économise le quota pour les jours chargés.
+  const jourSemaine = new Date().getDay();   // 0 = dimanche
+  const JOURS_CHARGES = [0, 2, 3, 5, 6];     // dim, mar, mer, ven, sam
+  const chargé = JOURS_CHARGES.indexOf(jourSemaine) >= 0;
+  // « detail » = nombre de matchs pour lesquels on récupère TOUS les marchés
+  // (double chance, plus/moins de buts, BTTS). Sans ça, le moteur n'a que
+  // le 1X2 à proposer — d'où l'impression qu'il ne suggère que des victoires.
+  const EFFORT = chargé
+    ? { pagesJ0: 22, pagesJ1: 10, pagesJ2: 5, rattrapage: 26, detail: 45, fenetre: 5 }
+    : { pagesJ0: 12, pagesJ1:  6, pagesJ2: 3, rattrapage: 16, detail: 30, fenetre: 4 };
   const KEY = process.env.FOOTBALL_API_KEY || "";
   if (!KEY) return res.status(200).json({ matches: [], error: "no_key" });
 
@@ -298,7 +346,7 @@ module.exports = async (req, res) => {
     // Les bookmakers publient leurs cotes 24 à 48h avant le coup d'envoi.
     // Afficher des matchs à J+2 ou J+3 revenait à montrer des rencontres
     // qui n'auraient JAMAIS de cotes — d'où l'impression que rien n'en a.
-    const days = [-1,0,1,2].map(i =>
+    const days = [-1,0,1,2,3].slice(0, EFFORT.fenetre).map(i =>
       new Date(now.getTime()+i*86400000).toISOString().split("T")[0]
     );
 
@@ -380,8 +428,19 @@ module.exports = async (req, res) => {
 
     const LIMIT = 80 - liveArr.length;
     const picked = [];
+
+    // ── GARANTIE : les compétitions majeures passent TOUJOURS en entier ──
+    // Champions League, Europa League, Conference, Supercoupe d'Europe et
+    // Big 5 : aucun match ne doit être écarté par le plafond, quel que soit
+    // le volume du jour. C'est le cœur de ce que les gens viennent chercher.
+    const MAJEURES = new Set([2, 3, 848, 531, 61, 140, 39, 135, 78, 4, 5]);
+    for (const [lid, arr] of ordered) {
+      if (!MAJEURES.has(lid)) continue;
+      while (arr.length && picked.length < LIMIT) picked.push(arr.shift());
+    }
+
     let round = 0;
-    // Tour 1 : 3 matchs par compétition. Tours suivants : on complète.
+    // Puis les autres compétitions, servies à tour de rôle.
     while (picked.length < LIMIT && round < 30) {
       let added = 0;
       for (const [, arr] of ordered) {
@@ -405,7 +464,7 @@ module.exports = async (req, res) => {
     // se limiter à 3 pages ne captait que 8% des matchs cotés.
     // Le forfait Pro (7500 req/jour) permet enfin de tout lire.
     const oddDays = days.slice(1);   // J0, J+1, J+2 — tous les jours affichés  // aujourd'hui + demain
-    const bulkMaps = await Promise.all(oddDays.map((d, i) => getOddsBulk(d, KEY, i === 0 ? 40 : (i === 1 ? 22 : 12))));
+    const bulkMaps = await Promise.all(oddDays.map((d, i) => getOddsBulk(d, KEY, i === 0 ? EFFORT.pagesJ0 : (i === 1 ? EFFORT.pagesJ1 : EFFORT.pagesJ2))));
     const oddsByFixture = Object.assign({}, ...bulkMaps);
 
     // ── RATTRAPAGE : matchs prioritaires oubliés par la pagination groupée ──
@@ -418,7 +477,7 @@ module.exports = async (req, res) => {
       // sinon certaines compétitions restent condamnées à "cotes indisponibles".
       // Le plafond de 12 ci-dessous suffit à protéger le quota.
       return d === today || d === tomorrow;
-    }).slice(0, 30);
+    }).slice(0, EFFORT.rattrapage);
 
     if (missing.length) {
       const rescued = await Promise.all(missing.map(f => getOdds(f.fixture?.id, KEY)));
@@ -429,9 +488,12 @@ module.exports = async (req, res) => {
     }
 
     // Marchés complets (double chance, over/under, BTTS) pour les 10 matchs prioritaires
+    // On sert d'abord les matchs les plus proches du coup d'envoi :
+    // ce sont ceux que l'utilisateur consulte réellement.
     const detailTargets = fixtures
       .filter(f => !LIVE.has(f.fixture?.status?.short) && oddsByFixture[f.fixture?.id])
-      .slice(0, 15);
+      .sort((a, b) => (a.fixture?.date || "") < (b.fixture?.date || "") ? -1 : 1)
+      .slice(0, EFFORT.detail);
     const detailArr = await Promise.all(detailTargets.map(f => getOdds(f.fixture?.id, KEY)));
     const detailById = {};
     detailTargets.forEach((f, i) => { if (detailArr[i]) detailById[f.fixture.id] = detailArr[i]; });
@@ -521,7 +583,7 @@ module.exports = async (req, res) => {
     // Aucun match ET une erreur API : on le dit clairement au lieu d'afficher le vide
     if (!matches.length && API_ERROR) {
       return res.status(200).json({ matches: [], finished: [], count: 0,
-        error: API_ERROR, apiError: API_ERROR, apiCalls: API_CALLS, source: "EDGE Scan v31" });
+        error: API_ERROR, apiError: API_ERROR, apiCalls: API_CALLS, source: "EDGE Scan v34" });
     }
 
     return res.status(200).json({
@@ -538,7 +600,7 @@ module.exports = async (req, res) => {
       fixturesScanned: pool.length,
       apiCalls: API_CALLS,
       missingOdds: matches.filter(m => !m.hasRealOdds).map(m => m.c + ": " + m.h + " - " + m.a).slice(0, 12),
-      source: "EDGE Scan v31",
+      source: "EDGE Scan v34",
       season,
     });
 
