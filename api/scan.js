@@ -1,4 +1,4 @@
-// EDGE — api/scan.js v34 — marchés alternatifs sur bien plus de matchs (16 → 45)
+// EDGE — api/scan.js v38 — cotes détaillées par bookmaker (arbitrage + comparateur)
 function toNum(val, decimals) {
   if(val === null || val === undefined || isNaN(val)) return 0;
   return parseFloat(parseFloat(val).toFixed(decimals || 3));
@@ -233,6 +233,14 @@ async function getOddsBulk(date, key, maxPages) {
 
       map[fid] = {
         o1: ref.o1, on: ref.on, o2: ref.o2,
+        // Liste complète par bookmaker : nécessaire pour l'arbitrage et le
+        // comparateur. Limitée à 20 books pour ne pas alourdir la réponse.
+        books: all1.slice(0, 20).map((x, i) => ({
+          n: x.b,
+          o1: x.o,
+          on: allN[i] ? allN[i].o : null,
+          o2: all2[i] ? all2[i].o : null,
+        })).filter(b => b.o1 && b.on && b.o2),
         pinnacle: hasPin,
         pinO1: pinOdds ? pinOdds.o1 : null,
         pinON: pinOdds ? pinOdds.on : null,
@@ -434,16 +442,33 @@ module.exports = async (req, res) => {
     // Big 5 : aucun match ne doit être écarté par le plafond, quel que soit
     // le volume du jour. C'est le cœur de ce que les gens viennent chercher.
     const MAJEURES = new Set([2, 3, 848, 531, 61, 140, 39, 135, 78, 4, 5]);
-    for (const [lid, arr] of ordered) {
-      if (!MAJEURES.has(lid)) continue;
-      while (arr.length && picked.length < LIMIT) picked.push(arr.shift());
+    const listeMaj = ordered.filter(([lid]) => MAJEURES.has(lid));
+    // À tour de rôle, pas dans l'ordre : sinon la Ligue 1 et la Liga
+    // consommaient tout le plafond et la Conference League disparaissait.
+    // Les majeures ne peuvent pas consommer plus de 65% du plafond :
+    // sinon les coupes nationales (FA Cup, Coupe de France, Coppa Italia…)
+    // disparaissent complètement les jours chargés.
+    const PLAFOND_MAJ = Math.floor(LIMIT * 0.65);
+    let tourMaj = 0;
+    while (picked.length < PLAFOND_MAJ && tourMaj < 40) {
+      let ajout = 0;
+      for (const [, arr] of listeMaj) {
+        if (!arr.length || picked.length >= PLAFOND_MAJ) continue;
+        picked.push(arr.shift());
+        ajout++;
+      }
+      if (!ajout) break;
+      tourMaj++;
     }
 
     let round = 0;
-    // Puis les autres compétitions, servies à tour de rôle.
+    // Puis les AUTRES compétitions uniquement : les majeures ont déjà eu
+    // leur part. Sans cette exclusion, elles reprenaient toute la place.
+    const listeAutres = ordered.filter(([lid]) => !MAJEURES.has(lid));
+    const tourPool = listeAutres.length ? listeAutres : ordered;
     while (picked.length < LIMIT && round < 30) {
       let added = 0;
-      for (const [, arr] of ordered) {
+      for (const [, arr] of tourPool) {
         const quota = round === 0 ? 3 : 1;
         for (let q = 0; q < quota && picked.length < LIMIT; q++) {
           if (arr.length) { picked.push(arr.shift()); added++; }
@@ -546,6 +571,10 @@ module.exports = async (req, res) => {
         goalsA: f.goals?.away ?? null,
         o1, on, o2,
         hasRealOdds: !!(odds.o1),
+        // Contexte de compétition : indispensable pour évaluer l'enjeu réel
+        // (match retour d'une double confrontation, phase finale, etc.)
+        round: f.league?.round || null,
+        books: odds.books || [],
         hasPinnacle: !!(odds.pinnacle),
         pinO1: odds.pinO1 || null,
         pinON: odds.pinON || null,
@@ -583,7 +612,7 @@ module.exports = async (req, res) => {
     // Aucun match ET une erreur API : on le dit clairement au lieu d'afficher le vide
     if (!matches.length && API_ERROR) {
       return res.status(200).json({ matches: [], finished: [], count: 0,
-        error: API_ERROR, apiError: API_ERROR, apiCalls: API_CALLS, source: "EDGE Scan v34" });
+        error: API_ERROR, apiError: API_ERROR, apiCalls: API_CALLS, source: "EDGE Scan v38" });
     }
 
     return res.status(200).json({
@@ -600,7 +629,7 @@ module.exports = async (req, res) => {
       fixturesScanned: pool.length,
       apiCalls: API_CALLS,
       missingOdds: matches.filter(m => !m.hasRealOdds).map(m => m.c + ": " + m.h + " - " + m.a).slice(0, 12),
-      source: "EDGE Scan v34",
+      source: "EDGE Scan v38",
       season,
     });
 
