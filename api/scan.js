@@ -1,4 +1,4 @@
-// EDGE — api/scan.js v40 — CORRECTIF : un message API anodin coupait toutes les requêtes (25 appels au lieu de 100)
+// EDGE — api/scan.js v41 — CORRECTIF : le filtre de date du rattrapage rejetait tous les matchs
 function toNum(val, decimals) {
   if(val === null || val === undefined || isNaN(val)) return 0;
   return parseFloat(parseFloat(val).toFixed(decimals || 3));
@@ -502,17 +502,22 @@ module.exports = async (req, res) => {
 
     // ── RATTRAPAGE : matchs prioritaires oubliés par la pagination groupée ──
     // (Champions/Europa/Conference et grands championnats ne doivent JAMAIS manquer)
-    const missing = fixtures.filter(f => {
-      if (oddsByFixture[f.fixture?.id]) return false;
-      const d = f.fixture?.date?.split("T")[0];
-      // Rattrapage concentré sur AUJOURD'HUI (là où l'utilisateur regarde).
-      // Plus de seuil de priorité : tout match AFFICHÉ mérite une tentative,
-      // sinon certaines compétitions restent condamnées à "cotes indisponibles".
-      // Le plafond de 12 ci-dessous suffit à protéger le quota.
-      // Aujourd'hui et demain : ce sont les seuls jours où l'utilisateur
-      // peut encore miser, donc les seuls qui méritent une requête dédiée.
-      return d === today || d === tomorrow;
-    }).slice(0, EFFORT.rattrapage);
+    // Rattrapage : tout match AFFICHÉ et non coté mérite une requête dédiée.
+    // ATTENTION : ne PAS filtrer par date. Les dates de l'API sont dans le
+    // fuseau du match, celles calculées ici en UTC — la comparaison échouait
+    // et rejetait absolument tous les matchs (48 identifiés, 0 traité).
+    // Les matchs sont déjà triés par heure : le plafond suffit à cibler
+    // les plus proches du coup d'envoi.
+    const maintenant = Date.now();
+    const missing = fixtures
+      .filter(f => !oddsByFixture[f.fixture?.id])
+      .filter(f => {
+        const t = new Date(f.fixture?.date || 0).getTime();
+        // Les matchs à plus de 3 jours n'ont presque jamais de cotes publiées
+        return isFinite(t) && (t - maintenant) < 3 * 86400000;
+      })
+      .sort((a, b) => new Date(a.fixture?.date || 0) - new Date(b.fixture?.date || 0))
+      .slice(0, EFFORT.rattrapage);
 
     if (missing.length) {
       const rescued = await Promise.all(missing.map(f => getOdds(f.fixture?.id, KEY)));
@@ -622,7 +627,7 @@ module.exports = async (req, res) => {
     // Aucun match ET une erreur API : on le dit clairement au lieu d'afficher le vide
     if (!matches.length && API_ERROR) {
       return res.status(200).json({ matches: [], finished: [], count: 0,
-        error: API_ERROR, apiError: API_ERROR, apiCalls: API_CALLS, source: "EDGE Scan v40" });
+        error: API_ERROR, apiError: API_ERROR, apiCalls: API_CALLS, source: "EDGE Scan v41" });
     }
 
     return res.status(200).json({
@@ -639,7 +644,7 @@ module.exports = async (req, res) => {
       fixturesScanned: pool.length,
       apiCalls: API_CALLS,
       missingOdds: matches.filter(m => !m.hasRealOdds).map(m => m.c + ": " + m.h + " - " + m.a).slice(0, 12),
-      source: "EDGE Scan v40",
+      source: "EDGE Scan v41",
       season,
     });
 
