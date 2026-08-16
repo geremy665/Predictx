@@ -1,4 +1,4 @@
-// EDGE — api/scan.js v38 — cotes détaillées par bookmaker (arbitrage + comparateur)
+// EDGE — api/scan.js v39 — rattrapage adaptatif : priorité aux matchs affichés plutôt qu'aux pages génériques
 function toNum(val, decimals) {
   if(val === null || val === undefined || isNaN(val)) return 0;
   return parseFloat(parseFloat(val).toFixed(decimals || 3));
@@ -340,9 +340,13 @@ module.exports = async (req, res) => {
   // « detail » = nombre de matchs pour lesquels on récupère TOUS les marchés
   // (double chance, plus/moins de buts, BTTS). Sans ça, le moteur n'a que
   // le 1X2 à proposer — d'où l'impression qu'il ne suggère que des victoires.
+  // Le flux /odds?date= renvoie les cotes du MONDE ENTIER : sur 30 pages,
+  // seule une poignée concerne nos championnats. Le rattrapage ciblé
+  // (une requête par match) est bien plus efficace — on l'augmente et on
+  // réduit les pages génériques.
   const EFFORT = chargé
-    ? { pagesJ0: 22, pagesJ1: 10, pagesJ2: 5, rattrapage: 26, detail: 45, fenetre: 5 }
-    : { pagesJ0: 12, pagesJ1:  6, pagesJ2: 3, rattrapage: 16, detail: 30, fenetre: 4 };
+    ? { pagesJ0: 12, pagesJ1: 6, pagesJ2: 3, rattrapage: 55, detail: 45, fenetre: 5 }
+    : { pagesJ0:  8, pagesJ1: 4, pagesJ2: 2, rattrapage: 35, detail: 30, fenetre: 4 };
   const KEY = process.env.FOOTBALL_API_KEY || "";
   if (!KEY) return res.status(200).json({ matches: [], error: "no_key" });
 
@@ -501,6 +505,8 @@ module.exports = async (req, res) => {
       // Plus de seuil de priorité : tout match AFFICHÉ mérite une tentative,
       // sinon certaines compétitions restent condamnées à "cotes indisponibles".
       // Le plafond de 12 ci-dessous suffit à protéger le quota.
+      // Aujourd'hui et demain : ce sont les seuls jours où l'utilisateur
+      // peut encore miser, donc les seuls qui méritent une requête dédiée.
       return d === today || d === tomorrow;
     }).slice(0, EFFORT.rattrapage);
 
@@ -612,7 +618,7 @@ module.exports = async (req, res) => {
     // Aucun match ET une erreur API : on le dit clairement au lieu d'afficher le vide
     if (!matches.length && API_ERROR) {
       return res.status(200).json({ matches: [], finished: [], count: 0,
-        error: API_ERROR, apiError: API_ERROR, apiCalls: API_CALLS, source: "EDGE Scan v38" });
+        error: API_ERROR, apiError: API_ERROR, apiCalls: API_CALLS, source: "EDGE Scan v39" });
     }
 
     return res.status(200).json({
@@ -629,7 +635,7 @@ module.exports = async (req, res) => {
       fixturesScanned: pool.length,
       apiCalls: API_CALLS,
       missingOdds: matches.filter(m => !m.hasRealOdds).map(m => m.c + ": " + m.h + " - " + m.a).slice(0, 12),
-      source: "EDGE Scan v38",
+      source: "EDGE Scan v39",
       season,
     });
 
