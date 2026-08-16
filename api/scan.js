@@ -1,4 +1,4 @@
-// EDGE — api/scan.js v39 — rattrapage adaptatif : priorité aux matchs affichés plutôt qu'aux pages génériques
+// EDGE — api/scan.js v40 — CORRECTIF : un message API anodin coupait toutes les requêtes (25 appels au lieu de 100)
 function toNum(val, decimals) {
   if(val === null || val === undefined || isNaN(val)) return 0;
   return parseFloat(parseFloat(val).toFixed(decimals || 3));
@@ -119,8 +119,12 @@ function noteApiError(d, httpStatus) {
   if (!keys.length) return;
   const msg = String(e[keys[0]] || keys[0]);
   API_ERROR = msg;
-  // Ces erreurs sont définitives pour la journée : inutile d'insister
-  if (/limit|quota|exceed|subscription|plan/i.test(msg)) API_STOP = true;
+  // ATTENTION : n'arrêter QUE sur un vrai dépassement de quota.
+  // Le message "no odds for this plan" ou toute mention de "plan" est
+  // renvoyé pour des matchs isolés sans cotes — il ne doit pas couper
+  // les requêtes suivantes. Un filtre trop large stoppait le scan à
+  // 25 appels sur 100, laissant la moitié des matchs sans cotes.
+  if (/reached the request limit|too many requests|quota exceeded/i.test(msg)) API_STOP = true;
 }
 
 async function apiFetch(url, key) {
@@ -618,7 +622,7 @@ module.exports = async (req, res) => {
     // Aucun match ET une erreur API : on le dit clairement au lieu d'afficher le vide
     if (!matches.length && API_ERROR) {
       return res.status(200).json({ matches: [], finished: [], count: 0,
-        error: API_ERROR, apiError: API_ERROR, apiCalls: API_CALLS, source: "EDGE Scan v39" });
+        error: API_ERROR, apiError: API_ERROR, apiCalls: API_CALLS, source: "EDGE Scan v40" });
     }
 
     return res.status(200).json({
@@ -635,7 +639,7 @@ module.exports = async (req, res) => {
       fixturesScanned: pool.length,
       apiCalls: API_CALLS,
       missingOdds: matches.filter(m => !m.hasRealOdds).map(m => m.c + ": " + m.h + " - " + m.a).slice(0, 12),
-      source: "EDGE Scan v39",
+      source: "EDGE Scan v40",
       season,
     });
 
