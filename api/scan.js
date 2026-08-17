@@ -1,4 +1,4 @@
-// EDGE — api/scan.js v41 — CORRECTIF : le filtre de date du rattrapage rejetait tous les matchs
+// EDGE — api/scan.js v43 — diagnostic + cache contournable (?nocache=1)
 function toNum(val, decimals) {
   if(val === null || val === undefined || isNaN(val)) return 0;
   return parseFloat(parseFloat(val).toFixed(decimals || 3));
@@ -329,7 +329,15 @@ module.exports = async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   // Cache 30 min : les cotes pré-match bougent lentement, et c'est ce qui
   // permet de tenir dans le quota même avec plusieurs utilisateurs simultanés.
-  res.setHeader("Cache-Control", "s-maxage=1800, stale-while-revalidate=3600");
+  // MAIS : après un déploiement, le cache peut servir une réponse périmée
+  // pendant 30 min — d'où l'impression qu'un correctif ne change rien.
+  // Ajouter ?nocache=1 à l'URL force une réponse fraîche.
+  const sansCache = req.query && (req.query.nocache === "1" || req.query.nocache === "true");
+  if (sansCache) {
+    res.setHeader("Cache-Control", "no-store, max-age=0");
+  } else {
+    res.setHeader("Cache-Control", "s-maxage=1800, stale-while-revalidate=3600");
+  }
   if (req.method === "OPTIONS") return res.status(200).end();
 
   API_CALLS = 0; API_ERROR = null; API_STOP = false;
@@ -627,7 +635,7 @@ module.exports = async (req, res) => {
     // Aucun match ET une erreur API : on le dit clairement au lieu d'afficher le vide
     if (!matches.length && API_ERROR) {
       return res.status(200).json({ matches: [], finished: [], count: 0,
-        error: API_ERROR, apiError: API_ERROR, apiCalls: API_CALLS, source: "EDGE Scan v41" });
+        error: API_ERROR, apiError: API_ERROR, apiCalls: API_CALLS, source: "EDGE Scan v43" });
     }
 
     return res.status(200).json({
@@ -640,11 +648,29 @@ module.exports = async (req, res) => {
       daysCovered: days.length - 1,
       withValue: matches.filter(m => m.lineValue).length,
       oddsRescued: missing.length,
+      // ── DIAGNOSTIC : suivre les cotes à chaque étape ──
+      diag: {
+        matchsSelectionnes: fixtures.length,
+        cotesParDate: Object.keys(oddsByFixture).length,
+        rattrapagesTentes: missing.length,
+        rattrapagesReussis: missing.filter(f => oddsByFixture[f.fixture?.id]).length,
+        // Un échantillon de ce qui est réellement dans oddsByFixture
+        exempleCote: (function(){
+          const k = Object.keys(oddsByFixture)[0];
+          return k ? { id: k, valeur: oddsByFixture[k] } : null;
+        })(),
+        // Les 3 premiers matchs et leur statut de cote
+        echantillon: fixtures.slice(0, 3).map(f => ({
+          id: f.fixture?.id,
+          equipes: (f.teams?.home?.name || "?") + " - " + (f.teams?.away?.name || "?"),
+          aUneCote: !!oddsByFixture[f.fixture?.id],
+        })),
+      },
       leaguesFound: Array.from(new Set(matches.map(m => m.leagueId + " " + m.c))).sort(),
       fixturesScanned: pool.length,
       apiCalls: API_CALLS,
       missingOdds: matches.filter(m => !m.hasRealOdds).map(m => m.c + ": " + m.h + " - " + m.a).slice(0, 12),
-      source: "EDGE Scan v41",
+      source: "EDGE Scan v43",
       season,
     });
 
