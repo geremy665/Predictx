@@ -1,4 +1,4 @@
-// EDGE — api/scan.js v43 — diagnostic + cache contournable (?nocache=1)
+// EDGE — api/scan.js v45 — 429 transitoire + débit régulé + garde-temps Vercel
 function toNum(val, decimals) {
   if(val === null || val === undefined || isNaN(val)) return 0;
   return parseFloat(parseFloat(val).toFixed(decimals || 3));
@@ -106,11 +106,19 @@ const LIVE = new Set(["1H","2H","HT","ET","BT","P","LIVE"]);
 const SHARP_BK = [8, 6, 1, 2, 3];
 
 let API_CALLS = 0;
+let RATE_LIMITED = false;   // limite par minute touchée : transitoire
+let DEBUT = 0;              // horodatage du début du scan
+const BUDGET_MS = 7500;     // Vercel coupe à 10s : on garde une marge
+function tempsEcoule() { return Date.now() - DEBUT; }
 let API_ERROR = null;   // quota dépassé, clé invalide, etc.
 let API_STOP = false;   // on arrête tout dès qu'une erreur bloquante survient
 
 function noteApiError(d, httpStatus) {
-  if (httpStatus === 429) { API_ERROR = "Quota API dépassé (trop de requêtes)"; API_STOP = true; return; }
+  // Le 429 d'API-Football = limite PAR MINUTE, pas quota journalier.
+  // Il est transitoire : on ralentit, on ne coupe surtout pas le scan.
+  // (Auparavant API_STOP=true ici arrêtait tout dès le premier burst :
+  //  7 appels effectués sur ~110, alors que le quota du jour était à 3%.)
+  if (httpStatus === 429) { API_ERROR = "Limite par minute atteinte (ralentissement)"; RATE_LIMITED = true; return; }
   if (httpStatus === 401 || httpStatus === 403) { API_ERROR = "Clé API refusée"; API_STOP = true; return; }
   if (!d || !d.errors) return;
   const e = d.errors;
@@ -127,7 +135,7 @@ function noteApiError(d, httpStatus) {
   if (/reached the request limit|too many requests|quota exceeded/i.test(msg)) API_STOP = true;
 }
 
-async function apiFetch(url, key) {
+async function apiFetch(url, key, essai) {
   if (API_STOP) return null;
   API_CALLS++;
   try {
@@ -138,11 +146,43 @@ async function apiFetch(url, key) {
       signal: ctrl.signal
     });
     clearTimeout(t);
-    if (!r.ok) { noteApiError(null, r.status); return null; }
+    if (!r.ok) {
+      noteApiError(null, r.status);
+      // 429 = limite par minute : on attend et on retente une seule fois
+      if (r.status === 429 && !essai && tempsEcoule() < BUDGET_MS) {
+        await pause(1100);
+        return apiFetch(url, key, 1);
+      }
+      return null;
+    }
     const d = await r.json();
     noteApiError(d);
     return d.response || null;
   } catch(e) { return null; }
+}
+
+// Petite pause (limite par minute de l'API)
+function pause(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// Exécute des tâches par petits lots au lieu de tout lancer d'un coup.
+// Un burst de 35 requêtes simultanées déclenche le 429 d'API-Football.
+async function parLots(items, fn, taille) {
+  const out = [];
+  for (let i = 0; i < items.length; i += taille) {
+    // Garde-temps : mieux vaut renvoyer des cotes partielles que rien du tout
+    // (une fonction Vercel coupée à 10s ne renvoie AUCUNE donnée).
+    if (tempsEcoule() > BUDGET_MS) {
+      while (out.length < items.length) out.push(null);
+      break;
+    }
+    const lot = items.slice(i, i + taille);
+    const r = await Promise.all(lot.map(fn));
+    out.push(...r);
+    // Débit régulé : ~8 requêtes/seconde en rythme normal.
+    // Le burst de 35 simultanées déclenchait le 429 d'API-Football.
+    if (i + taille < items.length) await pause(RATE_LIMITED ? 1100 : 600);
+  }
+  return out;
 }
 
 // Récupère TOUTES les cotes 1X2 d'une journée en 1 à 3 requêtes (au lieu d'une par match)
@@ -340,7 +380,7 @@ module.exports = async (req, res) => {
   }
   if (req.method === "OPTIONS") return res.status(200).end();
 
-  API_CALLS = 0; API_ERROR = null; API_STOP = false;
+  API_CALLS = 0; API_ERROR = null; API_STOP = false; RATE_LIMITED = false; DEBUT = Date.now();
 
   // ── EFFORT ADAPTÉ AU JOUR ──
   // Le samedi et le dimanche concentrent l'essentiel des matchs.
@@ -356,9 +396,12 @@ module.exports = async (req, res) => {
   // seule une poignée concerne nos championnats. Le rattrapage ciblé
   // (une requête par match) est bien plus efficace — on l'augmente et on
   // réduit les pages génériques.
+  // Volumes calibrés pour tenir dans le budget de temps de Vercel
+  // avec un débit régulé (~8 req/s) : au-delà, la fonction est coupée
+  // et l'utilisateur ne reçoit RIEN.
   const EFFORT = chargé
-    ? { pagesJ0: 12, pagesJ1: 6, pagesJ2: 3, rattrapage: 55, detail: 45, fenetre: 5 }
-    : { pagesJ0:  8, pagesJ1: 4, pagesJ2: 2, rattrapage: 35, detail: 30, fenetre: 4 };
+    ? { pagesJ0: 10, pagesJ1: 5, pagesJ2: 2, rattrapage: 30, detail: 20, fenetre: 5 }
+    : { pagesJ0:  7, pagesJ1: 3, pagesJ2: 2, rattrapage: 22, detail: 15, fenetre: 4 };
   const KEY = process.env.FOOTBALL_API_KEY || "";
   if (!KEY) return res.status(200).json({ matches: [], error: "no_key" });
 
@@ -528,7 +571,7 @@ module.exports = async (req, res) => {
       .slice(0, EFFORT.rattrapage);
 
     if (missing.length) {
-      const rescued = await Promise.all(missing.map(f => getOdds(f.fixture?.id, KEY)));
+      const rescued = await parLots(missing, f => getOdds(f.fixture?.id, KEY), 5);
       missing.forEach((f, i) => {
         const o = rescued[i];
         if (o && o.o1) oddsByFixture[f.fixture.id] = Object.assign({ nBooks: 1 }, o);
@@ -542,7 +585,7 @@ module.exports = async (req, res) => {
       .filter(f => !LIVE.has(f.fixture?.status?.short) && oddsByFixture[f.fixture?.id])
       .sort((a, b) => (a.fixture?.date || "") < (b.fixture?.date || "") ? -1 : 1)
       .slice(0, EFFORT.detail);
-    const detailArr = await Promise.all(detailTargets.map(f => getOdds(f.fixture?.id, KEY)));
+    const detailArr = await parLots(detailTargets, f => getOdds(f.fixture?.id, KEY), 5);
     const detailById = {};
     detailTargets.forEach((f, i) => { if (detailArr[i]) detailById[f.fixture.id] = detailArr[i]; });
 
@@ -635,7 +678,7 @@ module.exports = async (req, res) => {
     // Aucun match ET une erreur API : on le dit clairement au lieu d'afficher le vide
     if (!matches.length && API_ERROR) {
       return res.status(200).json({ matches: [], finished: [], count: 0,
-        error: API_ERROR, apiError: API_ERROR, apiCalls: API_CALLS, source: "EDGE Scan v43" });
+        error: API_ERROR, apiError: API_ERROR, apiCalls: API_CALLS, source: "EDGE Scan v45" });
     }
 
     return res.status(200).json({
@@ -648,6 +691,9 @@ module.exports = async (req, res) => {
       daysCovered: days.length - 1,
       withValue: matches.filter(m => m.lineValue).length,
       oddsRescued: missing.length,
+      apiError: API_ERROR,
+      rateLimited: RATE_LIMITED,
+      dureeMs: tempsEcoule(),
       // ── DIAGNOSTIC : suivre les cotes à chaque étape ──
       diag: {
         matchsSelectionnes: fixtures.length,
@@ -670,7 +716,7 @@ module.exports = async (req, res) => {
       fixturesScanned: pool.length,
       apiCalls: API_CALLS,
       missingOdds: matches.filter(m => !m.hasRealOdds).map(m => m.c + ": " + m.h + " - " + m.a).slice(0, 12),
-      source: "EDGE Scan v43",
+      source: "EDGE Scan v45",
       season,
     });
 
