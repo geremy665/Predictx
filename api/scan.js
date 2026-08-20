@@ -1,4 +1,4 @@
-// EDGE — api/scan.js v45 — 429 transitoire + débit régulé + garde-temps Vercel
+// EDGE — api/scan.js v46 — CORRECTIF : la limite par minute arrive en HTTP 200 dans le corps JSON
 function toNum(val, decimals) {
   if(val === null || val === undefined || isNaN(val)) return 0;
   return parseFloat(parseFloat(val).toFixed(decimals || 3));
@@ -127,12 +127,26 @@ function noteApiError(d, httpStatus) {
   if (!keys.length) return;
   const msg = String(e[keys[0]] || keys[0]);
   API_ERROR = msg;
+
+  // ── POINT CRITIQUE ──
+  // API-Football renvoie la limite PAR MINUTE en HTTP 200, dans le corps :
+  //   errors: { rateLimit: "Too many requests. Your rate limit is 300/minute" }
+  // Ce n'est PAS le quota journalier : c'est transitoire, il faut ralentir
+  // et continuer. Le traiter comme fatal bloquait tout le scan à 7 appels
+  // alors que le quota du jour n'était consommé qu'à 3%.
+  if (/rate ?limit/i.test(keys[0]) || /too many requests|rate limit/i.test(msg)) {
+    RATE_LIMITED = true;
+    return;
+  }
   // ATTENTION : n'arrêter QUE sur un vrai dépassement de quota.
   // Le message "no odds for this plan" ou toute mention de "plan" est
   // renvoyé pour des matchs isolés sans cotes — il ne doit pas couper
   // les requêtes suivantes. Un filtre trop large stoppait le scan à
   // 25 appels sur 100, laissant la moitié des matchs sans cotes.
-  if (/reached the request limit|too many requests|quota exceeded/i.test(msg)) API_STOP = true;
+  // Seul le quota JOURNALIER est définitif (la limite par minute est
+  // déjà interceptée ci-dessus). "too many requests" est volontairement
+  // absent d'ici : c'est le message de la limite par minute.
+  if (/reached the request limit for the day|quota exceeded|daily limit/i.test(msg)) API_STOP = true;
 }
 
 async function apiFetch(url, key, essai) {
@@ -678,7 +692,7 @@ module.exports = async (req, res) => {
     // Aucun match ET une erreur API : on le dit clairement au lieu d'afficher le vide
     if (!matches.length && API_ERROR) {
       return res.status(200).json({ matches: [], finished: [], count: 0,
-        error: API_ERROR, apiError: API_ERROR, apiCalls: API_CALLS, source: "EDGE Scan v45" });
+        error: API_ERROR, apiError: API_ERROR, apiCalls: API_CALLS, source: "EDGE Scan v46" });
     }
 
     return res.status(200).json({
@@ -716,7 +730,7 @@ module.exports = async (req, res) => {
       fixturesScanned: pool.length,
       apiCalls: API_CALLS,
       missingOdds: matches.filter(m => !m.hasRealOdds).map(m => m.c + ": " + m.h + " - " + m.a).slice(0, 12),
-      source: "EDGE Scan v45",
+      source: "EDGE Scan v46",
       season,
     });
 
