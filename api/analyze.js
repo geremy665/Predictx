@@ -159,23 +159,53 @@ module.exports = async (req, res) => {
   }
 
   // H2H
-  if(d.h2h&&d.h2h.length){
-    const h2h=d.h2h.slice(0,6);
-    const hW=h2h.filter(g=>g.winner==="home").length;
-    const aW=h2h.filter(g=>g.winner==="away").length;
-    const draws=h2h.length-hW-aW;
-    const avgGH=(h2h.reduce((s,g)=>s+(g.homeGoals||0),0)/h2h.length).toFixed(1);
-    const avgGA=(h2h.reduce((s,g)=>s+(g.awayGoals||0),0)/h2h.length).toFixed(1);
-    const avgTot=(h2h.reduce((s,g)=>s+(g.homeGoals||0)+(g.awayGoals||0),0)/h2h.length).toFixed(1);
+  // ── CORRECTIF ──
+  // enrich.js produit des entrées { gh, ga, date }. Ce bloc lisait
+  // homeGoals/awayGoals/winner, qui n'existent PAS : `g.homeGoals||0`
+  // donnait 0 et aucun vainqueur n'était trouvé, donc tout était compté
+  // comme nul. L'IA recevait "6 confrontations, 6 nuls 0-0" sur des
+  // matchs réels et bâtissait une analyse tactique entière là-dessus.
+  // On lit désormais les vrais champs, et le vainqueur est déduit du score.
+  const butsH = g => {
+    const v = (g.homeGoals !== undefined && g.homeGoals !== null) ? g.homeGoals
+            : (g.gh !== undefined && g.gh !== null) ? g.gh
+            : (g.goalsH !== undefined && g.goalsH !== null) ? g.goalsH : null;
+    return (typeof v === "number" && isFinite(v)) ? v : null;
+  };
+  const butsA = g => {
+    const v = (g.awayGoals !== undefined && g.awayGoals !== null) ? g.awayGoals
+            : (g.ga !== undefined && g.ga !== null) ? g.ga
+            : (g.goalsA !== undefined && g.goalsA !== null) ? g.goalsA : null;
+    return (typeof v === "number" && isFinite(v)) ? v : null;
+  };
+
+  // On ne garde que les confrontations dont le score est réellement connu :
+  // mieux vaut ne rien dire que d'inventer des 0-0.
+  const h2hOk = (d.h2h || []).filter(g => butsH(g) !== null && butsA(g) !== null).slice(0, 6);
+
+  if(h2hOk.length){
+    const hW = h2hOk.filter(g => butsH(g) > butsA(g)).length;
+    const aW = h2hOk.filter(g => butsA(g) > butsH(g)).length;
+    const draws = h2hOk.length - hW - aW;
+    const avgGH=(h2hOk.reduce((s,g)=>s+butsH(g),0)/h2hOk.length).toFixed(1);
+    const avgGA=(h2hOk.reduce((s,g)=>s+butsA(g),0)/h2hOk.length).toFixed(1);
+    const avgTot=(h2hOk.reduce((s,g)=>s+butsH(g)+butsA(g),0)/h2hOk.length).toFixed(1);
     L.push("════ HISTORIQUE H2H ════");
-    L.push(`${h2h.length} confrontations directes:`);
+    L.push(`${h2hOk.length} confrontations directes:`);
     L.push(`  DOM ${hW}V | ${draws}N | ${aW}D EXT`);
     L.push(`  Buts moyens: ${home} ${avgGH} | ${away} ${avgGA} | Total: ${avgTot}/match`);
-    L.push(`  Résultats récents: ${h2h.slice(0,5).map(g=>`${g.homeGoals||0}-${g.awayGoals||0}`).join(" | ")}`);
+    L.push(`  Résultats récents: ${h2hOk.slice(0,5).map(g=>`${butsH(g)}-${butsA(g)}`).join(" | ")}`);
     if(d.h2hStats){
       const s=d.h2hStats;
       L.push(`  Équipe dominante H2H: ${s.hWins>s.aWins?home:s.aWins>s.hWins?away:"Équilibré"}`);
     }
+    L.push("");
+  } else if (d.h2h && d.h2h.length) {
+    // Des confrontations existent mais sans score exploitable :
+    // on le dit explicitement pour que l'IA n'invente rien.
+    L.push("════ HISTORIQUE H2H ════");
+    L.push("Scores des confrontations directes indisponibles.");
+    L.push("N'invente aucun résultat et n'en tire aucune conclusion tactique.");
     L.push("");
   }
 
