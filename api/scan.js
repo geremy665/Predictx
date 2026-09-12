@@ -1,4 +1,4 @@
-// EDGE — api/scan.js v46 — CORRECTIF : la limite par minute arrive en HTTP 200 dans le corps JSON
+// EDGE — api/scan.js v48 — effort doublé (quota 75 000) : lots plus larges, cache plus court
 function toNum(val, decimals) {
   if(val === null || val === undefined || isNaN(val)) return 0;
   return parseFloat(parseFloat(val).toFixed(decimals || 3));
@@ -108,7 +108,7 @@ const SHARP_BK = [8, 6, 1, 2, 3];
 let API_CALLS = 0;
 let RATE_LIMITED = false;   // limite par minute touchée : transitoire
 let DEBUT = 0;              // horodatage du début du scan
-const BUDGET_MS = 7500;     // Vercel coupe à 10s : on garde une marge
+const BUDGET_MS = 8000;     // Vercel coupe à 10s : on garde une marge
 function tempsEcoule() { return Date.now() - DEBUT; }
 let API_ERROR = null;   // quota dépassé, clé invalide, etc.
 let API_STOP = false;   // on arrête tout dès qu'une erreur bloquante survient
@@ -192,9 +192,10 @@ async function parLots(items, fn, taille) {
     const lot = items.slice(i, i + taille);
     const r = await Promise.all(lot.map(fn));
     out.push(...r);
-    // Débit régulé : ~8 requêtes/seconde en rythme normal.
-    // Le burst de 35 simultanées déclenchait le 429 d'API-Football.
-    if (i + taille < items.length) await pause(RATE_LIMITED ? 1100 : 600);
+    // Débit régulé. Avec le forfait 75 000, la limite par minute est plus
+    // large : on peut accélérer sans déclencher le 429. Le garde-temps
+    // Vercel reste le vrai plafond.
+    if (i + taille < items.length) await pause(RATE_LIMITED ? 900 : 260);
   }
   return out;
 }
@@ -390,7 +391,9 @@ module.exports = async (req, res) => {
   if (sansCache) {
     res.setHeader("Cache-Control", "no-store, max-age=0");
   } else {
-    res.setHeader("Cache-Control", "s-maxage=1800, stale-while-revalidate=3600");
+    // Cache ramené de 30 à 10 minutes : avec 75 000 requêtes/jour on peut
+    // se permettre des cotes plus fraîches (144 scans/jour au pire).
+    res.setHeader("Cache-Control", "s-maxage=600, stale-while-revalidate=1800");
   }
   if (req.method === "OPTIONS") return res.status(200).end();
 
@@ -413,9 +416,12 @@ module.exports = async (req, res) => {
   // Volumes calibrés pour tenir dans le budget de temps de Vercel
   // avec un débit régulé (~8 req/s) : au-delà, la fonction est coupée
   // et l'utilisateur ne reçoit RIEN.
+  // Quota de 75 000 requêtes/jour : le frein n'est plus le quota mais les
+  // 10 secondes accordées par Vercel à chaque appel. On dépense donc
+  // largement, en restant sous le garde-temps.
   const EFFORT = chargé
-    ? { pagesJ0: 10, pagesJ1: 5, pagesJ2: 2, rattrapage: 30, detail: 20, fenetre: 5 }
-    : { pagesJ0:  7, pagesJ1: 3, pagesJ2: 2, rattrapage: 22, detail: 15, fenetre: 4 };
+    ? { pagesJ0: 16, pagesJ1: 8, pagesJ2: 4, rattrapage: 70, detail: 35, fenetre: 5 }
+    : { pagesJ0: 12, pagesJ1: 6, pagesJ2: 3, rattrapage: 50, detail: 25, fenetre: 4 };
   const KEY = process.env.FOOTBALL_API_KEY || "";
   if (!KEY) return res.status(200).json({ matches: [], error: "no_key" });
 
@@ -574,6 +580,15 @@ module.exports = async (req, res) => {
     // Les matchs sont déjà triés par heure : le plafond suffit à cibler
     // les plus proches du coup d'envoi.
     const maintenant = Date.now();
+
+    // Équipes réserve / jeunes : les bookmakers ne les cotent jamais.
+    // Inutile de dépenser une requête pour "Real Madrid II" ou "Getafe B".
+    const estReserve = n => /\b(II|B|U1[6-9]|U2[0-3]|Reserve|Youth|Sub-\d+)\b/i.test(String(n || ""));
+
+    // Le budget de rattrapage est limité (30 requêtes). Le dépenser dans
+    // l'ordre chronologique le gaspillait sur les amicaux du matin, qui
+    // n'ont presque jamais de cotes, avant d'atteindre la Ligue des
+    // Champions du soir. On sert donc les compétitions par priorité.
     const missing = fixtures
       .filter(f => !oddsByFixture[f.fixture?.id])
       .filter(f => {
@@ -581,11 +596,17 @@ module.exports = async (req, res) => {
         // Les matchs à plus de 3 jours n'ont presque jamais de cotes publiées
         return isFinite(t) && (t - maintenant) < 3 * 86400000;
       })
-      .sort((a, b) => new Date(a.fixture?.date || 0) - new Date(b.fixture?.date || 0))
+      .filter(f => !estReserve(f.teams?.home?.name) && !estReserve(f.teams?.away?.name))
+      .sort((a, b) => {
+        const pa = PRIORITY[a.league?.id] || 0;
+        const pb = PRIORITY[b.league?.id] || 0;
+        if (pa !== pb) return pb - pa;                 // compétition d'abord
+        return new Date(a.fixture?.date || 0) - new Date(b.fixture?.date || 0);
+      })
       .slice(0, EFFORT.rattrapage);
 
     if (missing.length) {
-      const rescued = await parLots(missing, f => getOdds(f.fixture?.id, KEY), 5);
+      const rescued = await parLots(missing, f => getOdds(f.fixture?.id, KEY), 10);
       missing.forEach((f, i) => {
         const o = rescued[i];
         if (o && o.o1) oddsByFixture[f.fixture.id] = Object.assign({ nBooks: 1 }, o);
@@ -599,7 +620,7 @@ module.exports = async (req, res) => {
       .filter(f => !LIVE.has(f.fixture?.status?.short) && oddsByFixture[f.fixture?.id])
       .sort((a, b) => (a.fixture?.date || "") < (b.fixture?.date || "") ? -1 : 1)
       .slice(0, EFFORT.detail);
-    const detailArr = await parLots(detailTargets, f => getOdds(f.fixture?.id, KEY), 5);
+    const detailArr = await parLots(detailTargets, f => getOdds(f.fixture?.id, KEY), 10);
     const detailById = {};
     detailTargets.forEach((f, i) => { if (detailArr[i]) detailById[f.fixture.id] = detailArr[i]; });
 
@@ -692,7 +713,7 @@ module.exports = async (req, res) => {
     // Aucun match ET une erreur API : on le dit clairement au lieu d'afficher le vide
     if (!matches.length && API_ERROR) {
       return res.status(200).json({ matches: [], finished: [], count: 0,
-        error: API_ERROR, apiError: API_ERROR, apiCalls: API_CALLS, source: "EDGE Scan v46" });
+        error: API_ERROR, apiError: API_ERROR, apiCalls: API_CALLS, source: "EDGE Scan v48" });
     }
 
     return res.status(200).json({
@@ -730,7 +751,7 @@ module.exports = async (req, res) => {
       fixturesScanned: pool.length,
       apiCalls: API_CALLS,
       missingOdds: matches.filter(m => !m.hasRealOdds).map(m => m.c + ": " + m.h + " - " + m.a).slice(0, 12),
-      source: "EDGE Scan v46",
+      source: "EDGE Scan v48",
       season,
     });
 
