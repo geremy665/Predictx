@@ -1,4 +1,4 @@
-// EDGE — api/scan.js v49 — budget de temps réparti : le rattrapage n'affame plus les marchés alternatifs
+// EDGE — api/scan.js v52 — effort plein + ralentissement automatique en filet de sécurité
 function toNum(val, decimals) {
   if(val === null || val === undefined || isNaN(val)) return 0;
   return parseFloat(parseFloat(val).toFixed(decimals || 3));
@@ -183,20 +183,28 @@ function pause(ms) { return new Promise(r => setTimeout(r, ms)); }
 async function parLots(items, fn, taille, echeance) {
   const out = [];
   const stop = (typeof echeance === "number") ? Math.min(echeance, BUDGET_MS) : BUDGET_MS;
-  for (let i = 0; i < items.length; i += taille) {
+  let i = 0;
+  while (i < items.length) {
     // Garde-temps : mieux vaut renvoyer des cotes partielles que rien du tout
     // (une fonction Vercel coupée à 10s ne renvoie AUCUNE donnée).
     if (tempsEcoule() > stop) {
       while (out.length < items.length) out.push(null);
       break;
     }
-    const lot = items.slice(i, i + taille);
+    // ── RYTHME ADAPTATIF ──
+    // Une fois la limite par minute touchée, allonger la pause ne suffit
+    // pas : il faut aussi RÉDUIRE la taille des lots, sinon on continue
+    // d'envoyer des rafales qui se font refuser. Sans ça, la couverture
+    // s'effondrait (23 matchs cotés sur 80 au lieu de 70).
+    const t = RATE_LIMITED ? Math.max(2, Math.floor(taille / 2)) : taille;
+    const lot = items.slice(i, i + t);
     const r = await Promise.all(lot.map(fn));
     out.push(...r);
-    // Débit régulé. Avec le forfait 75 000, la limite par minute est plus
-    // large : on peut accélérer sans déclencher le 429. Le garde-temps
-    // Vercel reste le vrai plafond.
-    if (i + taille < items.length) await pause(RATE_LIMITED ? 900 : 260);
+    i += t;
+    // Cadence visée : ~7 requêtes/seconde, soit sous les 450/minute du
+    // forfait. Saturer la limite puis récupérer coûte bien plus cher que
+    // de rester dessous : les appels refusés sont perdus, pas différés.
+    if (i < items.length) await pause(RATE_LIMITED ? 900 : 300);
   }
   return out;
 }
@@ -420,9 +428,20 @@ module.exports = async (req, res) => {
   // Quota de 75 000 requêtes/jour : le frein n'est plus le quota mais les
   // 10 secondes accordées par Vercel à chaque appel. On dépense donc
   // largement, en restant sous le garde-temps.
+  // Le frein réel n'est ni le quota (75 000/jour) ni Vercel, mais la
+  // limite par MINUTE de l'abonnement. Viser un débit soutenable vaut
+  // mieux que saturer puis se faire refuser les trois quarts des appels.
+  // Une page de cotes groupées rapporte une dizaine de matchs d'un coup,
+  // là où un rattrapage n'en rapporte qu'un. À budget de requêtes égal,
+  // on privilégie donc largement les pages groupées.
+  // Un scan consomme ~110 requêtes, largement sous les 450/minute du
+  // forfait. La limite n'est atteinte qu'en rechargeant plusieurs fois
+  // dans la même minute (test avec ?nocache=1) — le cache de 10 minutes
+  // l'évite en usage normal. Le ralentissement automatique reste en
+  // filet de sécurité si ça arrive quand même.
   const EFFORT = chargé
-    ? { pagesJ0: 16, pagesJ1: 8, pagesJ2: 4, rattrapage: 70, detail: 35, fenetre: 5 }
-    : { pagesJ0: 12, pagesJ1: 6, pagesJ2: 3, rattrapage: 50, detail: 25, fenetre: 4 };
+    ? { pagesJ0: 16, pagesJ1: 8, pagesJ2: 4, rattrapage: 45, detail: 26, fenetre: 5 }
+    : { pagesJ0: 12, pagesJ1: 6, pagesJ2: 3, rattrapage: 32, detail: 18, fenetre: 4 };
   const KEY = process.env.FOOTBALL_API_KEY || "";
   if (!KEY) return res.status(200).json({ matches: [], error: "no_key" });
 
@@ -610,7 +629,7 @@ module.exports = async (req, res) => {
       // Le rattrapage ne consomme au plus que 60% du budget : les marchés
       // alternatifs (plus/moins, double chance, BTTS) doivent garder leur
       // part, sinon la diversité des paris s'effondre.
-      const rescued = await parLots(missing, f => getOdds(f.fixture?.id, KEY), 10, BUDGET_MS * 0.60);
+      const rescued = await parLots(missing, f => getOdds(f.fixture?.id, KEY), 8, BUDGET_MS * 0.62);
       missing.forEach((f, i) => {
         const o = rescued[i];
         if (o && o.o1) oddsByFixture[f.fixture.id] = Object.assign({ nBooks: 1 }, o);
@@ -624,7 +643,7 @@ module.exports = async (req, res) => {
       .filter(f => !LIVE.has(f.fixture?.status?.short) && oddsByFixture[f.fixture?.id])
       .sort((a, b) => (a.fixture?.date || "") < (b.fixture?.date || "") ? -1 : 1)
       .slice(0, EFFORT.detail);
-    const detailArr = await parLots(detailTargets, f => getOdds(f.fixture?.id, KEY), 10);
+    const detailArr = await parLots(detailTargets, f => getOdds(f.fixture?.id, KEY), 8);
     const detailById = {};
     detailTargets.forEach((f, i) => { if (detailArr[i]) detailById[f.fixture.id] = detailArr[i]; });
 
@@ -717,7 +736,7 @@ module.exports = async (req, res) => {
     // Aucun match ET une erreur API : on le dit clairement au lieu d'afficher le vide
     if (!matches.length && API_ERROR) {
       return res.status(200).json({ matches: [], finished: [], count: 0,
-        error: API_ERROR, apiError: API_ERROR, apiCalls: API_CALLS, source: "EDGE Scan v49" });
+        error: API_ERROR, apiError: API_ERROR, apiCalls: API_CALLS, source: "EDGE Scan v52" });
     }
 
     return res.status(200).json({
@@ -755,7 +774,7 @@ module.exports = async (req, res) => {
       fixturesScanned: pool.length,
       apiCalls: API_CALLS,
       missingOdds: matches.filter(m => !m.hasRealOdds).map(m => m.c + ": " + m.h + " - " + m.a).slice(0, 12),
-      source: "EDGE Scan v49",
+      source: "EDGE Scan v52",
       season,
     });
 
