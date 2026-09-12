@@ -1,4 +1,4 @@
-// EDGE — api/scan.js v48 — effort doublé (quota 75 000) : lots plus larges, cache plus court
+// EDGE — api/scan.js v49 — budget de temps réparti : le rattrapage n'affame plus les marchés alternatifs
 function toNum(val, decimals) {
   if(val === null || val === undefined || isNaN(val)) return 0;
   return parseFloat(parseFloat(val).toFixed(decimals || 3));
@@ -180,12 +180,13 @@ function pause(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 // Exécute des tâches par petits lots au lieu de tout lancer d'un coup.
 // Un burst de 35 requêtes simultanées déclenche le 429 d'API-Football.
-async function parLots(items, fn, taille) {
+async function parLots(items, fn, taille, echeance) {
   const out = [];
+  const stop = (typeof echeance === "number") ? Math.min(echeance, BUDGET_MS) : BUDGET_MS;
   for (let i = 0; i < items.length; i += taille) {
     // Garde-temps : mieux vaut renvoyer des cotes partielles que rien du tout
     // (une fonction Vercel coupée à 10s ne renvoie AUCUNE donnée).
-    if (tempsEcoule() > BUDGET_MS) {
+    if (tempsEcoule() > stop) {
       while (out.length < items.length) out.push(null);
       break;
     }
@@ -606,7 +607,10 @@ module.exports = async (req, res) => {
       .slice(0, EFFORT.rattrapage);
 
     if (missing.length) {
-      const rescued = await parLots(missing, f => getOdds(f.fixture?.id, KEY), 10);
+      // Le rattrapage ne consomme au plus que 60% du budget : les marchés
+      // alternatifs (plus/moins, double chance, BTTS) doivent garder leur
+      // part, sinon la diversité des paris s'effondre.
+      const rescued = await parLots(missing, f => getOdds(f.fixture?.id, KEY), 10, BUDGET_MS * 0.60);
       missing.forEach((f, i) => {
         const o = rescued[i];
         if (o && o.o1) oddsByFixture[f.fixture.id] = Object.assign({ nBooks: 1 }, o);
@@ -713,7 +717,7 @@ module.exports = async (req, res) => {
     // Aucun match ET une erreur API : on le dit clairement au lieu d'afficher le vide
     if (!matches.length && API_ERROR) {
       return res.status(200).json({ matches: [], finished: [], count: 0,
-        error: API_ERROR, apiError: API_ERROR, apiCalls: API_CALLS, source: "EDGE Scan v48" });
+        error: API_ERROR, apiError: API_ERROR, apiCalls: API_CALLS, source: "EDGE Scan v49" });
     }
 
     return res.status(200).json({
@@ -751,7 +755,7 @@ module.exports = async (req, res) => {
       fixturesScanned: pool.length,
       apiCalls: API_CALLS,
       missingOdds: matches.filter(m => !m.hasRealOdds).map(m => m.c + ": " + m.h + " - " + m.a).slice(0, 12),
-      source: "EDGE Scan v48",
+      source: "EDGE Scan v49",
       season,
     });
 
