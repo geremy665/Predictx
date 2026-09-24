@@ -1,4 +1,4 @@
-// EDGE — api/scan.js v52 — effort plein + ralentissement automatique en filet de sécurité
+// EDGE — api/scan.js v54 — cotes par championnat : couverture J+2/J+3 et petits championnats
 function toNum(val, decimals) {
   if(val === null || val === undefined || isNaN(val)) return 0;
   return parseFloat(parseFloat(val).toFixed(decimals || 3));
@@ -327,66 +327,136 @@ async function getOddsBulk(date, key, maxPages) {
   return map;
 }
 
+// Trouve un marché par son NOM exact (fiable sur API-Football), avec
+// l'identifiant correct seulement en secours. Les anciens identifiants
+// étaient faux : 3 = « vainqueur 2e mi-temps » (pas les buts), 5 = buts
+// (pas « les deux marquent ») — d'où des marchés alternatifs presque
+// toujours vides sur les matchs rattrapés.
+function trouverPari(bets, nom, id) {
+  const exact = bets.find(b => b.name === nom);
+  if (exact) return exact;
+  return bets.find(b => b.id === id && !/half|1st|2nd|first|second/i.test(b.name || "")) || null;
+}
+
+// Lit toutes les cotes d'UN match à partir de sa liste de bookmakers.
+// Partagé par la récupération match par match et par championnat.
+function lireCotes(bookmakers) {
+  const result = {};
+  const allBks = (bookmakers || []).slice();
+  // Les bookmakers les plus fins d'abord : ce sont eux qui fixent la
+  // cote de référence et remplissent en priorité les marchés alternatifs.
+  allBks.sort((a, b) => {
+    const ia = SHARP_BK.indexOf(a.id), ib = SHARP_BK.indexOf(b.id);
+    return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+  });
+  const books = [];
+  // On parcourt TOUS les bookmakers : Pinnacle ne cote pas tous les marchés.
+  for (const bk of allBks) {
+    const bets = bk.bets || [];
+    const mw = trouverPari(bets, "Match Winner", 1);
+    if (mw?.values?.length >= 3) {
+      const h = mw.values.find(v => v.value === "Home");
+      const dr = mw.values.find(v => v.value === "Draw");
+      const a = mw.values.find(v => v.value === "Away");
+      const c1 = parseFloat(h?.odd), cn = parseFloat(dr?.odd), c2 = parseFloat(a?.odd);
+      if (c1 > 1.01 && cn > 1.01 && c2 > 1.01) {
+        books.push({ n: bk.name, o1: c1, on: cn, o2: c2 });
+        if (!result.o1) { result.o1 = c1; result.on = cn; result.o2 = c2; result.pinnacle = bk.id === 8; }
+        if (bk.id === 8) { result.pinO1 = c1; result.pinON = cn; result.pinO2 = c2; result.pinnacle = true; }
+      }
+    }
+    const dc = trouverPari(bets, "Double Chance", 12);
+    if (dc?.values && !result.dc1x) {
+      const hd = dc.values.find(v => v.value === "Home/Draw");
+      const ha = dc.values.find(v => v.value === "Home/Away");
+      const da = dc.values.find(v => v.value === "Draw/Away");
+      if (hd) result.dc1x = parseFloat(hd.odd);
+      if (ha) result.dc12 = parseFloat(ha.odd);
+      if (da) result.dcx2 = parseFloat(da.odd);
+    }
+    const ou = trouverPari(bets, "Goals Over/Under", 5);
+    if (ou?.values) {
+      ou.values.forEach(v => {
+        const m = String(v.value || "").match(/^(Over|Under)\s+([\d.]+)$/i);
+        if (!m) return;
+        const k = (m[1].toLowerCase() === "over" ? "over" : "under") + m[2].replace(".", "_");
+        const o = parseFloat(v.odd);
+        if (!result[k] && o > 1.01) result[k] = o;
+      });
+    }
+    const btts = trouverPari(bets, "Both Teams Score", 8);
+    if (btts?.values && !result.bttsY) {
+      const y = btts.values.find(v => v.value === "Yes");
+      const n = btts.values.find(v => v.value === "No");
+      if (y) result.bttsY = parseFloat(y.odd);
+      if (n) result.bttsN = parseFloat(n.odd);
+    }
+  }
+  if (books.length) {
+    result.books = books.slice(0, 30);
+    result.nBooks = books.length;
+    const best = k => books.reduce((acc, b) => (b[k] > acc.o ? { o: b[k], b: b.n } : acc), { o: 0, b: null });
+    const b1 = best("o1"), bN = best("on"), b2 = best("o2");
+    result.bestO1 = b1.o; result.bestON = bN.o; result.bestO2 = b2.o;
+    result.bestBook1 = b1.b; result.bestBookN = bN.b; result.bestBook2 = b2.b;
+  }
+  return Object.keys(result).length ? result : null;
+}
+
 async function getOdds(fixtureId, key) {
   try {
     const data = await apiFetch(`/odds?fixture=${fixtureId}`, key);
     if (!data?.length) return null;
-    let result = {};
-    let foundSharp = false;
-    const allBks = [];
-    for (const item of data) {
-      for (const bk of (item.bookmakers || [])) allBks.push(bk);
-    }
-    allBks.sort((a,b) => {
-      const ia = SHARP_BK.indexOf(a.id);
-      const ib = SHARP_BK.indexOf(b.id);
-      return (ia<0?99:ia) - (ib<0?99:ib);
+    const bks = [];
+    for (const item of data) for (const bk of (item.bookmakers || [])) bks.push(bk);
+    return lireCotes(bks);
+  } catch (e) { return null; }
+}
+
+// Requête complète (avec la pagination), mêmes protections qu'apiFetch.
+async function apiFetchFull(url, key, essai) {
+  if (API_STOP) return null;
+  API_CALLS++;
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 8000);
+    const r = await fetch(`https://v3.football.api-sports.io${url}`, {
+      headers: { "x-apisports-key": key, "Accept": "application/json" }, signal: ctrl.signal
     });
-    for (const bk of allBks) {
-      const bets = bk.bets || [];
-      const isPinnacle = bk.id === 8;
-      const mw = bets.find(b => b.id === 1 || b.name === "Match Winner");
-      if (mw?.values?.length >= 3 && !result.o1) {
-        const h = mw.values.find(v => v.value === "Home");
-        const dr = mw.values.find(v => v.value === "Draw");
-        const a = mw.values.find(v => v.value === "Away");
-        if (h && dr && a) {
-          result.o1 = parseFloat(h.odd);
-          result.on = parseFloat(dr.odd);
-          result.o2 = parseFloat(a.odd);
-          result.pinnacle = isPinnacle;
-          if (isPinnacle) foundSharp = true;
-        }
-      }
-      const dc = bets.find(b => b.id === 12 || b.name === "Double Chance");
-      if (dc?.values && !result.dc1x) {
-        const hd = dc.values.find(v => v.value === "Home/Draw");
-        const ha = dc.values.find(v => v.value === "Home/Away");
-        const da = dc.values.find(v => v.value === "Draw/Away");
-        if (hd) result.dc1x = parseFloat(hd.odd);
-        if (ha) result.dc12 = parseFloat(ha.odd);
-        if (da) result.dcx2 = parseFloat(da.odd);
-      }
-      const ou = bets.find(b => b.id === 3 || b.name === "Goals Over/Under");
-      if (ou?.values) {
-        ou.values.forEach(v => {
-          const m = v.value.match(/(Over|Under)\s+([\d.]+)/i);
-          if (!m) return;
-          const k = (m[1].toLowerCase()==="over"?"over":"under")+m[2].replace(".","_");
-          if (!result[k]) result[k] = parseFloat(v.odd);
-        });
-      }
-      const btts = bets.find(b => b.id === 5 || b.name === "Both Teams Score");
-      if (btts?.values && !result.bttsY) {
-        const y = btts.values.find(v => v.value === "Yes");
-        const n = btts.values.find(v => v.value === "No");
-        if (y) result.bttsY = parseFloat(y.odd);
-        if (n) result.bttsN = parseFloat(n.odd);
-      }
-      if (result.o1 && foundSharp) break;
+    clearTimeout(t);
+    if (!r.ok) {
+      noteApiError(null, r.status);
+      if (r.status === 429 && !essai && tempsEcoule() < BUDGET_MS) { await pause(1100); return apiFetchFull(url, key, 1); }
+      return null;
     }
-    return Object.keys(result).length ? result : null;
-  } catch(e) { return null; }
+    const d = await r.json();
+    noteApiError(d);
+    return d;
+  } catch (e) { return null; }
+}
+
+// ── COTES PAR CHAMPIONNAT ──
+// Une requête couvre tous les matchs cotés d'une compétition, là où les
+// pages « par date » parcourent le monde entier (des milliers de matchs)
+// et ratent l'essentiel des nôtres dès J+2. Chaque entrée contient déjà
+// tous les bookmakers et tous les marchés.
+async function getOddsLeague(leagueId, season, key, maxPages) {
+  const out = {};
+  let page = 1, total = 1;
+  while (page <= Math.min(maxPages || 2, total)) {
+    if (tempsEcoule() > BUDGET_MS) break;
+    const d = await apiFetchFull(`/odds?league=${leagueId}&season=${season}&page=${page}`, key);
+    if (!d || !Array.isArray(d.response)) break;
+    total = (d.paging && d.paging.total) ? d.paging.total : 1;
+    for (const item of d.response) {
+      const fid = item?.fixture?.id;
+      if (!fid) continue;
+      const c = lireCotes(item.bookmakers);
+      if (c && c.o1) out[fid] = c;
+    }
+    page++;
+  }
+  return out;
 }
 
 module.exports = async (req, res) => {
@@ -440,8 +510,8 @@ module.exports = async (req, res) => {
   // l'évite en usage normal. Le ralentissement automatique reste en
   // filet de sécurité si ça arrive quand même.
   const EFFORT = chargé
-    ? { pagesJ0: 16, pagesJ1: 8, pagesJ2: 4, rattrapage: 45, detail: 26, fenetre: 5 }
-    : { pagesJ0: 12, pagesJ1: 6, pagesJ2: 3, rattrapage: 32, detail: 18, fenetre: 4 };
+    ? { pagesJ0: 10, pagesJ1: 5, pagesJ2: 3, ligues: 18, rattrapage: 40, detail: 22, fenetre: 5 }
+    : { pagesJ0:  8, pagesJ1: 4, pagesJ2: 2, ligues: 14, rattrapage: 30, detail: 16, fenetre: 4 };
   const KEY = process.env.FOOTBALL_API_KEY || "";
   if (!KEY) return res.status(200).json({ matches: [], error: "no_key" });
 
@@ -591,6 +661,39 @@ module.exports = async (req, res) => {
     const bulkMaps = await Promise.all(oddDays.map((d, i) => getOddsBulk(d, KEY, i === 0 ? EFFORT.pagesJ0 : (i === 1 ? EFFORT.pagesJ1 : EFFORT.pagesJ2))));
     const oddsByFixture = Object.assign({}, ...bulkMaps);
 
+    // ── COTES PAR CHAMPIONNAT ──
+    // Pour chaque compétition qui a des matchs à venir sans cote (ou sans
+    // marchés alternatifs), une requête récupère tout d'un coup. On sert
+    // d'abord les compétitions prioritaires, puis celles qui ont le plus de
+    // matchs manquants. Chaque match porte sa propre saison, exacte.
+    const aCompleter = new Map();
+    for (const f of fixtures) {
+      const fid = f.fixture?.id, lg = f.league?.id;
+      if (!fid || !lg || LIVE.has(f.fixture?.status?.short)) continue;
+      const o = oddsByFixture[fid];
+      if (o && o.books && (o.over2_5 || o.bttsY)) continue;       // déjà complet
+      const saison = f.league?.season || season;
+      const cle = lg + "|" + saison;
+      if (!aCompleter.has(cle)) aCompleter.set(cle, { lg, saison, n: 0 });
+      aCompleter.get(cle).n++;
+    }
+    const liguesCibles = [...aCompleter.values()]
+      .sort((a, b) => ((PRIORITY[b.lg] || 0) - (PRIORITY[a.lg] || 0)) || (b.n - a.n))
+      .slice(0, EFFORT.ligues);
+    const parLigue = await parLots(liguesCibles, x => getOddsLeague(x.lg, x.saison, KEY, 2), 6, BUDGET_MS * 0.45);
+    let cotesParLigue = 0;
+    const idsAffiches = new Set(fixtures.map(f => f.fixture?.id));
+    parLigue.forEach(map => {
+      if (!map) return;
+      for (const fid in map) {
+        if (!idsAffiches.has(+fid)) continue;
+        const neuf = map[fid], ancien = oddsByFixture[fid];
+        if (!ancien) { oddsByFixture[fid] = neuf; cotesParLigue++; continue; }
+        // Match déjà coté : on complète seulement ce qui manque
+        for (const k in neuf) if (ancien[k] === undefined || ancien[k] === null) ancien[k] = neuf[k];
+      }
+    });
+
     // ── RATTRAPAGE : matchs prioritaires oubliés par la pagination groupée ──
     // (Champions/Europa/Conference et grands championnats ne doivent JAMAIS manquer)
     // Rattrapage : tout match AFFICHÉ et non coté mérite une requête dédiée.
@@ -632,7 +735,7 @@ module.exports = async (req, res) => {
       const rescued = await parLots(missing, f => getOdds(f.fixture?.id, KEY), 8, BUDGET_MS * 0.62);
       missing.forEach((f, i) => {
         const o = rescued[i];
-        if (o && o.o1) oddsByFixture[f.fixture.id] = Object.assign({ nBooks: 1 }, o);
+        if (o && o.o1) oddsByFixture[f.fixture.id] = Object.assign({ nBooks: (o.books && o.books.length) || 1 }, o);
       });
     }
 
@@ -641,6 +744,7 @@ module.exports = async (req, res) => {
     // ce sont ceux que l'utilisateur consulte réellement.
     const detailTargets = fixtures
       .filter(f => !LIVE.has(f.fixture?.status?.short) && oddsByFixture[f.fixture?.id])
+      .filter(f => { const o = oddsByFixture[f.fixture?.id]; return !(o.books && (o.over2_5 || o.bttsY)); })
       .sort((a, b) => (a.fixture?.date || "") < (b.fixture?.date || "") ? -1 : 1)
       .slice(0, EFFORT.detail);
     const detailArr = await parLots(detailTargets, f => getOdds(f.fixture?.id, KEY), 8);
@@ -736,7 +840,7 @@ module.exports = async (req, res) => {
     // Aucun match ET une erreur API : on le dit clairement au lieu d'afficher le vide
     if (!matches.length && API_ERROR) {
       return res.status(200).json({ matches: [], finished: [], count: 0,
-        error: API_ERROR, apiError: API_ERROR, apiCalls: API_CALLS, source: "EDGE Scan v52" });
+        error: API_ERROR, apiError: API_ERROR, apiCalls: API_CALLS, source: "EDGE Scan v54" });
     }
 
     return res.status(200).json({
@@ -756,6 +860,8 @@ module.exports = async (req, res) => {
       diag: {
         matchsSelectionnes: fixtures.length,
         cotesParDate: Object.keys(oddsByFixture).length,
+        liguesInterrogees: liguesCibles.length,
+        cotesParLigue: cotesParLigue,
         rattrapagesTentes: missing.length,
         rattrapagesReussis: missing.filter(f => oddsByFixture[f.fixture?.id]).length,
         // Un échantillon de ce qui est réellement dans oddsByFixture
@@ -774,7 +880,7 @@ module.exports = async (req, res) => {
       fixturesScanned: pool.length,
       apiCalls: API_CALLS,
       missingOdds: matches.filter(m => !m.hasRealOdds).map(m => m.c + ": " + m.h + " - " + m.a).slice(0, 12),
-      source: "EDGE Scan v52",
+      source: "EDGE Scan v54",
       season,
     });
 
