@@ -11,7 +11,7 @@ module.exports = async (req, res) => {
   res.setHeader("Cache-Control","s-maxage=300, stale-while-revalidate=600");
   if (req.method==="OPTIONS") return res.status(200).end();
 
-  const MKEY = process.env.MISTRAL_API_KEY || "lvoeRXlFieBv5hpfh3TlZ12FZiFvIF8w";
+  const MKEY = process.env.MISTRAL_API_KEY || "";  // clé uniquement dans Vercel, jamais dans le code
 
   let body={};
   try {

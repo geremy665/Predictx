@@ -5159,6 +5159,7 @@ function saveTrack(){
   try{localStorage.setItem("edge_track",JSON.stringify(S.track.slice(-500)));}catch(e){}
 }
 function recordSignals(){
+  if(preuveActive()) return;   // la Preuve officielle est tenue par le serveur
   if(!S.track)loadTrack();
   // On enregistre EXACTEMENT les paris de la sélection du jour (règle v2) :
   // ce que l'app recommande est ce qui est mesuré. Au maximum trois par
@@ -5694,6 +5695,7 @@ function blocGainPrix(){
 
 function pPreuve(){
   var h="";
+  try{ h+=blocPreuveServeur(); }catch(e){}
   try{ h+=blocRegleV2(); }catch(e){}
   try{ h+=blocGainPrix(); }catch(e){}
   var tk=trackStats();
@@ -5706,7 +5708,7 @@ function pPreuve(){
   h+='</div>';
 
   // ── 1. Preuve en direct ──
-  h+='<div class="sec-header"><div class="sec-bar"></div><div class="sec-title">Preuve en direct</div></div>';
+  h+='<div class="sec-header"><div class="sec-bar"></div><div class="sec-title">'+(preuveActive()?'Historique de ce téléphone (avant le serveur)':'Preuve en direct')+'</div></div>';
   h+='<div class="card" style="padding:14px;margin-bottom:14px">';
   h+='<div style="font-size:12px;color:var(--w30);line-height:1.55;margin-bottom:12px">Chaque signal est enregistré <strong style="color:var(--w80)">avant le coup d\'envoi</strong>, avec la cote du moment, puis réglé automatiquement avec le score réel. Impossible de revenir en arrière. Ces chiffres regroupent tout l\'historique, y compris celui d\'avant la règle actuelle, suivie à part en haut de page. Les analyses IA ne sont pas comptabilisées.</div>';
   if(!tk.n){
@@ -7185,6 +7187,8 @@ function pAdmin(){
   });
   h+='</div>';
 
+  try{ h+=blocMachineAdmin(); }catch(e){}
+
   // ── Opérateurs reçus de l'API : lesquels sont agréés en France ? ──
   // La sélection du jour ne peut proposer que ceux-là : s'il y en a peu,
   // elle trouvera rarement quelque chose.
@@ -8120,9 +8124,157 @@ function selectionRetiree(items){
   return out;
 }
 
+// ═══ LA PREUVE OFFICIELLE — tenue par le serveur (api/machine.js) ═══
+// Le serveur enregistre lui-même chaque pari AVANT le match et le règle
+// avec le score réel. Même Preuve pour tout le monde, téléphone ouvert ou non.
+function chargerPreuve(){
+  try{
+    fetch("/api/preuve",{cache:"no-store"}).then(function(r){ return r.json(); }).then(function(j){
+      if(!j||typeof j!=="object") return;
+      S.preuve=j;
+      if(S.tab==="home"||S.tab==="preuve"||S.tab==="admin") renderPage();
+    }).catch(function(){});
+  }catch(e){}
+}
+function preuveActive(){ return !!(S.preuve&&S.preuve.actif); }
+function statsPreuve(liste){
+  var r={ n:0, regles:0, gagnes:0, perdus:0, annules:0, attente:0, pnl:0, roi:0, reussite:0, nClv:0, clvMoy:0, clvBattue:0, depuis:null };
+  (liste||[]).forEach(function(s){
+    if(!s) return;
+    r.n++;
+    if(!r.depuis||s.ts<r.depuis) r.depuis=s.ts;
+    var c=parseFloat(s.cote);
+    if(s.status==="won"){ r.gagnes++; r.pnl+=c-1; }
+    else if(s.status==="lost"){ r.perdus++; r.pnl-=1; }
+    else if(s.status==="void") r.annules++;
+    else r.attente++;
+    if((s.status==="won"||s.status==="lost")&&isFinite(parseFloat(s.clv))){ r.nClv++; r.clvMoy+=parseFloat(s.clv); if(parseFloat(s.clv)>0) r.clvBattue++; }
+  });
+  r.regles=r.gagnes+r.perdus;
+  r.pnl=Math.round(r.pnl*100)/100;
+  r.roi=r.regles?Math.round(r.pnl/r.regles*1000)/10:0;
+  r.reussite=r.regles?Math.round(r.gagnes/r.regles*100):0;
+  if(r.nClv){ r.clvMoy=Math.round(r.clvMoy/r.nClv*10)/10; r.clvBattue=Math.round(r.clvBattue/r.nClv*100); }
+  return r;
+}
+// La sélection du jour = les paris que le serveur a enregistrés (ce qui
+// est affiché est exactement ce qui est mesuré)
+function selectionServeur(){
+  var now=Date.now(), items=[];
+  ((S.preuve&&S.preuve.signaux)||[]).forEach(function(s){
+    if(!s||s.status!=="pending") return;
+    var ko=new Date(s.ko).getTime();
+    if(!isFinite(ko)||ko<now-2.5*3600000||ko>now+26*3600000) return;
+    var idx=-1;
+    (S.matches||[]).forEach(function(m,i){ if(m&&m.frId===s.id) idx=i; });
+    items.push({ m:{ h:s.h, a:s.a, c:s.lg, time:s.ko, idx:idx }, k:s.pick, label:s.label, cote:parseFloat(s.cote),
+      book:s.book, prob:parseFloat(s.prob), src:s.src, gain:null, ev:(parseFloat(s.ev)||parseFloat(s.prob)*parseFloat(s.cote)), coteMin:(s.minAct||s.coteMin||null), t:ko, srv:s });
+  });
+  items.sort(function(a,b){ return a.t-b.t; });
+  var d=(S.preuve&&S.preuve.etat&&S.preuve.etat.dernier)||{};
+  return { items:items, analyses:d.analyses||0, suspects:d.suspects||0, serveur:true };
+}
+// État actuel d'un pari enregistré : encore jouable ou non ?
+function etatPariServeur(s){
+  var now=Date.now(), ko=new Date(s.ko).getTime();
+  var d=function(v){ return parseFloat(v).toFixed(2).replace(".",","); };
+  if(isFinite(ko)&&ko<=now) return '<div style="font-size:12px;color:var(--w55);margin-top:6px">Match commencé : le résultat sera enregistré automatiquement.</div>';
+  if(s.coteAct&&s.minAct){
+    if(s.coteAct>=s.minAct) return '<div style="font-size:12px;color:var(--vert);margin-top:6px">Encore jouable : meilleure cote actuelle '+d(s.coteAct)+(s.bookAct?' chez '+esc(s.bookAct):'')+'.</div>';
+    return '<div style="font-size:12px;color:var(--rouge);margin-top:6px">Avantage disparu depuis : meilleure cote actuelle '+d(s.coteAct)+', il faudrait au moins '+d(s.minAct)+'. Ne le joue plus. Il reste compté dans la Preuve, comme prévu.</div>';
+  }
+  return "";
+}
+function blocPreuveServeur(){
+  if(!S.preuve) return "";
+  var h="";
+  h+='<div class="sec-header"><div class="sec-bar"></div><div class="sec-title">Preuve officielle</div></div>';
+  h+='<div class="card" style="padding:14px;margin-bottom:14px;border-color:var(--accB)">';
+  if(!preuveActive()){
+    h+='<div style="font-size:13px;color:var(--w80);margin-bottom:6px">Bientôt en service.</div>';
+    h+='<div style="font-size:12px;color:var(--w55);line-height:1.6">La Preuve sera tenue par le serveur : chaque pari enregistré avant le coup d\'envoi avec les vraies cotes des opérateurs français, puis réglé avec le score réel. La même pour tout le monde, téléphone ouvert ou non.</div>';
+    h+='</div>';
+    return h;
+  }
+  var liste=S.preuve.signaux||[];
+  var st=statsPreuve(liste);
+  var dd=function(ts){ try{ return new Date(ts).toLocaleDateString("fr-FR",{day:"numeric",month:"long"}); }catch(e){ return ""; } };
+  h+='<div style="font-size:12px;color:var(--w55);line-height:1.6;margin-bottom:12px">Tenue par le serveur'+(st.depuis?' depuis le '+esc(dd(st.depuis)):'')+'. Chaque pari est enregistré <strong style="color:var(--w80)">avant le coup d\'envoi</strong>, au prix réel d\'un opérateur agréé en France, puis réglé avec le score réel. Rien ne se modifie, rien ne s\'efface. La même pour tout le monde.</div>';
+  if(!st.n){
+    h+='<div style="text-align:center;padding:14px 8px;font-size:13px;color:var(--w55)">Aucun pari ne remplit encore la règle. Le premier sera enregistré ici automatiquement.</div>';
+    h+='</div>';
+    return h;
+  }
+  var eur=Math.round(st.pnl*MISE_REF*100)/100;
+  var tuile=function(v,l,c){ return '<div style="background:var(--w03);border-radius:10px;padding:11px;text-align:center"><div style="font-family:var(--ft);font-size:22px;line-height:1;color:'+c+'">'+v+'</div><div style="font-size:11px;color:var(--w30);margin-top:4px">'+l+'</div></div>'; };
+  h+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">';
+  h+=tuile(st.gagnes,"GAGNÉS","var(--vert)")+tuile(st.perdus,"PERDUS","var(--rouge)")+tuile(st.attente,"EN ATTENTE","var(--w55)");
+  h+='</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">';
+  h+=tuile((eur>0?"+":"")+eur.toFixed(2)+"€","SUR DES MISES DE "+MISE_REF+"€",eur>0?"var(--vert)":eur<0?"var(--rouge)":"var(--w55)");
+  h+=tuile((st.roi>0?"+":"")+st.roi+"%","ROI · "+st.reussite+"% DE RÉUSSITE",st.roi>0?"var(--vert)":st.roi<0?"var(--rouge)":"var(--w55)");
+  h+='</div>';
+  if(st.nClv){
+    h+='<div style="background:var(--w03);border-radius:10px;padding:11px 12px;margin-bottom:10px;font-size:12px;color:var(--w55);line-height:1.55">';
+    h+='<strong style="color:'+(st.clvMoy>0?'var(--vert)':'var(--rouge)')+'">Cote de clôture battue sur '+st.clvBattue+'% des paris</strong> (en moyenne '+(st.clvMoy>0?'+':'')+String(st.clvMoy).replace(".",",")+'%). ';
+    h+='C\'est le meilleur indicateur à long terme : si on prend régulièrement un meilleur prix que le marché juste avant le match, les gains suivent, même après une mauvaise série.';
+    h+='</div>';
+  }
+  if(st.regles<100) h+='<div style="font-size:11px;color:var(--w30);margin-bottom:10px">'+st.regles+' pari'+(st.regles>1?'s':'')+' réglé'+(st.regles>1?'s':'')+' : trop peu pour juger. Il en faut plusieurs centaines.</div>';
+  liste.slice(0,30).forEach(function(s){
+    var ic=s.status==="won"?"✅":s.status==="lost"?"❌":s.status==="void"?"⚪":"⏳";
+    var c=parseFloat(s.cote);
+    var pl=s.status==="won"?'+'+(Math.round((c-1)*100)/100)+'u':s.status==="lost"?'-1u':s.status==="void"?'remboursé':'';
+    h+='<div style="display:flex;align-items:center;gap:9px;padding:7px 0;border-top:1px solid var(--bord)">';
+    h+='<span style="font-size:14px;flex-shrink:0">'+ic+'</span>';
+    h+='<div style="flex:1;min-width:0"><div style="font-size:13px;color:var(--w);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(s.h)+' — '+esc(s.a)+'</div>';
+    h+='<div style="font-size:11px;color:var(--w30)">'+esc(fmtTime(s.ko))+' · '+esc(s.label)+' @'+c.toFixed(2)+(s.book?' chez '+esc(s.book):'')+(s.gh!=null&&s.ga!=null?' · '+s.gh+'-'+s.ga:'')+(isFinite(parseFloat(s.clv))?' · clôture '+(s.clv>0?'+':'')+String(s.clv).replace(".",",")+'%':'')+'</div></div>';
+    h+='<span style="font-family:var(--fm);font-size:12px;flex-shrink:0;color:'+(s.status==="won"?'var(--vert)':s.status==="lost"?'var(--rouge)':'var(--w30)')+'">'+pl+'</span></div>';
+  });
+  h+='</div>';
+  return h;
+}
+function blocMachineAdmin(){
+  var p=S.preuve, h='';
+  h+='<div class="card" style="padding:14px;margin-bottom:12px">';
+  h+='<div style="font-size:11px;color:var(--w30);letter-spacing:.1em;margin-bottom:9px">LA MACHINE (SERVEUR)</div>';
+  if(!p){ h+='<div style="font-size:12px;color:var(--w55)">Lecture de l\'état…</div></div>'; return h; }
+  var e=p.etat||{}, d=e.dernier||{};
+  var ok=function(b){ return b?'<span style="color:var(--vert)">✓ branchée</span>':'<span style="color:var(--rouge)">✗ absente</span>'; };
+  var quand="jamais"; try{ if(e.dernierScan) quand=new Date(e.dernierScan).toLocaleString("fr-FR",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}); }catch(x){}
+  var nFR=(S.matches||[]).filter(function(m){ return m&&m.oddsFR; }).length;
+  [["Base de données",ok(p.base)],
+   ["Clé The Odds API",ok(p.cleOdds)],
+   ["Dernier passage",esc(quand)],
+   ["Crédits restants",(e.credits&&e.credits.restants!=null)?String(e.credits.restants):"—"],
+   ["Championnats / matchs cotés",(d.championnats!=null?d.championnats:"—")+" / "+(d.matchs!=null?d.matchs:"—")],
+   ["Analysés / nouveaux paris",(d.analyses!=null?d.analyses:"—")+" / "+(d.nouveaux!=null?d.nouveaux:"—")],
+   ["Paris enregistrés",String((p.signaux||[]).length)],
+   ["Matchs de l'appli avec cotes FR",nFR+" / "+(S.matches||[]).length]].forEach(function(x){
+    h+='<div style="display:flex;justify-content:space-between;gap:10px;padding:4px 0;font-size:12px"><span style="color:var(--w30)">'+x[0]+'</span><span style="font-family:var(--fm);color:var(--w80);text-align:right">'+x[1]+'</span></div>';
+  });
+  if(e.erreurs&&e.erreurs.length) h+='<div style="font-size:11px;color:var(--rouge);line-height:1.5;margin-top:6px">'+e.erreurs.map(esc).join("<br>")+'</div>';
+  if(p.base&&p.cleOdds) h+='<button class="btn btn-primary" data-action="lancerMachine()" style="width:100%;margin-top:10px">Lancer la machine maintenant</button>';
+  else h+='<div style="font-size:11px;color:var(--w55);line-height:1.5;margin-top:8px">La machine démarre dès que la base et la clé sont branchées dans Vercel. Elle tourne ensuite toute seule toutes les 30 minutes, de 7 h à 23 h 30.</div>';
+  h+='</div>';
+  return h;
+}
+function lancerMachine(){
+  try{ toast("Machine lancée…"); }catch(e){}
+  fetch("/api/machine?manuel=1",{cache:"no-store"}).then(function(r){ return r.json(); }).then(function(j){
+    var msg = !j ? "Pas de réponse"
+      : j.ignore==="passage_recent" ? "Dernier passage il y a "+(j.ilYa||"peu")+" : réessaie dans 10 minutes."
+      : j.ok ? ((j.journal||[]).join(" · ")||"Terminé")
+      : ({base_absente:"Base de données absente", cle_odds_absente:"Clé The Odds API absente", base_injoignable:"Base injoignable"}[j.raison]||("Erreur : "+(j.raison||"?")));
+    try{ toast(msg); }catch(e){}
+    chargerPreuve();
+  }).catch(function(){ try{ toast("La machine ne répond pas"); }catch(e){} });
+}
+window.chargerPreuve=chargerPreuve;window.preuveActive=preuveActive;window.statsPreuve=statsPreuve;window.selectionServeur=selectionServeur;window.blocPreuveServeur=blocPreuveServeur;window.blocMachineAdmin=blocMachineAdmin;window.lancerMachine=lancerMachine;window.etatPariServeur=etatPariServeur;
+
 function blocSelectionDuJour(){
-  if(!(S.matches||[]).length) return "";          // chargement : l'accueil reste lisible
-  var sel; try{ sel=selectionDuJour(); }catch(e){ return ""; }
+  var _srv=preuveActive();
+  if(!(S.matches||[]).length&&!_srv) return "";          // chargement : l'accueil reste lisible
+  var sel; try{ sel=_srv?selectionServeur():selectionDuJour(); }catch(e){ return ""; }
   var auj=new Date();
   var jour=""; try{ jour=auj.toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"}); }catch(e){}
   var cleJour=function(ts){ var d=new Date(ts); return d.getFullYear()+"-"+d.getMonth()+"-"+d.getDate(); };
@@ -8165,6 +8317,7 @@ function blocSelectionDuJour(){
       h+='Probabilité réelle : <strong style="font-family:var(--fm);color:var(--w80)">'+_d1(x.prob*100)+'%</strong> '+(x.src==="Pinnacle"?'(marché de référence, marge retirée).':'(estimation sans le marché de référence, moins précise : avantage exigé doublé).')+' À cette cote, <strong style="font-family:var(--fm);color:var(--w80)">'+_d1(seuil)+'%</strong> suffisent. Avantage estimé : <strong style="font-family:var(--fm);color:var(--vert)">+'+_d1((x.ev-1)*100)+'%</strong>.';
       if(x.gain&&x.gain>0.3) h+=' Meilleur prix du marché français : +'+_d1(x.gain)+'% sur la médiane.';
       if(x.coteMin) h+='<div style="font-size:12px;color:var(--w80);margin-top:6px">Ne joue pas en dessous de <strong style="font-family:var(--fm)">'+x.coteMin.toFixed(2).replace(".",",")+'</strong> : vérifie le prix sur ton appli avant de miser.</div>';
+      if(x.srv) h+=etatPariServeur(x.srv);
       if(x.cote>SDJ.seuilOutsider) h+='<div style="font-size:11px;color:var(--acc2);margin-top:6px">OUTSIDER — avantage plus élevé, mais de longues séries de défaites sont normales sur ce type de pari.</div>';
       h+='</div>';
       h+='</div>';
@@ -8172,7 +8325,7 @@ function blocSelectionDuJour(){
   }
   h+='<div style="font-size:11px;color:var(--w30);line-height:1.55;margin-top:10px;padding-top:10px;border-top:1px solid var(--bord2)">';
     try{
-    var _ret=selectionRetiree(sel.items);
+    var _ret=_srv?[]:selectionRetiree(sel.items);
     if(_ret.length){
       h+='<div style="margin-top:2px;padding-top:4px">';
       h+='<div style="font-size:11px;color:var(--w30);letter-spacing:.1em;margin-bottom:8px">PARIS RETIRÉS DEPUIS LEUR SÉLECTION</div>';
@@ -8570,6 +8723,7 @@ function renderPage(){
 }
 
 function fetchMatches(){
+  try{ chargerPreuve(); }catch(e){}
   S.mLoad=true;S.mErr="";S.hasReal=false;
   renderPage();
   var safe=setTimeout(function(){

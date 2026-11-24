@@ -114,6 +114,56 @@ const rangBk = bk => { const n = String((bk && bk.name) || ""); const i = PRIORI
 let API_CALLS = 0;
 let RATE_LIMITED = false;   // limite par minute touchée : transitoire
 let DEBUT = 0;              // horodatage du début du scan
+// ── Cotes françaises (The Odds API), relevées par api/machine.js ──
+// Le scan ne dépense aucun crédit : il lit la dernière photo gardée en base.
+const STORE = require("./_lib/store");
+const REGLE = require("./_lib/regle");
+async function fusionFR(matches) {
+  const info = { actif: false, photo: null, rapproches: 0, ajoutes: 0 };
+  if (!STORE.actif()) return info;
+  let snap = null;
+  try { snap = await STORE.getJSON("edge:fr:snap", 1500); } catch (e) { return info; }
+  if (!snap || !Array.isArray(snap.events)) return info;
+  info.actif = true; info.photo = snap.ts || null;
+  // Photo trop vieille (plus de 3 h) : on ne mélange pas des prix périmés
+  if (!snap.ts || Date.now() - snap.ts > 3 * 3600000) { info.perimee = true; return info; }
+  // Attribution globale : les rapprochements les plus sûrs d'abord, et
+  // chaque match d'un côté n'est utilisé qu'une seule fois de l'autre
+  const paires = [];
+  matches.forEach((m, i) => {
+    if (!m || m.isLive) return;
+    snap.events.forEach((e, j) => {
+      const sc = REGLE.memeMatch(m.h, m.a, m.time, e.h, e.a, e.ko);
+      if (sc > 0) paires.push([sc, i, j]);
+    });
+  });
+  paires.sort((x, y) => y[0] - x[0]);
+  const choix = {}, pris = new Set();
+  paires.forEach(([sc, i, j]) => { if (choix[i] === undefined && !pris.has(j)) { choix[i] = j; pris.add(j); } });
+  Object.keys(choix).forEach(i => {
+    const m = matches[i], best = snap.events[choix[i]];
+    if (!best || !Array.isArray(best.books) || !best.books.length) return;
+    info.rapproches++;
+    const fr = best.books.filter(b => REGLE.estAgreeFR(b.n));
+    const pin = best.books.find(b => /pinnacle/i.test(b.n));
+    // Les versions internationales (ex. « Unibet » d'API-Football) ne donnent
+    // pas le prix français : on les remplace par les vraies cotes .fr
+    let books = (m.books || []).filter(b => !REGLE.estAgreeFR(b.n));
+    fr.forEach(b => books.push({ n: b.n, o1: b.o1, on: b.on, o2: b.o2, fr: true }));
+    if (!books.some(b => /pinnacle/i.test(b.n || "")) && pin) books.unshift({ n: "Pinnacle", o1: pin.o1, on: pin.on, o2: pin.o2 });
+    m.books = books.slice(0, 30);
+    m.nBooks = m.books.length;
+    if (pin && !m.pinO1) { m.pinO1 = pin.o1; m.pinON = pin.on; m.pinO2 = pin.o2; m.hasPinnacle = true; }
+    if (!m.hasRealOdds) {
+      const ref = pin || best.books[0];
+      m.o1 = ref.o1; m.on = ref.on; m.o2 = ref.o2; m.hasRealOdds = true;
+    }
+    m.oddsFR = fr.length;
+    m.frId = best.id;
+    info.ajoutes += fr.length;
+  });
+  return info;
+}
 const BUDGET_MS = 8000;     // Vercel coupe à 10s : on garde une marge
 function tempsEcoule() { return Date.now() - DEBUT; }
 let API_ERROR = null;   // quota dépassé, clé invalide, etc.
@@ -834,6 +884,10 @@ module.exports = async (req, res) => {
       };
     });
 
+    // Cotes des opérateurs français (Winamax, Betclic, Unibet, PMU, NetBet)
+    let infoFR = { actif: false };
+    try { infoFR = await fusionFR(matches); } catch (e) { infoFR = { actif: false, erreur: e.message }; }
+
     // Live d'abord, puis les matchs réellement cotés (exploitables), puis par heure
     matches.sort((a,b) => {
       if(a.isLive !== b.isLive) return a.isLive ? -1 : 1;
@@ -853,6 +907,8 @@ module.exports = async (req, res) => {
       count: matches.length,
       withOdds: matches.filter(m => m.hasRealOdds).length,
       withPinnacle: matches.filter(m => m.hasPinnacle).length,
+      withFR: matches.filter(m => m.oddsFR).length,
+      coteFR: infoFR,
       updated: now.toISOString(),
       daysCovered: days.length - 1,
       withValue: matches.filter(m => m.lineValue).length,
@@ -892,3 +948,4 @@ module.exports = async (req, res) => {
     return res.status(200).json({ matches: [], error: e.message });
   }
 };
+module.exports.fusionFR = fusionFR;

@@ -1,0 +1,8 @@
+{
+  "crons": [
+    { "path": "/api/machine", "schedule": "*/30 6-22 * * *" }
+  ],
+  "functions": {
+    "api/machine.js": { "maxDuration": 60 }
+  }
+}

@@ -8,8 +8,9 @@
 module.exports = async (req, res) => {
   // Sécurité: seulement depuis Vercel Cron
   const auth = req.headers["authorization"];
-  const CRON_SECRET = process.env.CRON_SECRET || "edge_cron_2025";
-  if (auth !== `Bearer ${CRON_SECRET}`) {
+  const CRON_SECRET = process.env.CRON_SECRET || "";
+  // Ancien point d'entrée, remplacé par api/machine.js
+  if (!CRON_SECRET || auth !== `Bearer ${CRON_SECRET}`) {
     return res.status(401).json({error:"Non autorisé"});
   }
 
@@ -18,8 +19,6 @@ module.exports = async (req, res) => {
   log.push(`[${new Date().toISOString()}] EDGE Cron démarré`);
 
   try {
-    const FKEY = process.env.FOOTBALL_API_KEY || "b0e8adc0dfcca1cc964daa5bfe9a56c1";
-    const MKEY = process.env.MISTRAL_API_KEY  || "lvoeRXlFieBv5hpfh3TlZ12FZiFvIF8w";
 
     // 1. Déclencher le scan complet
     const scanUrl = `${process.env.VERCEL_URL || "https://predictx-pi.vercel.app"}/api/scan?mode=full&ai=1`;
