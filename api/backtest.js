@@ -22,7 +22,13 @@ function ligueRetenue(l){
 }
 const LEAGUE_NAME = {61:"Ligue 1",62:"Ligue 2",140:"La Liga",39:"Premier League",135:"Serie A",78:"Bundesliga",2:"Champions League",3:"Europa League",848:"Conference League",94:"Liga Portugal",88:"Eredivisie",144:"Pro League",203:"Süper Lig",179:"Premiership",10:"Amicaux Nations",667:"Amicaux Clubs",4:"Euro",5:"UEFA Nations League",1:"Qualif. Mondial",34:"Qualif. Mondial"};
 const DONE = new Set(["FT","AET","PEN"]);
-const SHARP_BK = [8,6,1,2,3];
+// Pinnacle est reconnu par son NOM, jamais par un numéro : chez API-Football,
+// l'identifiant 8 correspond à Bet365, pas à Pinnacle. L'ancienne version
+// prenait donc Bet365 (marge ~5 %) pour la référence de calcul.
+const estPinnacle = bk => /pinnacle/i.test(String((bk && (bk.name || bk.n)) || ""));
+// Ordre de priorité pour la cote de référence : les plus fins d'abord.
+const PRIORITE_BK = [/pinnacle/i, /betfair/i, /sbo/i, /marathon/i];
+const rangBk = bk => { const n = String((bk && bk.name) || ""); const i = PRIORITE_BK.findIndex(r => r.test(n)); return i < 0 ? 99 : i; };
 
 async function api(url, key, ms) {
   try {

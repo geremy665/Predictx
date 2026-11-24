@@ -103,7 +103,13 @@ const LEAGUE_NAME = {
 
 const DONE = new Set(["FT","AET","PEN","AWD","WO","ABD","CANC","SUSP","PST","TBD"]);
 const LIVE = new Set(["1H","2H","HT","ET","BT","P","LIVE"]);
-const SHARP_BK = [8, 6, 1, 2, 3];
+// Pinnacle est reconnu par son NOM, jamais par un numéro : chez API-Football,
+// l'identifiant 8 correspond à Bet365, pas à Pinnacle. L'ancienne version
+// prenait donc Bet365 (marge ~5 %) pour la référence de calcul.
+const estPinnacle = bk => /pinnacle/i.test(String((bk && (bk.name || bk.n)) || ""));
+// Ordre de priorité pour la cote de référence : les plus fins d'abord.
+const PRIORITE_BK = [/pinnacle/i, /betfair/i, /sbo/i, /marathon/i];
+const rangBk = bk => { const n = String((bk && bk.name) || ""); const i = PRIORITE_BK.findIndex(r => r.test(n)); return i < 0 ? 99 : i; };
 
 let API_CALLS = 0;
 let RATE_LIMITED = false;   // limite par minute touchée : transitoire
@@ -242,8 +248,7 @@ async function getOddsBulk(date, key, maxPages) {
       if (!fid || map[fid]) continue;
       const bks = item.bookmakers || [];
       bks.sort((a, b) => {
-        const ia = SHARP_BK.indexOf(a.id), ib = SHARP_BK.indexOf(b.id);
-        return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+        return rangBk(a) - rangBk(b);
       });
       // On collecte TOUS les bookmakers pour calculer consensus + meilleure cote
       const all1 = [], allN = [], all2 = [];
@@ -260,7 +265,7 @@ async function getOddsBulk(date, key, maxPages) {
         all1.push({ o: c1, b: bk.name });
         allN.push({ o: cn, b: bk.name });
         all2.push({ o: c2, b: bk.name });
-        if (bk.id === 8) { hasPin = true; pinOdds = { o1: c1, on: cn, o2: c2 }; }
+        if (estPinnacle(bk)) { hasPin = true; pinOdds = { o1: c1, on: cn, o2: c2 }; }
         if (!ref) ref = { o1: c1, on: cn, o2: c2, book: bk.name };
       }
       if (!ref || all1.length === 0) continue;
@@ -346,8 +351,7 @@ function lireCotes(bookmakers) {
   // Les bookmakers les plus fins d'abord : ce sont eux qui fixent la
   // cote de référence et remplissent en priorité les marchés alternatifs.
   allBks.sort((a, b) => {
-    const ia = SHARP_BK.indexOf(a.id), ib = SHARP_BK.indexOf(b.id);
-    return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+    return rangBk(a) - rangBk(b);
   });
   const books = [];
   // On parcourt TOUS les bookmakers : Pinnacle ne cote pas tous les marchés.
@@ -361,8 +365,8 @@ function lireCotes(bookmakers) {
       const c1 = parseFloat(h?.odd), cn = parseFloat(dr?.odd), c2 = parseFloat(a?.odd);
       if (c1 > 1.01 && cn > 1.01 && c2 > 1.01) {
         books.push({ n: bk.name, o1: c1, on: cn, o2: c2 });
-        if (!result.o1) { result.o1 = c1; result.on = cn; result.o2 = c2; result.pinnacle = bk.id === 8; }
-        if (bk.id === 8) { result.pinO1 = c1; result.pinON = cn; result.pinO2 = c2; result.pinnacle = true; }
+        if (!result.o1) { result.o1 = c1; result.on = cn; result.o2 = c2; result.pinnacle = estPinnacle(bk); }
+        if (estPinnacle(bk)) { result.pinO1 = c1; result.pinON = cn; result.pinO2 = c2; result.pinnacle = true; }
       }
     }
     const dc = trouverPari(bets, "Double Chance", 12);

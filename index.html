@@ -1393,9 +1393,28 @@ input:focus, textarea:focus {
 </div>
 <script>
 
+// Journal d'erreurs : réservé au développeur. Les visiteurs ne voient jamais
+// le bandeau rouge. Activer : ouvrir le site avec ?debug=1 (désactiver : ?debug=0).
+// « Script error. » ligne 0 = erreur d'un script étranger (extension du
+// navigateur, portefeuille crypto, appli qui ouvre le lien) : jamais d'EDGE.
+(function(){
+  try{
+    var q=location.search||"";
+    if(/[?&]debug=1/.test(q)) localStorage.setItem("edge_debug","1");
+    if(/[?&]debug=0/.test(q)) localStorage.removeItem("edge_debug");
+  }catch(e){}
+})();
 window.onerror=function(msg,src,line,col,err){
-  var d=document.getElementById("err-log");
-  if(d){d.style.display="block";d.innerHTML+="<b>ERR</b> "+msg+" (L"+line+")<br>";}
+  try{
+    var m=String(msg||"");
+    if(!line||m==="Script error."||m.indexOf("Script error")===0) return false;
+    if(/ethereum|selectedAddress|web3|solana|phantom|metamask|tronweb/i.test(m)) return false;
+    if(src&&src.indexOf(location.origin)!==0) return false;
+    var dev=false; try{ dev=localStorage.getItem("edge_debug")==="1"; }catch(e){}
+    if(!dev) return false;
+    var d=document.getElementById("err-log");
+    if(d){d.style.display="block";d.innerHTML+="<b>ERR</b> "+m.replace(/</g,"&lt;")+" (L"+line+")<br>";}
+  }catch(e){}
   return false;
 };
 var HOME_ADV={"Premier League":0.08,"La Liga":0.09,"Bundesliga":0.12,"Serie A":0.10,"Ligue 1":0.07,"Champions League":0.06,"Europa League":0.05,"Eredivisie":0.11,"Pro League":0.09,"Primeira Liga":0.10,"Allsvenskan":0.10,"Botola Pro":0.12,"Super Lig":0.11,"DEFAULT":0.08};
@@ -2104,10 +2123,10 @@ function pHome(){
   // ── Ce que EDGE fait ─────────────────────────────
   h+='<div class="sec-header" style="margin-top:4px"><div class="sec-bar" style="background:var(--w12)"></div><div class="sec-title" style="color:var(--w30)">Ce que EDGE fait pour toi</div></div>';
   var features=[
-    {ic:"📊",t:"SCANNER VALUE BETS",d:"Compare notre probabilité calculée à la cote bookmaker. Si l\'écart dépasse 4%, c\'est un value bet réel."},
-    {ic:"🤖",t:"CHAT IA",d:"Pose n\'importe quelle question sur un match. L\'IA a accès à tes données, aux cotes et aux stats en temps réel."},
-    {ic:"🎯",t:"ANALYSER UN MATCH",d:"Compositions, H2H, classement, blessures, xG. Et les mouvements de cotes des paris sharp."},
-    {ic:"🎰",t:"COMBINÉ DU JOUR",d:"Un ticket combiné optimisé automatiquement par Kelly. Sélection des meilleures corrélations."},
+    {ic:"🎯",t:"LA SÉLECTION DU JOUR",d:"Trois paris au maximum, uniquement quand un opérateur agréé en France les paie plus cher que leur vraie valeur. Les jours sans rien, EDGE te le dit."},
+    {ic:"💶",t:"OÙ PARIER",d:"Compare les opérateurs agréés et montre le meilleur prix. Même pari, meilleure cote : c\'est le seul avantage garanti."},
+    {ic:"🧮",t:"COTE BOOSTÉE OU MYCOMBI",d:"Saisis la cote de ton appli de paris : EDGE te dit si c\'est une bonne affaire ou un piège, avec la cote juste."},
+    {ic:"📈",t:"LA PREUVE",d:"Chaque pari est enregistré avant le match et réglé automatiquement. Les pertes restent affichées."},
   ];
   features.forEach(function(f){
     h+='<div style="display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid var(--bord)">';
@@ -2120,7 +2139,7 @@ function pHome(){
   // ── Sous le capot ────────────────────────────────
   h+='<div class="sec-header" style="margin-top:16px"><div class="sec-bar" style="background:var(--w06)"></div><div class="sec-title" style="color:var(--w30)">Sous le capot</div></div>';
   h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">';
-  [{t:"DIXON-COLES",d:"Poisson bivarié corrigé pour les scores serrés",tag:"Probabilités"},{t:"BAYÉSIEN",d:"Mise à jour continue avec les cotes du marché",tag:"Adaptatif"},{t:"MONTE CARLO",d:"800 simulations par match pour affiner les probas",tag:"800 sim."},{t:"KELLY ADAPTATIF",d:"Mise optimale selon l\'edge détecté et le bankroll",tag:"Gestion"},{t:"9 FACTEURS",d:"Domicile, forme, fatigue, motivation, rotation...",tag:"Contexte"},{t:"18 LIGUES",d:"Coefficients spécifiques par championnat",tag:"Europe+"}].forEach(function(s){
+  [{t:"MARCHÉ DE RÉFÉRENCE",d:"La vraie probabilité, tirée du marché le plus précis, marge du bookmaker retirée",tag:"Probabilités"},{t:"PRIX AGRÉÉS",d:"Uniquement les opérateurs autorisés en France",tag:"Légal"},{t:"MARGE DE SÉCURITÉ",d:"Avantage exigé proportionnel à la cote, cotes suspectes écartées",tag:"Prudence"},{t:"MODÈLE DE SCORES",d:"Calé sur le marché, pour évaluer combinés et cotes boostées",tag:"MyCombi"},{t:"KELLY ¼",d:"Mise prudente, proportionnelle à l\'avantage réel",tag:"Gestion"},{t:"CLV",d:"Mesure si les prix obtenus battent la cote de clôture",tag:"Contrôle"}].forEach(function(s){
     h+='<div style="background:var(--card2);border:1px solid var(--bord);border-radius:var(--r3);padding:12px">';
     h+='<div style="font-family:var(--ft);font-size:13px;letter-spacing:.08em;color:var(--w55);margin-bottom:4px">'+s.t+'</div>';
     h+='<div style="font-size:12px;color:var(--w30);line-height:1.4;margin-bottom:6px">'+s.d+'</div>';
@@ -7165,6 +7184,34 @@ function pAdmin(){
     h+='<span style="font-family:var(--fm);color:var(--w80)">'+x[1]+'</span></div>';
   });
   h+='</div>';
+
+  // ── Opérateurs reçus de l'API : lesquels sont agréés en France ? ──
+  // La sélection du jour ne peut proposer que ceux-là : s'il y en a peu,
+  // elle trouvera rarement quelque chose.
+  try{
+    var vus={}, nMatchsCotes=0;
+    ms.forEach(function(m){
+      if(!m||!Array.isArray(m.books)||!m.books.length) return;
+      nMatchsCotes++;
+      m.books.forEach(function(b){ var n=String(b&&b.n||"").trim(); if(n) vus[n]=(vus[n]||0)+1; });
+    });
+    var noms=Object.keys(vus).sort(function(a,b){ return vus[b]-vus[a]; });
+    var agr=noms.filter(function(n){ return estAgreeFR(n); });
+    h+='<div class="card" style="padding:14px;margin-bottom:12px">';
+    h+='<div style="font-size:11px;color:var(--w30);letter-spacing:.1em;margin-bottom:6px">OPÉRATEURS REÇUS DE L\'API</div>';
+    if(!noms.length){
+      h+='<div style="font-size:12px;color:var(--w55)">Aucune cote chargée pour le moment.</div>';
+    } else {
+      h+='<div style="font-size:12px;color:var(--w55);line-height:1.5;margin-bottom:8px"><strong style="color:'+(agr.length?'var(--vert)':'var(--rouge)')+'">'+agr.length+' agréé'+(agr.length>1?'s':'')+' en France</strong> sur '+noms.length+' opérateurs, pour '+nMatchsCotes+' matchs cotés.</div>';
+      noms.forEach(function(n){
+        var ok=estAgreeFR(n), pin=/pinnacle/i.test(n);
+        h+='<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px">';
+        h+='<span style="color:'+(ok?'var(--vert)':'var(--w55)')+'">'+(ok?'✓ ':'')+esc(n)+(pin?' <span style="color:var(--acc)">(référence)</span>':'')+'</span>';
+        h+='<span style="font-family:var(--fm);color:var(--w30)">'+vus[n]+' match'+(vus[n]>1?'s':'')+'</span></div>';
+      });
+    }
+    h+='</div>';
+  }catch(e){}
 
   // ── Track record brut ──
   var tk=trackStats();
