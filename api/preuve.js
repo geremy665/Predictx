@@ -19,8 +19,8 @@ module.exports = async (req, res) => {
       .sort((a, b) => new Date(b.ko) - new Date(a.ko));
     out.etat = etat ? { dernierScan: etat.dernierScan || null, credits: etat.credits || null,
       dernier: etat.dernier || null, erreurs: etat.erreurs || [] } : null;
-    // Active dès que la machine a tourné au moins une fois avec succès
-    out.actif = !!(cle && etat && etat.dernierScan);
+    // Active dès que la machine a tourné au moins une fois
+    out.actif = !!(etat && etat.dernierScan);
   } catch (e) {
     out.erreur = "base_injoignable";
   }

@@ -118,15 +118,17 @@ let DEBUT = 0;              // horodatage du début du scan
 // Le scan ne dépense aucun crédit : il lit la dernière photo gardée en base.
 const STORE = require("./_lib/store");
 const REGLE = require("./_lib/regle");
-async function fusionFR(matches) {
+async function fusionFR(matches, maxMin) {
   const info = { actif: false, photo: null, rapproches: 0, ajoutes: 0 };
   if (!STORE.actif()) return info;
   let snap = null;
   try { snap = await STORE.getJSON("edge:fr:snap", 1500); } catch (e) { return info; }
   if (!snap || !Array.isArray(snap.events)) return info;
   info.actif = true; info.photo = snap.ts || null;
-  // Photo trop vieille (plus de 3 h) : on ne mélange pas des prix périmés
-  if (!snap.ts || Date.now() - snap.ts > 3 * 3600000) { info.perimee = true; return info; }
+  // Photo trop vieille : on ne mélange pas des prix périmés (3 h pour
+  // l'affichage, 1 h quand la machine enregistre un pari)
+  const maxMs = (isFinite(maxMin) && maxMin > 0 ? maxMin : 180) * 60000;
+  if (!snap.ts || Date.now() - snap.ts > maxMs) { info.perimee = true; return info; }
   // Attribution globale : les rapprochements les plus sûrs d'abord, et
   // chaque match d'un côté n'est utilisé qu'une seule fois de l'autre
   const paires = [];
@@ -886,7 +888,7 @@ module.exports = async (req, res) => {
 
     // Cotes des opérateurs français (Winamax, Betclic, Unibet, PMU, NetBet)
     let infoFR = { actif: false };
-    try { infoFR = await fusionFR(matches); } catch (e) { infoFR = { actif: false, erreur: e.message }; }
+    try { infoFR = await fusionFR(matches, req.query && parseFloat(req.query.frmax)); } catch (e) { infoFR = { actif: false, erreur: e.message }; }
 
     // Live d'abord, puis les matchs réellement cotés (exploitables), puis par heure
     matches.sort((a,b) => {

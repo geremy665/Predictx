@@ -92,4 +92,9 @@ async function scores(sport) {
   });
 }
 
-module.exports = { actif, championnatsActifs, calendrier, cotes, scores, quota: () => QUOTA, CHAMPIONNATS, BOOKS };
+// Les grands championnats, pour la formule gratuite (500 crédits par mois)
+const PRINCIPAUX = ["soccer_france_ligue_one", "soccer_epl", "soccer_spain_la_liga", "soccer_italy_serie_a",
+  "soccer_germany_bundesliga", "soccer_uefa_champs_league", "soccer_uefa_europa_league",
+  "soccer_uefa_europa_conference_league", "soccer_france_ligue_two"];
+
+module.exports = { PRINCIPAUX, actif, championnatsActifs, calendrier, cotes, scores, quota: () => QUOTA, CHAMPIONNATS, BOOKS };

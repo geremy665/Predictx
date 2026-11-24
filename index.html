@@ -8166,7 +8166,7 @@ function selectionServeur(){
     var ko=new Date(s.ko).getTime();
     if(!isFinite(ko)||ko<now-2.5*3600000||ko>now+26*3600000) return;
     var idx=-1;
-    (S.matches||[]).forEach(function(m,i){ if(m&&m.frId===s.id) idx=i; });
+    (S.matches||[]).forEach(function(m,i){ if(m&&(String(m.id)===String(s.id)||m.frId===s.id)) idx=i; });
     items.push({ m:{ h:s.h, a:s.a, c:s.lg, time:s.ko, idx:idx }, k:s.pick, label:s.label, cote:parseFloat(s.cote),
       book:s.book, prob:parseFloat(s.prob), src:s.src, gain:null, ev:(parseFloat(s.ev)||parseFloat(s.prob)*parseFloat(s.cote)), coteMin:(s.minAct||s.coteMin||null), t:ko, srv:s });
   });
@@ -8192,7 +8192,7 @@ function blocPreuveServeur(){
   h+='<div class="card" style="padding:14px;margin-bottom:14px;border-color:var(--accB)">';
   if(!preuveActive()){
     h+='<div style="font-size:13px;color:var(--w80);margin-bottom:6px">Bientôt en service.</div>';
-    h+='<div style="font-size:12px;color:var(--w55);line-height:1.6">La Preuve sera tenue par le serveur : chaque pari enregistré avant le coup d\'envoi avec les vraies cotes des opérateurs français, puis réglé avec le score réel. La même pour tout le monde, téléphone ouvert ou non.</div>';
+    h+='<div style="font-size:12px;color:var(--w55);line-height:1.6">La Preuve sera tenue par le serveur : chaque pari enregistré avant le coup d\'envoi au prix d\'un opérateur agréé en France, puis réglé avec le score réel. La même pour tout le monde, téléphone ouvert ou non.</div>';
     h+='</div>';
     return h;
   }
@@ -8243,18 +8243,18 @@ function blocMachineAdmin(){
   var quand="jamais"; try{ if(e.dernierScan) quand=new Date(e.dernierScan).toLocaleString("fr-FR",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}); }catch(x){}
   var nFR=(S.matches||[]).filter(function(m){ return m&&m.oddsFR; }).length;
   [["Base de données",ok(p.base)],
-   ["Clé The Odds API",ok(p.cleOdds)],
+   ["Cotes .fr (The Odds API)",p.cleOdds?'<span style="color:var(--vert)">✓ branchées</span>':'<span style="color:var(--w55)">non (facultatif)</span>'],
    ["Dernier passage",esc(quand)],
-   ["Crédits restants",(e.credits&&e.credits.restants!=null)?String(e.credits.restants):"—"],
-   ["Championnats / matchs cotés",(d.championnats!=null?d.championnats:"—")+" / "+(d.matchs!=null?d.matchs:"—")],
+   ["Crédits The Odds API",(p.cleOdds&&e.credits&&e.credits.restants!=null)?String(e.credits.restants):"—"],
+   ["Matchs / avec cotes .fr",(d.matchs!=null?d.matchs:"—")+" / "+(d.avecFR!=null?d.avecFR:"—")],
    ["Analysés / nouveaux paris",(d.analyses!=null?d.analyses:"—")+" / "+(d.nouveaux!=null?d.nouveaux:"—")],
    ["Paris enregistrés",String((p.signaux||[]).length)],
    ["Matchs de l'appli avec cotes FR",nFR+" / "+(S.matches||[]).length]].forEach(function(x){
     h+='<div style="display:flex;justify-content:space-between;gap:10px;padding:4px 0;font-size:12px"><span style="color:var(--w30)">'+x[0]+'</span><span style="font-family:var(--fm);color:var(--w80);text-align:right">'+x[1]+'</span></div>';
   });
   if(e.erreurs&&e.erreurs.length) h+='<div style="font-size:11px;color:var(--rouge);line-height:1.5;margin-top:6px">'+e.erreurs.map(esc).join("<br>")+'</div>';
-  if(p.base&&p.cleOdds) h+='<button class="btn btn-primary" data-action="lancerMachine()" style="width:100%;margin-top:10px">Lancer la machine maintenant</button>';
-  else h+='<div style="font-size:11px;color:var(--w55);line-height:1.5;margin-top:8px">La machine démarre dès que la base et la clé sont branchées dans Vercel. Elle tourne ensuite toute seule toutes les 30 minutes, de 7 h à 23 h 30.</div>';
+  if(p.base) h+='<button class="btn btn-primary" data-action="lancerMachine()" style="width:100%;margin-top:10px">Lancer la machine maintenant</button>';
+  else h+='<div style="font-size:11px;color:var(--w55);line-height:1.5;margin-top:8px">La machine démarre dès que la base gratuite est branchée dans Vercel. Elle tourne ensuite toute seule toutes les 30 minutes, de 7 h à 23 h 30.</div>';
   h+='</div>';
   return h;
 }
@@ -8264,7 +8264,7 @@ function lancerMachine(){
     var msg = !j ? "Pas de réponse"
       : j.ignore==="passage_recent" ? "Dernier passage il y a "+(j.ilYa||"peu")+" : réessaie dans 10 minutes."
       : j.ok ? ((j.journal||[]).join(" · ")||"Terminé")
-      : ({base_absente:"Base de données absente", cle_odds_absente:"Clé The Odds API absente", base_injoignable:"Base injoignable"}[j.raison]||("Erreur : "+(j.raison||"?")));
+      : ({base_absente:"Base de données absente", scan_vide:"API-Football n'a renvoyé aucun match", base_injoignable:"Base injoignable"}[j.raison]||("Erreur : "+(j.raison||"?")));
     try{ toast(msg); }catch(e){}
     chargerPreuve();
   }).catch(function(){ try{ toast("La machine ne répond pas"); }catch(e){} });

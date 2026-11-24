@@ -74,7 +74,8 @@ function consensus(books) {
 }
 // Probabilité du marché : Pinnacle marge retirée, sinon le consensus
 function probMarche(ev) {
-  const pin = (ev.books || []).find(b => /pinnacle/i.test(b.n || ""));
+  let pin = (ev.books || []).find(b => /pinnacle/i.test(b.n || ""));
+  if (!(pin && pin.o1 > 1) && ev.pinO1 > 1 && ev.pinON > 1 && ev.pinO2 > 1) pin = { o1: ev.pinO1, on: ev.pinON, o2: ev.pinO2 };
   if (pin && pin.o1 > 1 && pin.on > 1 && pin.o2 > 1) {
     const d = devigShin(pin.o1, pin.on, pin.o2) || devigPower(pin.o1, pin.on, pin.o2);
     if (d) return Object.assign(d, { src: "Pinnacle" });
