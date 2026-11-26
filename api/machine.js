@@ -68,7 +68,8 @@ async function rafraichirFR(etat, now, erreurs) {
   const fin = now + R.SDJ.horizonH * H;
   let ligues = Object.keys(cal.sports || {}).filter(s =>
     (cal.sports[s] || []).some(ko => { const t = new Date(ko).getTime(); return t > now && t <= fin; }));
-  if (rest != null && rest < 1500) ligues = ligues.filter(s => odds.PRINCIPAUX.indexOf(s) >= 0);
+  // Crédits inconnus (tout premier relevé) ou bas : seulement les grands championnats
+  if (rest == null || rest < 1500) ligues = ligues.filter(s => odds.PRINCIPAUX.indexOf(s) >= 0);
   if (!ligues.length) { etat.frDernier = now; return { fait: false, raison: "aucun_match" }; }
   const evenements = [];
   const r = await parPaquets(ligues, s => odds.cotes(s, iso(now), iso(fin)), 4);
