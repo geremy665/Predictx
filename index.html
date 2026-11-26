@@ -5696,6 +5696,7 @@ function blocGainPrix(){
 function pPreuve(){
   var h="";
   try{ h+=blocPreuveServeur(); }catch(e){}
+  try{ h+=blocMonteCarlo(); }catch(e){}
   try{ h+=blocRegleV2(); }catch(e){}
   try{ h+=blocGainPrix(); }catch(e){}
   var tk=trackStats();
@@ -8270,6 +8271,115 @@ function lancerMachine(){
   }).catch(function(){ try{ toast("La machine ne répond pas"); }catch(e){} });
 }
 window.chargerPreuve=chargerPreuve;window.preuveActive=preuveActive;window.statsPreuve=statsPreuve;window.selectionServeur=selectionServeur;window.blocPreuveServeur=blocPreuveServeur;window.blocMachineAdmin=blocMachineAdmin;window.lancerMachine=lancerMachine;window.etatPariServeur=etatPariServeur;
+
+// ═══ SIMULATEUR MONTE-CARLO DE BANKROLL ═══
+// Rejoue des milliers de fois une série de paris au hasard pour montrer
+// ce qui peut arriver à ta bankroll : le meilleur, le pire, et le plus probable.
+// Il ne choisit pas les paris : il dit combien miser pour tenir les mauvaises séries.
+function mcParamsDefaut(){
+  var st=null, liste=(S.preuve&&S.preuve.signaux)||[];
+  var regles=liste.filter(function(s){ return s&&(s.status==="won"||s.status==="lost"); });
+  var r={ bk:200, mise:(typeof MISE_REF!=="undefined"?MISE_REF:10), n:200, cote:2.30, avantage:2.5, source:"defaut" };
+  if(regles.length>=30){
+    var sc=0, sclv=0, nclv=0;
+    regles.forEach(function(s){ sc+=parseFloat(s.cote)||0; if(isFinite(parseFloat(s.clv))){ sclv+=parseFloat(s.clv); nclv++; } });
+    r.cote=Math.round(sc/regles.length*100)/100;
+    if(nclv>=30){ r.avantage=Math.round(sclv/nclv*10)/10; r.source="preuve"; }
+  }
+  return r;
+}
+function mcSimuler(p, chemins){
+  var N=chemins||3000, nb=Math.max(10,Math.min(2000,Math.round(p.n))), cote=p.cote, mise=p.mise, bk0=p.bk;
+  var pg=Math.min(0.98,Math.max(0.01,(1+p.avantage/100)/cote));
+  var pas=Math.max(1,Math.round(nb/40)), nPts=Math.floor(nb/pas)+1;
+  var traces=[]; for(var k=0;k<nPts;k++) traces.push([]);
+  var finaux=[], baisses=[], ruines=0, moitie=0;
+  for(var i=0;i<N;i++){
+    var b=bk0, sommet=bk0, pire=0, ruine=false, demi=false;
+    traces[0].push(b);
+    for(var j=1;j<=nb;j++){
+      if(!ruine){
+        if(b<mise){ ruine=true; }
+        else{ b+= Math.random()<pg ? mise*(cote-1) : -mise; }
+        if(b>sommet) sommet=b;
+        if(sommet-b>pire) pire=sommet-b;
+        if(b<=bk0/2) demi=true;
+      }
+      if(j%pas===0) traces[j/pas].push(b);
+    }
+    if(ruine) ruines++;
+    if(demi) moitie++;
+    finaux.push(b-bk0); baisses.push(pire);
+  }
+  var q=function(arr,x){ var a=arr.slice().sort(function(u,v){return u-v;}); return a[Math.min(a.length-1,Math.max(0,Math.floor(x*(a.length-1))))]; };
+  var bandes=traces.map(function(t){ return [q(t,0.10),q(t,0.50),q(t,0.90)]; });
+  var perte=finaux.filter(function(x){ return x<0; }).length/N;
+  return { mediane:q(finaux,0.5), pire10:q(finaux,0.10), meilleur10:q(finaux,0.90), perte:perte,
+    baisse:q(baisses,0.5), baisse10:q(baisses,0.9), ruine:ruines/N, moitie:moitie/N, bandes:bandes, pas:pas, nb:nb, pg:pg };
+}
+function mcRun(){
+  var g=function(id,def){ var el=document.getElementById(id); var v=el?parseFloat(String(el.value).replace(",",".")):NaN; return isFinite(v)?v:def; };
+  var d=mcParamsDefaut();
+  var p={ bk:Math.max(10,g("mc-bk",d.bk)), mise:Math.max(0.5,g("mc-mise",d.mise)), n:Math.max(10,Math.min(2000,g("mc-n",d.n))),
+    cote:Math.max(1.05,Math.min(20,g("mc-cote",d.cote))), avantage:Math.max(-15,Math.min(20,g("mc-av",d.avantage))), source:d.source };
+  S.mc={ p:p, r:mcSimuler(p,3000), r0:mcSimuler({bk:p.bk,mise:p.mise,n:p.n,cote:p.cote,avantage:-5},1500) };
+  renderPage();
+}
+function mcGraphe(r,bk){
+  var W=320,Hh=150,pad=6,b=r.bandes,n=b.length;
+  var mn=Infinity,mx=-Infinity; b.forEach(function(x){ mn=Math.min(mn,x[0]); mx=Math.max(mx,x[2]); });
+  mn=Math.min(mn,bk); mx=Math.max(mx,bk); if(mx-mn<1){ mx+=1; mn-=1; }
+  var X=function(i){ return pad+(W-2*pad)*i/(n-1); }, Y=function(v){ return pad+(Hh-2*pad)*(1-(v-mn)/(mx-mn)); };
+  var haut=b.map(function(x,i){ return X(i).toFixed(1)+","+Y(x[2]).toFixed(1); });
+  var bas=b.map(function(x,i){ return X(i).toFixed(1)+","+Y(x[0]).toFixed(1); }).reverse();
+  var med=b.map(function(x,i){ return X(i).toFixed(1)+","+Y(x[1]).toFixed(1); }).join(" ");
+  var s='<svg viewBox="0 0 '+W+' '+Hh+'" style="width:100%;height:auto;display:block" role="img" aria-label="Évolution possible de la bankroll">';
+  s+='<polygon points="'+haut.concat(bas).join(" ")+'" fill="var(--acc)" opacity=".16"/>';
+  s+='<line x1="'+pad+'" x2="'+(W-pad)+'" y1="'+Y(bk).toFixed(1)+'" y2="'+Y(bk).toFixed(1)+'" stroke="var(--w30)" stroke-dasharray="3 4" stroke-width="1"/>';
+  s+='<polyline points="'+med+'" fill="none" stroke="var(--acc)" stroke-width="2.2" stroke-linejoin="round"/>';
+  s+='</svg>';
+  return s;
+}
+function blocMonteCarlo(){
+  var d=mcParamsDefaut(), p=(S.mc&&S.mc.p)||d, r=S.mc&&S.mc.r, r0=S.mc&&S.mc.r0;
+  var e=function(v){ var x=Math.round(v); return (x>0?"+":x<0?"−":"")+Math.abs(x)+"€"; };
+  var pc=function(v){ var x=v*100; return (x>0&&x<1?"moins de 1":String(Math.round(x)))+"%"; };
+  var champ=function(id,lbl,val,step){ return '<label style="display:block"><span style="display:block;font-size:11px;color:var(--w30);margin-bottom:4px">'+lbl+'</span><input type="number" id="'+id+'" value="'+val+'" step="'+step+'" inputmode="decimal" style="width:100%;text-align:center"/></label>'; };
+  var h='';
+  h+='<div class="sec-header"><div class="sec-bar"></div><div class="sec-title">Simulateur de bankroll</div></div>';
+  h+='<div class="card" style="padding:14px;margin-bottom:14px">';
+  h+='<div style="font-size:12px;color:var(--w55);line-height:1.6;margin-bottom:12px">Méthode de Monte-Carlo : on rejoue <strong style="color:var(--w80)">3 000 fois</strong> ta série de paris au hasard, avec la vraie probabilité de chaque pari. Ça ne rend aucun pari plus sûr. Ça montre les montagnes russes possibles, et la mise qui te permet de les traverser.</div>';
+  h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">';
+  h+=champ("mc-bk","Bankroll de départ (€)",p.bk,10)+champ("mc-mise","Mise par pari (€)",p.mise,1);
+  h+=champ("mc-cote","Cote moyenne",p.cote,0.05)+champ("mc-av","Avantage moyen (%)",p.avantage,0.5);
+  h+='</div>'+champ("mc-n","Nombre de paris",p.n,10);
+  h+='<div style="font-size:11px;color:var(--w30);line-height:1.5;margin:8px 0 10px">'+(d.source==="preuve"
+    ?'Cote et avantage préremplis avec les chiffres réels de la Preuve officielle (avantage mesuré sur la cote de clôture).'
+    :'Valeurs prudentes par défaut. Elles seront remplacées par les vrais chiffres de la Preuve dès 30 paris réglés.')+'</div>';
+  h+='<button class="btn btn-primary" data-action="mcRun()" style="width:100%">Lancer la simulation</button>';
+  if(r){
+    var kelly=Math.max(0,0.25*(p.avantage/100)/(p.cote-1))*p.bk;
+    h+='<div style="margin-top:14px">'+mcGraphe(r,p.bk)+'</div>';
+    h+='<div style="font-size:11px;color:var(--w30);text-align:center;margin:4px 0 12px">Trait : le cas le plus probable · zone : 8 cas sur 10 · pointillés : ta bankroll de départ</div>';
+    var ligne=function(l,v,c){ return '<div style="display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-top:1px solid var(--bord);font-size:13px"><span style="color:var(--w55)">'+l+'</span><strong style="font-family:var(--fm);color:'+(c||'var(--w80)')+';text-align:right">'+v+'</strong></div>'; };
+    var col=function(v){ return v>0?'var(--vert)':v<0?'var(--rouge)':'var(--w80)'; };
+    h+=ligne("Le plus probable après "+r.nb+" paris",e(r.mediane),col(r.mediane));
+    h+=ligne("1 fois sur 10, pire que",e(r.pire10),col(r.pire10));
+    h+=ligne("1 fois sur 10, mieux que",e(r.meilleur10),col(r.meilleur10));
+    h+=ligne("Risque de finir en perte",pc(r.perte));
+    h+=ligne("Plus grosse baisse en cours de route",e(-r.baisse)+" (jusqu'à "+e(-r.baisse10)+")");
+    h+=ligne("Risque de perdre la moitié",pc(r.moitie),r.moitie>0.1?'var(--rouge)':null);
+    h+=ligne("Risque de tout perdre",pc(r.ruine),r.ruine>0.01?'var(--rouge)':null);
+    h+='<div style="background:var(--w03);border-radius:10px;padding:11px 12px;margin-top:12px;font-size:12px;color:var(--w55);line-height:1.6">';
+    if(p.avantage>0) h+='<strong style="color:var(--w80)">Mise conseillée (Kelly ¼) : '+(Math.round(kelly*10)/10).toFixed(1).replace(".",",")+'€</strong> par pari avec cette bankroll. '+(p.mise>kelly*2?'Ta mise est plus de deux fois au-dessus : une mauvaise série peut te faire très mal.':'Ta mise reste raisonnable.')+'<br>';
+    h+='Pour comparer, <strong style="color:var(--w80)">sans avantage réel</strong> (marge du bookmaker d\'environ 5 %), tu finirais en perte dans <strong style="color:var(--rouge)">'+pc(r0.perte)+'</strong> des cas. C\'est ce qui arrive avec des paris au feeling.';
+    h+='</div>';
+    h+='<div style="font-size:11px;color:var(--w30);line-height:1.5;margin-top:8px">Hypothèse : l\'avantage indiqué est réel. C\'est la Preuve (cote de clôture battue) qui dira s\'il l\'est.</div>';
+  }
+  h+='</div>';
+  return h;
+}
+window.mcParamsDefaut=mcParamsDefaut;window.mcSimuler=mcSimuler;window.mcRun=mcRun;window.blocMonteCarlo=blocMonteCarlo;window.mcGraphe=mcGraphe;
 
 function blocSelectionDuJour(){
   var _srv=preuveActive();
