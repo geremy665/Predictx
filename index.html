@@ -7158,7 +7158,7 @@ function tapLogo(){
   var now=Date.now();
   if(!S._taps || now-S._taps.last>1500) S._taps={n:0,last:now};
   S._taps.n++; S._taps.last=now;
-  if(S._taps.n>=5){ S._taps={n:0,last:0}; S.tab="admin"; renderPage(); }
+  if(S._taps.n>=5){ S._taps={n:0,last:0}; S.tab="admin"; renderPage(); try{ chargerPreuve(true); }catch(e){} }
 }
 function pAdmin(){
   var h="";
@@ -8127,9 +8127,9 @@ function selectionRetiree(items){
 // ═══ LA PREUVE OFFICIELLE — tenue par le serveur (api/machine.js) ═══
 // Le serveur enregistre lui-même chaque pari AVANT le match et le règle
 // avec le score réel. Même Preuve pour tout le monde, téléphone ouvert ou non.
-function chargerPreuve(){
+function chargerPreuve(frais){
   try{
-    fetch("/api/preuve",{cache:"no-store"}).then(function(r){ return r.json(); }).then(function(j){
+    fetch("/api/preuve"+(frais?"?t="+Date.now():""),{cache:"no-store"}).then(function(r){ return r.json(); }).then(function(j){
       if(!j||typeof j!=="object") return;
       S.preuve=j;
       if(S.tab==="home"||S.tab==="preuve"||S.tab==="admin") renderPage();
@@ -8266,7 +8266,7 @@ function lancerMachine(){
       : j.ok ? ((j.journal||[]).join(" · ")||"Terminé")
       : ({base_absente:"Base de données absente", scan_vide:"API-Football n'a renvoyé aucun match", base_injoignable:"Base injoignable"}[j.raison]||("Erreur : "+(j.raison||"?")));
     try{ toast(msg); }catch(e){}
-    chargerPreuve();
+    chargerPreuve(true);
   }).catch(function(){ try{ toast("La machine ne répond pas"); }catch(e){} });
 }
 window.chargerPreuve=chargerPreuve;window.preuveActive=preuveActive;window.statsPreuve=statsPreuve;window.selectionServeur=selectionServeur;window.blocPreuveServeur=blocPreuveServeur;window.blocMachineAdmin=blocMachineAdmin;window.lancerMachine=lancerMachine;window.etatPariServeur=etatPariServeur;
