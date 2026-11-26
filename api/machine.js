@@ -49,11 +49,34 @@ function regler(s, gh, ga) {
 // ── Cotes .fr (The Odds API), seulement si une clé est branchée ──
 // Le rythme s'adapte aux crédits restants : la formule gratuite
 // (500 crédits par mois) tient avec 3 relevés par jour sur les grands championnats.
-async function rafraichirFR(etat, now, erreurs) {
+// Formule gratuite : 3 relevés par jour aux meilleurs moments (heure de Paris)
+//   10 h : les cotes du jour sont fraîches, avant les matchs de l'après-midi
+//   16 h : avant les matchs de 18 h – 19 h
+//   19 h : avant les matchs de 20 h 45 – 21 h
+const CRENEAUX = [10, 16, 19];
+function heureParis(ms) {
+  const f = new Intl.DateTimeFormat("fr-FR", { timeZone: "Europe/Paris", hour: "2-digit", hour12: false,
+    year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date(ms));
+  const v = t => (f.find(x => x.type === t) || {}).value;
+  return { h: parseInt(v("hour"), 10) % 24, jour: v("year") + "-" + v("month") + "-" + v("day") };
+}
+async function rafraichirFR(etat, now, erreurs, manuel) {
   if (!odds.actif()) return { fait: false, raison: "pas_de_cle" };
   const rest = etat.credits && isFinite(etat.credits.restants) ? etat.credits.restants : null;
-  const intervalle = rest == null || rest >= 5000 ? 0.5 * H : rest >= 1500 ? 2 * H : rest >= 40 ? 6 * H : Infinity;
-  if (now - (etat.frDernier || 0) < intervalle - 5 * 60000) return { fait: false, raison: "pas_encore" };
+  if (rest != null && rest < 40) return { fait: false, raison: "credits_epuises" };
+  const petitBudget = rest == null || rest < 1500;
+  let creneau = null;
+  if (petitBudget && !manuel) {
+    const p = heureParis(now);
+    if (CRENEAUX.indexOf(p.h) < 0) return { fait: false, raison: "hors_creneau" };
+    creneau = p.jour + "-" + p.h;
+    if ((etat.frCreneaux || []).indexOf(creneau) >= 0) return { fait: false, raison: "creneau_fait" };
+  } else {
+    // Gros budget : toutes les 30 min (2 h sous 5 000 crédits). Bouton manuel : 6 h minimum en petit budget.
+    const intervalle = petitBudget ? 6 * H : rest >= 5000 ? 0.5 * H : 2 * H;
+    if (now - (etat.frDernier || 0) < intervalle - 5 * 60000) return { fait: false, raison: "pas_encore" };
+  }
+  if (creneau) etat.frCreneaux = (etat.frCreneaux || []).slice(-8).concat([creneau]);
   let cal = null;
   try { cal = await store.getJSON(CLE_CAL); } catch (e) {}
   if (!cal || !cal.sports || now - (cal.ts || 0) > 3 * H) {
@@ -106,7 +129,7 @@ module.exports = async (req, res) => {
   try { await store.setJSON(CLE_ETAT, etat); } catch (e) {}
 
   // ── 1. Cotes .fr (facultatif) ──
-  const fr = await rafraichirFR(etat, now, erreurs);
+  const fr = await rafraichirFR(etat, now, erreurs, manuel);
   if (fr.fait) journal.push("cotes FR : " + fr.ligues + " championnat(s), " + fr.matchs + " match(s)");
 
   // ── 2. Matchs et cotes d'API-Football (+ cotes .fr de moins d'1 h) ──
