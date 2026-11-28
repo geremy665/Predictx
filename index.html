@@ -2012,7 +2012,7 @@ function pHome(){
 
   // ── Stats rapides ────────────────────────────────
   h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">';
-  [{v:ms.length,l:"MATCHS",c:"var(--acc)"},{v:values.length,l:"VALUES",c:"var(--bl2)"},{v:lv.length>0?lv.length:"—",l:"LIVE",c:"var(--rouge)"},{v:roi.nbBets>0?(roi.roi>0?"+"+roi.roi+"%":roi.roi+"%"):"—",l:"MON ROI",c:roi.roi>0?"var(--vert)":roi.roi<0?"var(--rouge)":"var(--w30)"}].forEach(function(s){
+  [{v:ms.length,l:"MATCHS",c:"var(--acc)"},{v:values.length,l:"VALUES",c:"var(--bl2)"},{v:lv.length>0?lv.length:"—",l:"LIVE",c:"var(--rouge)"},_tuileROI(roi)].forEach(function(s){
     h+='<div class="stat-card"><div class="stat-val" style="color:'+s.c+'">'+s.v+'</div><div class="stat-lbl">'+s.l+'</div></div>';
   });
   h+='</div>';
@@ -8381,6 +8381,14 @@ function blocMonteCarlo(){
 }
 window.mcParamsDefaut=mcParamsDefaut;window.mcSimuler=mcSimuler;window.mcRun=mcRun;window.blocMonteCarlo=blocMonteCarlo;window.mcGraphe=mcGraphe;
 
+// Tuile ROI de l'accueil : tes paris perso s'il y en a, sinon la Preuve officielle
+function _tuileROI(roi){
+  if(roi&&roi.nbBets>0) return {v:(roi.roi>0?"+"+roi.roi+"%":roi.roi+"%"),l:"MON ROI",c:roi.roi>0?"var(--vert)":roi.roi<0?"var(--rouge)":"var(--w30)"};
+  var st=null; try{ if(preuveActive()) st=statsPreuve(S.preuve.signaux||[]); }catch(e){}
+  if(st&&st.regles>0) return {v:(st.roi>0?"+":"")+st.roi+"%",l:"ROI PREUVE · "+st.regles+" PARI"+(st.regles>1?"S":""),c:st.roi>0?"var(--vert)":st.roi<0?"var(--rouge)":"var(--w30)"};
+  return {v:"—",l:st&&st.attente?"ROI PREUVE · "+st.attente+" EN COURS":"ROI PREUVE",c:"var(--w30)"};
+}
+window._tuileROI=_tuileROI;
 function blocSelectionDuJour(){
   var _srv=preuveActive();
   if(!(S.matches||[]).length&&!_srv) return "";          // chargement : l'accueil reste lisible
