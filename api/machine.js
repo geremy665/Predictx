@@ -177,6 +177,29 @@ module.exports = async (req, res) => {
     if (r.cand) cands.push(Object.assign({ m, t }, r.cand));
   });
   cands.sort((a, b) => b.ev - a.ev);
+
+  // Diagnostic : à quel point les prix français approchent-ils le prix juste ?
+  const avecFR = matches.filter(m => m.oddsFR && m.hasRealOdds && !m.isLive);
+  if (avecFR.length) {
+    let meilleur = null, positifs = 0, issues = 0;
+    avecFR.forEach(m => {
+      const t = new Date(m.time || m.t).getTime();
+      if (!isFinite(t) || t < now + 10 * 60000 || t > fin) return;
+      const pm = R.probMarche(m);
+      if (!pm) return;
+      [["1", pm.p1, "Victoire " + m.h], ["N", pm.pn, "Match nul"], ["2", pm.p2, "Victoire " + m.a]].forEach(x => {
+        const px = R.meilleurPrixFR(m, x[0]);
+        if (!px || px.cote < R.SDJ.coteMin || px.cote > R.SDJ.coteMax) return;
+        issues++;
+        const ev = x[1] * px.cote;
+        if (ev > 1) positifs++;
+        if (ev <= R.EV_SUSPECT && (!meilleur || ev > meilleur.ev)) meilleur = { ev: Math.round(ev * 10000) / 10000,
+          seuil: Math.round(R.seuilEV(px.cote, R.multPrudence(pm.src)) * 10000) / 10000,
+          label: x[2], h: m.h, a: m.a, cote: px.cote, book: px.book, src: pm.src };
+      });
+    });
+    etat.diagFR = { ts: now, matchs: avecFR.length, issues, positifs, meilleur };
+  }
   const tous = Object.values(signaux);
   const nouveaux = [];
   cands.forEach(c => {

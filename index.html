@@ -8253,6 +8253,18 @@ function blocMachineAdmin(){
    ["Matchs de l'appli avec cotes FR",nFR+" / "+(S.matches||[]).length]].forEach(function(x){
     h+='<div style="display:flex;justify-content:space-between;gap:10px;padding:4px 0;font-size:12px"><span style="color:var(--w30)">'+x[0]+'</span><span style="font-family:var(--fm);color:var(--w80);text-align:right">'+x[1]+'</span></div>';
   });
+  var dg=e.diagFR;
+  if(dg){
+    var qd="?"; try{ qd=new Date(dg.ts).toLocaleString("fr-FR",{weekday:"short",hour:"2-digit",minute:"2-digit"}); }catch(x){}
+    var pcv=function(v){ var x=Math.round((v-1)*1000)/10; return (x>0?"+":"")+String(x).replace(".",",")+"%"; };
+    h+='<div style="background:var(--w03);border-radius:10px;padding:10px 12px;margin-top:10px;font-size:12px;color:var(--w55);line-height:1.6">';
+    h+='<div style="font-size:11px;color:var(--w30);letter-spacing:.08em;margin-bottom:4px">DERNIER RELEVÉ DES COTES FR · '+esc(qd)+'</div>';
+    h+=dg.matchs+' matchs avec cotes françaises, '+dg.issues+' issues comparées, <strong style="color:'+(dg.positifs?'var(--vert)':'var(--w80)')+'">'+dg.positifs+' au-dessus du prix juste</strong>.';
+    if(dg.meilleur){ var mb=dg.meilleur;
+      h+='<br>Meilleur prix trouvé : <strong style="color:'+(mb.ev>=mb.seuil?'var(--vert)':mb.ev>1?'var(--acc)':'var(--rouge)')+'">'+pcv(mb.ev)+'</strong> (il faut '+pcv(mb.seuil)+') · '+esc(mb.label)+' @'+parseFloat(mb.cote).toFixed(2)+' chez '+esc(mb.book)+' · '+esc(mb.h)+' – '+esc(mb.a);
+    }
+    h+='</div>';
+  }
   if(e.erreurs&&e.erreurs.length) h+='<div style="font-size:11px;color:var(--rouge);line-height:1.5;margin-top:6px">'+e.erreurs.map(esc).join("<br>")+'</div>';
   if(p.base) h+='<button class="btn btn-primary" data-action="lancerMachine()" style="width:100%;margin-top:10px">Lancer la machine maintenant</button>';
   else h+='<div style="font-size:11px;color:var(--w55);line-height:1.5;margin-top:8px">La machine démarre dès que la base gratuite est branchée dans Vercel. Elle tourne ensuite toute seule toutes les 30 minutes, de 7 h à 23 h 30.</div>';
